@@ -10,7 +10,7 @@ api.interceptors.request.use(
     (config) => {
         const tenantSlug =
             store.getState().tenant.slug;
-
+        console.log("Tenant Slug from store:", tenantSlug);
         if (tenantSlug) {
             config.headers["X-Tenant-Slug"] =
                 tenantSlug;
