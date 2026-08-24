@@ -9,7 +9,6 @@ function useTenant() {
     const initialized = useSelector((state) => state.tenant.initialized);
 
     const fetchTenant = useCallback(async () => {
-        dispatch(setTenantLoading(true));
         try {
           const tenant = await getTenant();
           dispatch(setTenant(tenant.data));

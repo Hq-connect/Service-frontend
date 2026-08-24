@@ -8,7 +8,7 @@ const initialState = {
     slug: initialSlug,
     tenant: null,
     initialized: !!initialSlug,
-    loading: false,
+    loading: true,
 };
 
 const tenantSlice = createSlice({
@@ -18,7 +18,6 @@ const tenantSlice = createSlice({
 
     reducers: {
         setTenant: (state, action) => {
-            state.slug = action.payload.slug;
             state.tenant = action.payload.tenant || null;
             state.initialized = true;
         },
