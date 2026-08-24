@@ -9,8 +9,8 @@ function useAuth() {
         dispatch(setLoading(true));
         try {
             const response = await authService.registerUser(userData);
-            dispatch(setUser(response));
-            return response;
+            dispatch(setUser(response.data));
+            return response.data;
         } catch (error) {
             dispatch(setError(error.response.data));
         }finally {
@@ -22,8 +22,8 @@ function useAuth() {
         dispatch(setLoading(true));
         try {
             const response = await authService.loginUser(userData);
-            dispatch(setUser(response));
-            return response;
+            dispatch(setUser(response.data));
+            return response.data;
         } catch (error) {
             dispatch(setError(error.response.data));
         } finally {
@@ -46,8 +46,8 @@ function useAuth() {
     const getCurrentUser = useCallback(async () => {
         try{
             const response = await authService.getCurrentUser();
-            dispatch(setUser(response));
-            return response;
+            dispatch(setUser(response.data));
+            return response.data;
         } catch (error) {
             dispatch(setError(error.response.data));
         } finally {
