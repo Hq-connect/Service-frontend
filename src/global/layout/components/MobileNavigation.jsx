@@ -4,7 +4,6 @@ import {
   Menu, Plus, User, Settings, LogOut 
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader, SheetDescription } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   DropdownMenu, 
@@ -70,10 +69,8 @@ function MobileNavigation({
         {/* Hamburger Menu & Page Title */}
         <div className="flex items-center gap-3">
           <Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden cursor-pointer">
-                <Menu className="size-5" />
-              </Button>
+            <SheetTrigger className="md:hidden cursor-pointer size-8 inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent hover:bg-muted hover:text-foreground outline-none select-none transition-all">
+              <Menu className="size-5" />
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-0 flex flex-col h-full bg-background">
               <SheetHeader className="p-4 border-b border-border">
