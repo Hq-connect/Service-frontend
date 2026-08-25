@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { PRIMARY_NAV_ITEMS } from "./navigation";
+import Logo from "@/components/ui/Logo";
 
 function MobileNavigation({ 
   tenant, user, logout, secondaryNav, selectedSpaceIdx, setSelectedSpaceIdx, 
@@ -76,14 +77,9 @@ function MobileNavigation({
               <SheetHeader className="p-4 border-b border-border">
                 <SheetTitle className="text-left font-heading text-lg font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="size-7 rounded-sm bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shrink-0">
-                      {(tenant?.name || "Hq")[0].toUpperCase()}
-                    </div>
-                    <span>{tenant?.name || "Hq"}</span>
+                    {tenant?.logo ? <img src={tenant?.logo} alt="Logo" className="w-7 h-7" /> : <Logo iconOnly={true} className="w-2 h-2" />}
+                    <span className="whitespace-nowrap">{tenant?.name || "Hq"}</span>
                   </div>
-                  <button className="flex items-center justify-center size-7 rounded-lg bg-emerald-500 text-white font-bold cursor-pointer">
-                    <Plus className="size-4" />
-                  </button>
                 </SheetTitle>
                 <SheetDescription className="text-left text-xs">
                   Sub-navigation for the selected dashboard view.
