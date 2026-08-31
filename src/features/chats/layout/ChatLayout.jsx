@@ -32,7 +32,7 @@ function ChatLayout({ chatType }) {
   // API uses "chatId" field (not "_id") on the chat document
   const queryClient = useQueryClient();
   const newUserId = chatId?.startsWith("new-") ? chatId.replace("new-", "") : null;
-  const { data: tenantUsers = [] } = useUsers({ limit: 100 , status:"active" });
+  const { data: tenantUsers = [] } = useUsers({ limit: 100 , status:"active", enabled: !!newUserId });
 
   const selectedUser = useMemo(() => {
     if (!newUserId) return null;

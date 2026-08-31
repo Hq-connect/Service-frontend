@@ -28,7 +28,9 @@ function DMListItem({ chat }) {
     .join("")
     .toUpperCase() || "U";
 
-  const lastText = chat.lastMessage?.content?.text ?? "";
+  const lastText = !chat.lastMessage?.deletedAt
+    ? chat.lastMessage?.content?.text ?? ""
+    : "This message was deleted.";
   const unread = chat.unreadCount ?? 0;
 
   const timeLabel = chat.updatedAt

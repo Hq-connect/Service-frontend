@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -61,16 +61,26 @@ function ChatSidebar({ activeType = "dm" }) {
   const { chatId } = useParams();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const { data: chats = [], isLoading } = useChats(activeType);
 
   const { user } = useAuth();
   const currentUser = user?.user || user?.data || user;
   const currentUserId = currentUser?._id || currentUser?.id;
 
-  // Query tenant users if searching in DM
+  // Debounce the search query to minimize API calls
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // Query tenant users if searching in DM, disabled if empty
   const { data: tenantUsers = [] } = useUsers({
-    search: activeType === "dm" ? search : "",
+    search: activeType === "dm" ? debouncedSearch : "",
     status: "active",
+    enabled: activeType === "dm" && !!debouncedSearch.trim(),
   });
 
   const filtered = chats.filter((c) => {
@@ -87,9 +97,9 @@ function ChatSidebar({ activeType = "dm" }) {
       .filter(Boolean)
   );
 
-  const newUsersToDm = tenantUsers.filter(
-    (u) => u._id !== currentUserId && !existingDmUserIds.has(u._id)
-  );
+  const newUsersToDm = search.trim()
+    ? tenantUsers.filter((u) => u._id !== currentUserId && !existingDmUserIds.has(u._id))
+    : [];
 
   return (
     <aside className={`flex-col w-full md:w-[280px] md:min-w-[240px] border-r border-border bg-background shrink-0 overflow-hidden ${
