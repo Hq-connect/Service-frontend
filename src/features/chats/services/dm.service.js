@@ -5,11 +5,11 @@ const dmService = {
         const response = await api.get("/chats/dm");
         return response.data.data.dms;
     },
-    sendMessage: async (chatId, recieverId, content , replyTo=null) => {
+    sendMessage: async (chatId, recieverId, text , replyTo=null) => {
         const response = await api.post("/chats/dm/message", {
             chatId,
             recieverId,
-            content,
+            content: { text },
             replyTo,
         });
         return response.data.data.message;
@@ -24,10 +24,10 @@ const dmService = {
         });
         return response.data.data.messages;
     },
-    updateMessage: async (messageId, content) => {
+    updateMessage: async (messageId, text) => {
         const response = await api.put("/chats/dm/message", {
             messageId,
-            content,
+            content: { text },
         });
         return response.data.data.message;
     },

@@ -6,6 +6,7 @@ import { Provider } from 'react-redux'
 import { store } from './app/store/store.js'
 import { QueryClient,QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from './components/ui/sonner.jsx'
+import { TooltipProvider } from './components/ui/tooltip.jsx'
 
 const queryClient = new QueryClient();
 
@@ -13,8 +14,10 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <App />
-        <Toaster richColors position="top-right" />
+        <TooltipProvider delayDuration={400}>
+          <App />
+          <Toaster richColors position="top-right" />
+        </TooltipProvider>
       </QueryClientProvider>
     </Provider>
   </StrictMode>,

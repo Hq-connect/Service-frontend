@@ -19,7 +19,7 @@ function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySid
       <nav className="flex-1 flex flex-col items-center gap-1.5 py-2 w-full overflow-y-auto">
         {PRIMARY_NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = currentPath === item.path;
+          const isActive = item.path === currentPath || currentPath.startsWith(item.path + "/");
           return (
             <Link
               key={item.path}
