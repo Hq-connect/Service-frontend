@@ -281,38 +281,28 @@ function MessageItem({
               )}
             </Bubble>
 
-            {/* Emoji Picker Popover */}
-            {showEmojiPicker && (
-              <div className="absolute bottom-full mb-1 right-0 flex items-center gap-1.5 bg-background border border-border rounded-full shadow-md px-2 py-1 z-30 pointer-events-auto">
-                {["👍", "❤️", "😂", "😮", "🎉", "🔥"].map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => {
-                      onReact?.(message._id, emoji);
-                      setShowEmojiPicker(false);
-                    }}
-                    className="hover:scale-125 transition-transform duration-100 p-0.5 text-base"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Hover Actions Toolbar */}
             {!isEditing && (
               <div 
                 className={cn(
-                  "absolute top-1/2 -translate-y-1/2 opacity-0 group-hover/bubble:opacity-100 transition-opacity duration-100 z-20 pointer-events-none group-hover/bubble:pointer-events-auto",
+                  "absolute top-1/2 -translate-y-1/2 transition-opacity duration-100 z-20",
+                  showEmojiPicker 
+                    ? "opacity-100 pointer-events-auto" 
+                    : "opacity-0 group-hover/bubble:opacity-100 pointer-events-none group-hover/bubble:pointer-events-auto",
                   isOwn ? "right-full pr-2" : "left-full pl-2"
                 )}
               >
                 <MessageActions
                   isOwn={isOwn}
                   onReply={() => onReply?.(message)}
-                  onReact={() => setShowEmojiPicker(!showEmojiPicker)}
+                  onReact={(emoji) => {
+                    onReact?.(message._id, emoji);
+                    setShowEmojiPicker(false);
+                  }}
                   onEdit={() => setIsEditing(true)}
                   onDelete={() => onDelete?.(message)}
+                  showEmojiPicker={showEmojiPicker}
+                  setShowEmojiPicker={setShowEmojiPicker}
                 />
               </div>
             )}
