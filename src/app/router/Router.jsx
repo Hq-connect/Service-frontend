@@ -5,6 +5,7 @@ import RegisterContainer from "@/features/auth/containers/RegisterContainer"
 import ProtectedRoutes from "@/components/security/ProtectedRoutes"
 import AppLayout from "@/global/layout/AppLayour"
 import UnderConstruction from "@/components/ui/UnderConstruction"
+import ChatPage from "@/features/chats/pages/ChatPage"
 
 export const router = createBrowserRouter([
   {
@@ -25,13 +26,21 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Navigate to="/home" replace /> },
-      { path: "home", element: <UnderConstruction /> },
-      { path: "tasks", element: <UnderConstruction /> },
-      { path: "docs", element: <UnderConstruction /> },
-      { path: "files", element: <UnderConstruction /> },
-      { path: "meets", element: <UnderConstruction /> },
+      { path: "home",   element: <UnderConstruction /> },
+      { path: "tasks",  element: <UnderConstruction /> },
+      { path: "docs",   element: <UnderConstruction /> },
+      { path: "files",  element: <UnderConstruction /> },
+      { path: "meets",  element: <UnderConstruction /> },
       { path: "ask-ai", element: <UnderConstruction /> },
-      { path: "chats", element: <UnderConstruction /> },
+
+      // Chat routes - type-scoped
+      { path: "chats",                    element: <ChatPage /> },
+      { path: "chats/dm",                 element: <ChatPage chatType="dm" /> },
+      { path: "chats/dm/:chatId",         element: <ChatPage chatType="dm" /> },
+      { path: "chats/group",              element: <ChatPage chatType="group" /> },
+      { path: "chats/group/:chatId",      element: <ChatPage chatType="group" /> },
+      { path: "chats/channel",            element: <ChatPage chatType="channel" /> },
+      { path: "chats/channel/:chatId",    element: <ChatPage chatType="channel" /> },
     ]
   },
   { path: "*", element: <Navigate to="/auth/login" replace /> },
