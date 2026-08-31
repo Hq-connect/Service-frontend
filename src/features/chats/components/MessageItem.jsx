@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   Message,
   MessageAvatar,
@@ -70,6 +70,50 @@ function MessageItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.content?.text ?? "");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showMobileToolbar, setShowMobileToolbar] = useState(false);
+
+  const timerRef = useRef(null);
+  const isLongPressRef = useRef(false);
+  const bubbleRef = useRef(null);
+
+  const startPress = useCallback(() => {
+    isLongPressRef.current = false;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      setShowMobileToolbar(true);
+    }, 600); // 600ms long press
+  }, []);
+
+  const endPress = useCallback((e) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (isLongPressRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, []);
+
+  const movePress = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
+
+  React.useEffect(() => {
+    if (!showMobileToolbar) return;
+    const handleDocumentClick = (e) => {
+      if (bubbleRef.current && !bubbleRef.current.contains(e.target)) {
+        setShowMobileToolbar(false);
+      }
+    };
+    document.addEventListener("click", handleDocumentClick);
+    document.addEventListener("touchstart", handleDocumentClick);
+    return () => {
+      document.removeEventListener("click", handleDocumentClick);
+      document.removeEventListener("touchstart", handleDocumentClick);
+    };
+  }, [showMobileToolbar]);
 
   const displayName =
     senderInfo.name ||
@@ -159,10 +203,14 @@ function MessageItem({
            *   (preventing full-width stretching).
            */}
           <div 
+            ref={bubbleRef}
             className={cn(
-              "relative group/bubble w-fit max-w-[85%] flex flex-col gap-1",
+              "relative group/bubble w-fit max-w-[85%] flex flex-col gap-1 select-none touch-callout-none",
               isOwn ? "self-end items-end" : "self-start items-start"
             )}
+            onTouchStart={startPress}
+            onTouchEnd={endPress}
+            onTouchMove={movePress}
           >
             {/* Reply reference - nested here to align with bubble width and have proper hover styling */}
             {message.replyTo && (
@@ -286,21 +334,31 @@ function MessageItem({
               <div 
                 className={cn(
                   "absolute top-1/2 -translate-y-1/2 transition-opacity duration-100 z-20",
-                  showEmojiPicker 
+                  (showEmojiPicker || showMobileToolbar)
                     ? "opacity-100 pointer-events-auto" 
-                    : "opacity-0 group-hover/bubble:opacity-100 pointer-events-none group-hover/bubble:pointer-events-auto",
+                    : "opacity-0 md:group-hover/bubble:opacity-100 pointer-events-none md:group-hover/bubble:pointer-events-auto",
                   isOwn ? "right-full pr-2" : "left-full pl-2"
                 )}
               >
                 <MessageActions
                   isOwn={isOwn}
-                  onReply={() => onReply?.(message)}
+                  onReply={() => {
+                    onReply?.(message);
+                    setShowMobileToolbar(false);
+                  }}
                   onReact={(emoji) => {
                     onReact?.(message._id, emoji);
                     setShowEmojiPicker(false);
+                    setShowMobileToolbar(false);
                   }}
-                  onEdit={() => setIsEditing(true)}
-                  onDelete={() => onDelete?.(message)}
+                  onEdit={() => {
+                    setIsEditing(true);
+                    setShowMobileToolbar(false);
+                  }}
+                  onDelete={() => {
+                    onDelete?.(message);
+                    setShowMobileToolbar(false);
+                  }}
                   showEmojiPicker={showEmojiPicker}
                   setShowEmojiPicker={setShowEmojiPicker}
                 />

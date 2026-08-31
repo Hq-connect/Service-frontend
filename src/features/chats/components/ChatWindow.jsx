@@ -11,6 +11,8 @@ import { useUpdateMessage } from "../hooks/useUpdateMessage";
 import { useDeleteMessage } from "../hooks/useDeleteMessage";
 import { useAddReaction } from "../hooks/useAddReaction";
 import useAuth from "@/features/auth/hooks/useAuth";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 /**
  * Right panel of the chat layout - header, messages, input.
@@ -24,6 +26,9 @@ function ChatWindow({ chatId, chatType, chat }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // State for message deletion confirmation Dialog
+  const [messageToDelete, setMessageToDelete] = React.useState(null);
 
   // Global state from chat.slice
   const replyingTo = useSelector((state) => state.chat.replyingTo);
@@ -88,9 +93,7 @@ function ChatWindow({ chatId, chatType, chat }) {
   };
 
   const handleDelete = (message) => {
-    if (window.confirm("Are you sure you want to delete this message?")) {
-      deleteMessage(message._id);
-    }
+    setMessageToDelete(message);
   };
 
   const handleReact = (messageId, emoji) => {
@@ -98,7 +101,7 @@ function ChatWindow({ chatId, chatType, chat }) {
   };
 
   return (
-    <div className={`flex-col flex-1 min-w-0 min-h-0 bg-background ${
+    <div className={`flex-col flex-1 min-w-0 min-h-0 bg-background relative ${
       chatId ? "flex" : "hidden md:flex"
     }`}>
       {/* Header */}
@@ -125,6 +128,34 @@ function ChatWindow({ chatId, chatType, chat }) {
         replyTo={replyingTo}
         onCancelReply={handleCancelReply}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!messageToDelete} onOpenChange={(open) => { if (!open) setMessageToDelete(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete message?</DialogTitle>
+            <DialogDescription>
+              This message will be deleted for everyone in this chat. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setMessageToDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (messageToDelete) {
+                  deleteMessage(messageToDelete._id);
+                  setMessageToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
