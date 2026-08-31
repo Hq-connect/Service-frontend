@@ -1,5 +1,6 @@
 import React from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { setActiveChat, setReplyingTo, clearReplyingTo } from "../states/chat.slice";
 import ChatHeader from "./ChatHeader";
 import MessageList from "./MessageList";
@@ -21,6 +22,7 @@ import useAuth from "@/features/auth/hooks/useAuth";
  */
 function ChatWindow({ chatId, chatType, chat }) {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   // Global state from chat.slice
@@ -54,12 +56,22 @@ function ChatWindow({ chatId, chatType, chat }) {
   }
 
   const handleSend = ({ text, replyTo: replyToId }) => {
-    sendMessage({
-      chatId,
-      content: text,
-      replyTo: replyToId,
-      ...(chatType === "dm" && { recieverId: chat.otherUser?.userId }),
-    });
+    const isNew = chatId?.startsWith("new-");
+    sendMessage(
+      {
+        chatId: isNew ? null : chatId,
+        content: text,
+        replyTo: replyToId,
+        ...(chatType === "dm" && { recieverId: chat.otherUser?.userId }),
+      },
+      {
+        onSuccess: (data) => {
+          if (isNew && data?.chatId) {
+            navigate(`/chats/dm/${data.chatId}`, { replace: true });
+          }
+        },
+      }
+    );
     dispatch(clearReplyingTo());
   };
 

@@ -6,12 +6,15 @@ const dmService = {
         return response.data.data.dms;
     },
     sendMessage: async (chatId, recieverId, text , replyTo=null) => {
-        const response = await api.post("/chats/dm/message", {
-            chatId,
+        const payload = {
             recieverId,
             content: { text },
             replyTo,
-        });
+        };
+        if (chatId && !chatId.startsWith("new-")) {
+            payload.chatId = chatId;
+        }
+        const response = await api.post("/chats/dm/message", payload);
         return response.data.data.message;
     },
     getMessages: async (chatId, limit, before) => {

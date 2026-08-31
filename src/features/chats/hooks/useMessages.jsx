@@ -40,6 +40,6 @@ export const useMessages = (type="dm", chatId, limit=30) => {
             ].createdAt;
         },
 
-        enabled: !!chatId && !!type,
+        enabled: !!chatId && !!type && !chatId.startsWith("new-"),
     });
 }

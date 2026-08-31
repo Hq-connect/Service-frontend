@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Reply, FileText, Image, Film, Volume2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MessageActions from "./MessageActions";
+import { useMessageScroller } from "@/components/ui/message-scroller";
 
 const ATTACHMENT_ICONS = {
   image: Image,
@@ -49,6 +50,21 @@ function MessageItem({
     message.senderId === currentUserId ||
     message.senderId?._id === currentUserId;
   const isDeleted = !!message.deletedAt;
+
+  const { scrollToMessage } = useMessageScroller();
+  const [isHighlighted, setIsHighlighted] = useState(false);
+
+  React.useEffect(() => {
+    const handleHighlight = (e) => {
+      if (e.detail?.messageId === message._id) {
+        setIsHighlighted(true);
+        const timer = setTimeout(() => setIsHighlighted(false), 2000);
+        return () => clearTimeout(timer);
+      }
+    };
+    window.addEventListener("highlight-message", handleHighlight);
+    return () => window.removeEventListener("highlight-message", handleHighlight);
+  }, [message._id]);
 
   // Local editing states
   const [isEditing, setIsEditing] = useState(false);
@@ -134,30 +150,52 @@ function MessageItem({
             </MessageHeader>
           )}
 
-          {/* Reply reference */}
-          {message.replyTo && (
-            <div className="flex items-start gap-1.5 mb-1 px-3 py-1.5 rounded-lg bg-muted/60 border-l-2 border-muted-foreground/30 text-xs text-muted-foreground">
-              <Reply className="size-3 shrink-0 mt-0.5" />
-              <span className="truncate">
-                {message.replyTo?.content?.text ?? "Replied message"}
-              </span>
-            </div>
-          )}
-
           {/* 
            * Bubble Wrapper:
            * - w-fit max-w-[85%] so it tightly wraps the bubble up to 85% of MessageContent.
            * - relative so the toolbar positions against the bubble boundary.
            * - group/bubble scopes the hover trigger to just the bubble area.
+           * - contains reply reference so that the reference container matches bubble alignment and width.
+           *   (preventing full-width stretching).
            */}
           <div 
             className={cn(
               "relative group/bubble w-fit max-w-[85%] flex flex-col gap-1",
-              isOwn ? "self-end" : "self-start"
+              isOwn ? "self-end items-end" : "self-start items-start"
             )}
           >
+            {/* Reply reference - nested here to align with bubble width and have proper hover styling */}
+            {message.replyTo && (
+              <div 
+                onClick={() => {
+                  const targetId = message.replyTo?._id ?? message.replyTo?.messageId;
+                  if (targetId) {
+                    scrollToMessage(targetId);
+                    window.dispatchEvent(new CustomEvent("highlight-message", { detail: { messageId: targetId } }));
+                  }
+                }}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] text-muted-foreground/80 hover:text-foreground cursor-pointer select-none transition-colors border-l-2 mb-0.5 max-w-full w-fit bg-muted/40 border-muted-foreground/20 hover:bg-muted/60"
+                )}
+              >
+                <Reply className="size-3 shrink-0" />
+                <span className="truncate max-w-[200px]">
+                  {message.replyTo?.content?.text ?? "Replied message"}
+                </span>
+              </div>
+            )}
+
             {/* Bubble - overridden with max-w-full to prevent circular percentage collapse */}
-            <Bubble variant={isOwn ? "default" : "outline"} className="max-w-full">
+            <Bubble 
+              variant={isOwn ? "default" : "outline"} 
+              className={cn(
+                "max-w-full transition-all duration-500",
+                isHighlighted && (isOwn 
+                  ? "ring-2 ring-primary ring-offset-2 scale-[1.02] duration-300" 
+                  : "ring-2 ring-primary ring-offset-2 scale-[1.02] bg-primary/5 duration-300"
+                )
+              )}
+            >
               {isEditing ? (
                 <div className="flex flex-col gap-2 p-2 min-w-[240px]">
                   <textarea
