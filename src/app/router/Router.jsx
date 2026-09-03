@@ -5,6 +5,7 @@ import RegisterContainer from "@/features/auth/containers/RegisterContainer"
 import ProtectedRoutes from "@/components/security/ProtectedRoutes"
 import AppLayout from "@/global/layout/AppLayour"
 import UnderConstruction from "@/components/ui/UnderConstruction"
+import PreferencesPage from "@/features/preferences/pages/PreferencesPage"
 
 export const router = createBrowserRouter([
   {
@@ -32,6 +33,8 @@ export const router = createBrowserRouter([
       { path: "meets", element: <UnderConstruction /> },
       { path: "ask-ai", element: <UnderConstruction /> },
       { path: "chats", element: <UnderConstruction /> },
+      { path: "preferences", element: <PreferencesPage /> },
+      { path: "settings", element: <PreferencesPage /> },
     ]
   },
   { path: "*", element: <Navigate to="/auth/login" replace /> },

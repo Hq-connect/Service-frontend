@@ -43,9 +43,9 @@ function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelec
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-[240px] bg-[#f8f9fa] border-r border-[#eef0f2] shrink-0 z-20 animate-in fade-in slide-in-from-left-4 duration-150">
+    <aside className="hidden md:flex flex-col w-[240px] bg-muted/20 border-r border-border shrink-0 z-20 animate-in fade-in slide-in-from-left-4 duration-150">
       {/* Tenant Name Selector */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-[#eef0f2] gap-2">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-border gap-2">
         <span className="text-sm font-bold text-foreground truncate select-none">
           {tenantName || "Hq"}
         </span>

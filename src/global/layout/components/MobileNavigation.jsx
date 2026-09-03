@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { 
-  Menu, Plus, User, Settings, LogOut 
+  Menu, User, Settings, LogOut 
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader, SheetDescription } from "@/components/ui/sheet";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -120,11 +120,15 @@ function MobileNavigation({
                 <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-                <User className="size-4" /> Profile Settings
+              <DropdownMenuItem asChild>
+                <Link to="/preferences" className="cursor-pointer flex items-center gap-2 w-full">
+                  <User className="size-4" /> Profile Settings
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-                <Settings className="size-4" /> Preferences
+              <DropdownMenuItem asChild>
+                <Link to="/preferences" className="cursor-pointer flex items-center gap-2 w-full">
+                  <Settings className="size-4" /> Preferences
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 

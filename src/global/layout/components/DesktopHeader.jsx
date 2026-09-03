@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { 
   LayoutGrid, Search, Smartphone, Calendar, Bell, User, Settings, LogOut 
 } from "lucide-react";
@@ -13,43 +14,43 @@ import {
 
 function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle }) {
   return (
-    <header className="hidden md:flex items-center justify-between h-16 border-b border-[#eef0f2] px-6 select-none bg-white shrink-0">
+    <header className="hidden md:flex items-center justify-between h-16 border-b border-border px-6 select-none bg-background shrink-0">
       {/* Left: View title */}
       <div className="flex items-center gap-2">
-        <LayoutGrid className="size-[18px] text-gray-500" />
-        <span className="font-semibold text-gray-800 text-sm">All spaces</span>
+        <LayoutGrid className="size-[18px] text-muted-foreground" />
+        <span className="font-semibold text-foreground text-sm">All spaces</span>
       </div>
 
       {/* Middle: Search bar */}
       <div className="relative w-96">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <input 
           type="text" 
           placeholder="Search" 
-          className="w-full pl-9 pr-4 py-1.5 text-sm bg-[#f1f3f5] text-gray-800 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#00c2ff]/30 transition-all border-none"
+          className="w-full pl-9 pr-4 py-1.5 text-sm bg-muted text-foreground placeholder:text-muted-foreground rounded-lg focus:outline-hidden focus:ring-1 focus:ring-primary/40 transition-all border-none"
         />
       </div>
 
       {/* Right: Quick actions and user avatar */}
       <div className="flex items-center gap-4">
-        <button className="text-gray-500 hover:text-gray-800 cursor-pointer">
+        <button className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
           <Smartphone className="size-5" />
         </button>
-        <button className="text-gray-500 hover:text-gray-800 cursor-pointer">
+        <button className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
           <Calendar className="size-5" />
         </button>
         <div className="relative">
-          <button className="text-gray-500 hover:text-gray-800 cursor-pointer">
+          <button className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
             <Bell className="size-5" />
           </button>
-          <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 rounded-full bg-[#f23c3c] text-white text-[7px] font-bold flex items-center justify-center ring-2 ring-white">
+          <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 rounded-full bg-[#f23c3c] text-white text-[7px] font-bold flex items-center justify-center ring-2 ring-background">
             23
           </span>
         </div>
         
         <DropdownMenu>
           <DropdownMenuTrigger className="focus:outline-hidden cursor-pointer group rounded-full">
-            <Avatar className="size-8 ring-2 ring-transparent group-hover:ring-[#00c2ff]/20 transition-all duration-200">
+            <Avatar className="size-8 ring-2 ring-transparent group-hover:ring-primary/40 transition-all duration-200">
               {user?.avatar && <AvatarImage src={user.avatar} alt={getUserName(user)} />}
               <AvatarFallback 
                 style={getAvatarStyle(user)} 
@@ -65,11 +66,15 @@ function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle 
               <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-              <User className="size-4" /> Profile Settings
+            <DropdownMenuItem asChild>
+              <Link to="/preferences" className="cursor-pointer flex items-center gap-2 w-full">
+                <User className="size-4" /> Profile Settings
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-              <Settings className="size-4" /> Preferences
+            <DropdownMenuItem asChild>
+              <Link to="/preferences" className="cursor-pointer flex items-center gap-2 w-full">
+                <Settings className="size-4" /> Preferences
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 

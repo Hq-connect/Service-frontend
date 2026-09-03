@@ -112,7 +112,7 @@ function AppLayout() {
         />
 
         {/* Dynamic Nested Viewport */}
-        <main className="flex-1 min-w-0 bg-[#ffffff] overflow-y-auto px-4 md:px-8 py-6 mt-14 md:mt-0 mb-16 md:mb-0">
+        <main className="flex-1 min-w-0 bg-background text-foreground overflow-y-auto px-4 md:px-8 py-6 mt-14 md:mt-0 mb-16 md:mb-0">
           <Outlet />
         </main>
       </div>

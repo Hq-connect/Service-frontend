@@ -4,8 +4,9 @@ import './index.css'
 import App from './app/App.jsx'
 import { Provider } from 'react-redux'
 import { store } from './app/store/store.js'
-import { QueryClient,QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from './components/ui/sonner.jsx'
+import { AppearanceProvider } from './global/theme/AppearanceProvider.jsx'
 
 const queryClient = new QueryClient();
 
@@ -13,8 +14,10 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <App />
-        <Toaster richColors position="top-right" />
+        <AppearanceProvider>
+          <App />
+          <Toaster richColors position="top-right" />
+        </AppearanceProvider>
       </QueryClientProvider>
     </Provider>
   </StrictMode>,
