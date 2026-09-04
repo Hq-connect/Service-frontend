@@ -80,10 +80,10 @@ export const SECONDARY_NAV_DATA = {
   "/chats": {
     title: "Chats",
     items: [
-      { label: "Direct Messages", icon: MessageCircle, count: 5 },
-      { label: "Channels", icon: Hash, count: 3 },
-      { label: "Group Chats", icon: Users, count: 2 },
-      { label: "Muted", icon: BellOff }
+      { label: "Direct Messages", icon: MessageCircle, count: 5, path: "/chats/dm" },
+      { label: "Channels",        icon: Hash,          count: 3, path: "/chats/channel" },
+      { label: "Group Chats",     icon: Users,          count: 2, path: "/chats/group" },
+      { label: "Muted",           icon: BellOff,                  path: "/chats/muted" },
     ]
   }
 };

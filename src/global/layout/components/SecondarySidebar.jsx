@@ -1,25 +1,33 @@
 import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelectedSpaceIdx }) {
+  const location = useLocation();
+
   const renderSecondaryItems = () => {
     return (
       <div className="flex flex-col gap-0.5 p-2">
         {secondaryNav.items.map((item, idx) => {
           const Icon = item.icon;
-          const isSelected = selectedSpaceIdx === idx;
-          return (
-            <button
-              key={idx}
-              onClick={() => setSelectedSpaceIdx(idx)}
-              className={`flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 group cursor-pointer ${
-                isSelected 
-                  ? "bg-accent/80 text-foreground" 
-                  : "text-foreground/80 hover:bg-accent/40 hover:text-foreground"
-              }`}
-            >
+
+          // If the item has a path, use a Link and derive active from URL
+          const isActive = item.path
+            ? location.pathname.startsWith(item.path)
+            : selectedSpaceIdx === idx;
+
+          const baseClass = cn(
+            "flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 group cursor-pointer",
+            isActive
+              ? "bg-accent/80 text-foreground"
+              : "text-foreground/80 hover:bg-accent/40 hover:text-foreground"
+          );
+
+          const content = (
+            <>
               <div className="flex items-center gap-3">
                 {typeof Icon === "string" ? (
-                  <span 
+                  <span
                     className="flex items-center justify-center size-5 text-[10px] font-bold text-white rounded-md shadow-xs shrink-0 select-none"
                     style={{ backgroundColor: item.color || "#00c2ff" }}
                   >
@@ -35,6 +43,20 @@ function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelec
                   {item.count}
                 </span>
               )}
+            </>
+          );
+
+          return item.path ? (
+            <Link key={idx} to={item.path} className={baseClass}>
+              {content}
+            </Link>
+          ) : (
+            <button
+              key={idx}
+              onClick={() => setSelectedSpaceIdx(idx)}
+              className={baseClass}
+            >
+              {content}
             </button>
           );
         })}
@@ -66,3 +88,4 @@ function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelec
 }
 
 export default SecondarySidebar;
+

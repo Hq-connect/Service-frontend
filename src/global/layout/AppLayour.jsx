@@ -20,7 +20,12 @@ function AppLayout() {
 
   // Normalize pathname (e.g. "/" goes to "/home")
   const currentPath = location.pathname === "/" ? "/home" : location.pathname;
-  const secondaryNav = SECONDARY_NAV_DATA[currentPath] || SECONDARY_NAV_DATA["/home"];
+  // For secondary nav lookup, use the base route segment (e.g. /chats/dm/xxx -> /chats)
+  const navLookupPath = `/${currentPath.split("/")[1]}`;
+  const secondaryNav = SECONDARY_NAV_DATA[navLookupPath] || SECONDARY_NAV_DATA["/home"];
+
+  // Chat routes need full-height with no padding/scroll so ChatLayout can manage its own layout
+  const isChatsRoute = currentPath.startsWith("/chats");
 
   // Helper to extract the actual user object if it is nested or wrapped in API response
   const extractUser = (u) => {
@@ -67,7 +72,7 @@ function AppLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background font-sans">
+    <div className="flex h-screen h-[100dvh] w-screen overflow-hidden bg-background font-sans">
       {/* 1. Desktop Leftmost Primary Sidebar (Dark Theme) */}
       <PrimarySidebar 
         currentPath={currentPath}
@@ -112,7 +117,11 @@ function AppLayout() {
         />
 
         {/* Dynamic Nested Viewport */}
-        <main className="flex-1 min-w-0 bg-[#ffffff] overflow-y-auto px-4 md:px-8 py-6 mt-14 md:mt-0 mb-16 md:mb-0">
+        <main className={`flex-1 min-w-0 mt-14 md:mt-0 mb-16 md:mb-0 ${
+          isChatsRoute
+            ? "flex flex-col overflow-hidden"
+            : "bg-background overflow-y-auto px-4 md:px-8 py-6"
+        }`}>
           <Outlet />
         </main>
       </div>
