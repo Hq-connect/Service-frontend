@@ -48,7 +48,8 @@ function MessageItem({
 }) {
   const isOwn =
     message.senderId === currentUserId ||
-    message.senderId?._id === currentUserId;
+    message.senderId?._id === currentUserId ||
+    message.senderId?.userId === currentUserId;
   const isDeleted = !!message.deletedAt;
 
   const { scrollToMessage } = useMessageScroller();
@@ -116,10 +117,13 @@ function MessageItem({
   }, [showMobileToolbar]);
 
   const displayName =
+    senderInfo.userSnapshot?.name ||
     senderInfo.name ||
     `${senderInfo.firstName ?? ""} ${senderInfo.lastName ?? ""}`.trim() ||
     senderInfo.email ||
     "Unknown";
+
+  const avatarUrl = senderInfo.userSnapshot?.avatar || senderInfo.avatar;
 
   const initials = displayName
     .split(" ")
@@ -174,8 +178,8 @@ function MessageItem({
         {!isOwn && (
           <MessageAvatar>
             <Avatar className="size-8">
-              {senderInfo.avatar && (
-                <AvatarImage src={senderInfo.avatar} alt={displayName} />
+              {avatarUrl && (
+                <AvatarImage src={avatarUrl} alt={displayName} />
               )}
               <AvatarFallback style={avatarStyle} className="text-xs font-semibold">
                 {initials}

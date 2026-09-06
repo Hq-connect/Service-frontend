@@ -32,6 +32,7 @@ function MessageList({
   chatType = "dm",
   currentUserId,
   otherUser,
+  groupMembers = [],
   typingUsers = [],
   onReply,
   onEdit,
@@ -114,6 +115,23 @@ function MessageList({
                 senderInfo = message.senderId;
               } else if (otherUser && (message.senderId === otherUser.userId || message.senderId === otherUser.id)) {
                 senderInfo = otherUser;
+              } else if (chatType === "group" && groupMembers.length > 0) {
+                const found = groupMembers.find(
+                  (m) =>
+                    m.userId === message.senderId ||
+                    m._id === message.senderId ||
+                    m.id === message.senderId ||
+                    m.userSnapshot?._id === message.senderId
+                );
+                if (found) {
+                  senderInfo = {
+                    name: found.userSnapshot?.name || found.name || found.email,
+                    avatar: found.userSnapshot?.avatar || found.avatar,
+                    userId: found.userId || found._id,
+                    userSnapshot: found.userSnapshot,
+                    ...found,
+                  };
+                }
               }
 
               return (

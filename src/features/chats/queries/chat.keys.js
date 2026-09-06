@@ -17,4 +17,10 @@ export const chatKeys = {
     "messages",
     chatId,
   ],
+
+  members: (chatId) => [
+    ...chatKeys.all,
+    "members",
+    chatId,
+  ],
 };
