@@ -196,3 +196,35 @@ export const getFileTypeConfig = (name = "", mimeType = "", type = "", url = "")
     displayName,
   };
 };
+
+export const getLastMessageInfo = (lastMessage) => {
+  if (!lastMessage) return { text: "No messages yet", icon: null, iconColor: "" };
+  if (lastMessage.deletedAt) return { text: "This message was deleted.", icon: null, iconColor: "" };
+
+  const content = lastMessage.content;
+  if (typeof content === "string") {
+    return { text: content.trim() || "No messages yet", icon: null, iconColor: "" };
+  }
+
+  const text = content?.text?.trim();
+  if (text) return { text, icon: null, iconColor: "" };
+
+  const attachments = content?.attachments || [];
+  if (attachments.length > 0) {
+    const first = attachments[0];
+    const config = getFileTypeConfig(first.name, first.mimeType, first.type, first.url);
+
+    if (config.category === "image") {
+      return { text: "Photo", icon: config.icon, iconColor: config.iconColor };
+    }
+    if (config.category === "video") {
+      return { text: "Video", icon: config.icon, iconColor: config.iconColor };
+    }
+    if (config.category === "audio") {
+      return { text: "Audio Track", icon: config.icon, iconColor: config.iconColor };
+    }
+    return { text: config.displayName, icon: config.icon, iconColor: config.iconColor };
+  }
+
+  return { text: "No messages yet", icon: null, iconColor: "" };
+};
