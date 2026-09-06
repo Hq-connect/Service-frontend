@@ -1,12 +1,20 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import dmService from "../services/dm.service";
 import { chatKeys } from "../queries/chat.keys";
+import groupService from "../services/group.service";
 
 export const useMessages = (type="dm", chatId, limit=30) => {
     const getMessages = async ({ pageParam }) => {
         switch (type) {
         case "dm":
             return dmService.getMessages(
+                chatId,
+                limit,
+                pageParam
+            );
+        
+        case "group":
+            return groupService.getMessages(
                 chatId,
                 limit,
                 pageParam
