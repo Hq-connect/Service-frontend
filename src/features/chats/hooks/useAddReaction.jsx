@@ -3,6 +3,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import dmService from "../services/dm.service";
+import groupService from "../services/group.service";
 import { chatKeys } from "../queries/chat.keys";
 
 export const useAddReaction = (type="dm") => {
@@ -14,6 +15,12 @@ export const useAddReaction = (type="dm") => {
         switch (type) {
         case "dm":
             return dmService.addReaction(
+                messageId,
+                emoji
+            );
+
+        case "group":
+            return groupService.addReaction(
                 messageId,
                 emoji
             );
