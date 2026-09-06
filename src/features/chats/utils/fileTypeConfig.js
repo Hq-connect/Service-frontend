@@ -9,6 +9,7 @@ import {
   File,
   FileSpreadsheet,
   FileCode2,
+  Globe,
 } from "lucide-react";
 
 export const getFileTypeConfig = (name = "", mimeType = "", type = "", url = "") => {
@@ -224,6 +225,14 @@ export const getLastMessageInfo = (lastMessage) => {
       return { text: "Audio Track", icon: config.icon, iconColor: config.iconColor };
     }
     return { text: config.displayName, icon: config.icon, iconColor: config.iconColor };
+  }
+
+  if (content?.linkPreview) {
+    return {
+      text: content.linkPreview.title || content.linkPreview.hostname || "Link",
+      icon: Globe,
+      iconColor: "text-blue-500",
+    };
   }
 
   return { text: "No messages yet", icon: null, iconColor: "" };

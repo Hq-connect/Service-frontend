@@ -15,6 +15,13 @@ const mediaService = {
 
     return response.data.data.attachments;
   },
+
+  fetchLinkPreview: async (url) => {
+    const response = await api.get("/chats/media/link-preview", {
+      params: { url },
+    });
+    return response.data.data;
+  },
 };
 
 export default mediaService;

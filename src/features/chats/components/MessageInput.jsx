@@ -1,14 +1,15 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Paperclip, SendHorizonal, Smile, X, FileText, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Paperclip, SendHorizonal, Smile, X, FileText, Image as ImageIcon, Loader2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadMedia } from "../hooks/useUploadMedia";
 import { getFileTypeConfig } from "../utils/fileTypeConfig";
+import mediaService from "../services/media.service";
 
 /**
- * Message composition input with auto-grow textarea, file attachments, and reply-to banner.
- * @param {Function} onSend - Called with { text, attachments, replyTo }
+ * Message composition input with auto-grow textarea, file attachments, reply-to banner, and live link preview.
+ * @param {Function} onSend - Called with { text, attachments, replyTo, linkPreview }
  * @param {object|null} replyTo - Message being replied to
  * @param {Function} onCancelReply
  * @param {boolean} disabled
@@ -17,10 +18,50 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
   const [text, setText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [linkPreview, setLinkPreview] = useState(null);
+  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
+  const [dismissedUrl, setDismissedUrl] = useState(null);
+
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
   const { mutateAsync: uploadFiles, isPending: isUploading } = useUploadMedia();
+
+  // URL Detection & Link Preview fetch
+  useEffect(() => {
+    const urlRegex = /(https?:\/\/[^\s]+)/i;
+    const match = text.match(urlRegex);
+
+    if (!match) {
+      setLinkPreview(null);
+      return;
+    }
+
+    const detectedUrl = match[0];
+    if (detectedUrl === dismissedUrl) return;
+    if (linkPreview?.url === detectedUrl) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        setIsFetchingPreview(true);
+        const data = await mediaService.fetchLinkPreview(detectedUrl);
+        setLinkPreview(data);
+      } catch (err) {
+        console.error("Failed to fetch link preview:", err);
+      } finally {
+        setIsFetchingPreview(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [text, dismissedUrl, linkPreview]);
+
+  const handleDismissLinkPreview = () => {
+    if (linkPreview) {
+      setDismissedUrl(linkPreview.url);
+    }
+    setLinkPreview(null);
+  };
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -48,16 +89,19 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
         text: trimmedText,
         attachments,
         replyTo: replyTo?._id ?? null,
+        linkPreview: linkPreview || null,
       });
 
       setText("");
       setSelectedFiles([]);
+      setLinkPreview(null);
+      setDismissedUrl(null);
       setShowEmojiPicker(false);
       textareaRef.current?.focus();
     } catch (err) {
       console.error("Failed to upload attachments / send message:", err);
     }
-  }, [text, selectedFiles, disabled, isUploading, uploadFiles, onSend, replyTo]);
+  }, [text, selectedFiles, disabled, isUploading, uploadFiles, onSend, replyTo, linkPreview]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -189,6 +233,50 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
           })}
         </div>
       )}
+
+      {/* Live Link Preview Card */}
+      {isFetchingPreview ? (
+        <div className="flex items-center gap-2 mb-2 p-2 bg-muted/40 rounded-lg border border-border text-xs animate-pulse">
+          <Loader2 className="size-4 animate-spin text-primary" />
+          <span className="text-muted-foreground text-[11px]">Fetching link preview...</span>
+        </div>
+      ) : linkPreview ? (
+        <div className="relative group flex items-center gap-3 mb-2 p-2.5 bg-background rounded-xl border border-primary/40 shadow-xs max-w-full">
+          {linkPreview.image ? (
+            <img
+              src={linkPreview.image}
+              alt={linkPreview.title}
+              className="size-11 object-cover rounded-lg shrink-0 border border-border"
+              onError={(e) => (e.target.style.display = "none")}
+            />
+          ) : (
+            <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Globe className="size-5 text-primary" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0 pr-2">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              {linkPreview.favicon && (
+                <img src={linkPreview.favicon} alt="" className="size-3 rounded-full shrink-0" />
+              )}
+              <span className="font-semibold uppercase tracking-wider text-primary truncate">{linkPreview.siteName || linkPreview.hostname}</span>
+            </div>
+            <p className="font-semibold text-foreground truncate text-xs mt-0.5">{linkPreview.title}</p>
+            {linkPreview.description && (
+              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{linkPreview.description}</p>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={handleDismissLinkPreview}
+            className="size-6 text-muted-foreground hover:text-foreground shrink-0"
+          >
+            <X className="size-3.5" />
+          </Button>
+        </div>
+      ) : null}
 
       {/* Input area */}
       <div

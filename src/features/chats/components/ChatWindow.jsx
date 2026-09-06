@@ -65,9 +65,17 @@ function ChatWindow({ chatId, chatType, chat }) {
     );
   }
 
-  const handleSend = ({ text, attachments = [], replyTo: replyToId }) => {
+  const handleSend = ({ text, attachments = [], replyTo: replyToId, linkPreview = null }) => {
     const isNew = chatId?.startsWith("new-");
-    const contentPayload = attachments.length > 0 ? { text, attachments } : text;
+    let contentPayload = text;
+    if (attachments.length > 0 || linkPreview) {
+      contentPayload = {
+        text: text || null,
+        attachments: attachments || [],
+        ...(linkPreview && { linkPreview }),
+      };
+    }
+
     sendMessage(
       {
         chatId: isNew ? null : chatId,

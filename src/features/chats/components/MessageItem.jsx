@@ -13,12 +13,13 @@ import {
 } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Reply, FileText, Image, Film, Volume2 } from "lucide-react";
+import { Reply, FileText, Image, Film, Volume2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MessageActions from "./MessageActions";
 import { useMessageScroller } from "@/components/ui/message-scroller";
 import FileViewerModal from "./FileViewerModal";
 import { getFileTypeConfig } from "../utils/fileTypeConfig";
+import mediaService from "../services/media.service";
 
 const ATTACHMENT_ICONS = {
   image: Image,
@@ -75,6 +76,35 @@ function MessageItem({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMobileToolbar, setShowMobileToolbar] = useState(false);
   const [viewerAttachment, setViewerAttachment] = useState(null);
+  const [autoLinkPreview, setAutoLinkPreview] = useState(null);
+
+  // Auto-fetch link preview fallback if text contains a URL and no linkPreview is attached
+  React.useEffect(() => {
+    if (message.content?.linkPreview) return;
+    const text = message.content?.text;
+    if (!text) return;
+
+    const urlRegex = /(https?:\/\/[^\s]+)/i;
+    const match = text.match(urlRegex);
+    if (!match) return;
+
+    const url = match[0];
+    let isMounted = true;
+    mediaService
+      .fetchLinkPreview(url)
+      .then((data) => {
+        if (isMounted && data) {
+          setAutoLinkPreview(data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [message.content?.linkPreview, message.content?.text]);
+
+  const activeLinkPreview = message.content?.linkPreview || autoLinkPreview;
 
   const timerRef = useRef(null);
   const isLongPressRef = useRef(false);
@@ -242,7 +272,7 @@ function MessageItem({
 
             {/* Bubble - overridden with max-w-full to prevent circular percentage collapse */}
             <Bubble 
-              variant={isOwn ? "default" : "outline"} 
+              variant={isOwn ? ((message.content?.text || activeLinkPreview) ? "default" : "ghost") : ((message.content?.text || activeLinkPreview) ? "outline" : "ghost")} 
               className={cn(
                 "max-w-full transition-all duration-500",
                 isHighlighted && (isOwn 
@@ -350,8 +380,61 @@ function MessageItem({
                   </div>
                 </div>
               ) : (
-                message.content?.text && (
-                  <BubbleContent>{message.content.text}</BubbleContent>
+                Boolean(message.content?.text || activeLinkPreview) && (
+                  <BubbleContent className={cn("flex flex-col gap-2 p-3", activeLinkPreview && "w-[340px] max-w-full")}>
+                    {message.content?.text && (
+                      <p className="text-sm leading-relaxed break-all select-text">{message.content.text}</p>
+                    )}
+                    {/* Rich Link Preview Card */}
+                    {activeLinkPreview && (
+                      <a
+                        href={activeLinkPreview.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn(
+                          "block w-full rounded-lg overflow-hidden border transition-all duration-200 shadow-xs group/link text-left mt-1",
+                          isOwn
+                            ? "bg-black/20 hover:bg-black/30 border-white/20 text-primary-foreground"
+                            : "bg-muted/50 hover:bg-muted/80 border-border/80 text-foreground"
+                        )}
+                      >
+                        {activeLinkPreview.image && (
+                          <div className="w-full h-36 overflow-hidden bg-black/20 relative">
+                            <img
+                              src={activeLinkPreview.image}
+                              alt={activeLinkPreview.title}
+                              className="w-full h-full object-cover group-hover/link:scale-105 transition-transform duration-300"
+                              onError={(e) => (e.target.parentElement.style.display = "none")}
+                            />
+                          </div>
+                        )}
+                        <div className="p-2.5">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider truncate opacity-90">
+                              {activeLinkPreview.favicon && (
+                                <img
+                                  src={activeLinkPreview.favicon}
+                                  alt=""
+                                  className="size-3.5 rounded-full shrink-0"
+                                />
+                              )}
+                              <span className="truncate">{activeLinkPreview.siteName || activeLinkPreview.hostname}</span>
+                            </div>
+                            <ExternalLink className="size-3.5 opacity-60 group-hover/link:opacity-100 transition-opacity shrink-0" />
+                          </div>
+                          <p className="font-semibold text-xs leading-snug line-clamp-2">
+                            {activeLinkPreview.title}
+                          </p>
+                          {activeLinkPreview.description && (
+                            <p className="text-[11px] opacity-80 line-clamp-2 mt-1 leading-normal">
+                              {activeLinkPreview.description}
+                            </p>
+                          )}
+                        </div>
+                      </a>
+                    )}
+                  </BubbleContent>
                 )
               )}
 
