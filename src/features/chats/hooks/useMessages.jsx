@@ -14,7 +14,7 @@ export const useMessages = (type="dm", chatId, limit=30) => {
             );
         
         case "group":
-            return groupService.getMessages(
+            return groupService.getGroupMessages(
                 chatId,
                 limit,
                 pageParam
