@@ -43,10 +43,11 @@ const groupService = {
         });
         return response.data.data.groupChat;
     },
-    sendMessage: async (chatId, text, replyTo=null) => {
+    sendMessage: async (chatId, content, replyTo=null) => {
+        const formattedContent = typeof content === "object" && content !== null ? content : { text: content };
         const payload = {
             chatId,
-            content: { text },
+            content: formattedContent,
             replyTo,
         };
         const response = await api.post("/chats/group/message", payload);

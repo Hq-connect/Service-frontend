@@ -1,12 +1,13 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Paperclip, SendHorizonal, Smile, X } from "lucide-react";
+import { Paperclip, SendHorizonal, Smile, X, FileText, Image as ImageIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUploadMedia } from "../hooks/useUploadMedia";
 
 /**
- * Message composition input with auto-grow textarea, attachment, and reply-to banner.
- * @param {Function} onSend - Called with { text, replyTo }
+ * Message composition input with auto-grow textarea, file attachments, and reply-to banner.
+ * @param {Function} onSend - Called with { text, attachments, replyTo }
  * @param {object|null} replyTo - Message being replied to
  * @param {Function} onCancelReply
  * @param {boolean} disabled
@@ -14,16 +15,48 @@ import { cn } from "@/lib/utils";
 function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false }) {
   const [text, setText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
-  const handleSend = useCallback(() => {
-    const trimmed = text.trim();
-    if (!trimmed || disabled) return;
-    onSend?.({ text: trimmed, replyTo: replyTo?._id ?? null });
-    setText("");
-    setShowEmojiPicker(false);
-    textareaRef.current?.focus();
-  }, [text, disabled, onSend, replyTo]);
+  const { mutateAsync: uploadFiles, isPending: isUploading } = useUploadMedia();
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles((prev) => [...prev, ...filesArray]);
+      e.target.value = null; // Reset input so same file can be chosen again
+    }
+  };
+
+  const removeFile = (indexToRemove) => {
+    setSelectedFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleSend = useCallback(async () => {
+    const trimmedText = text.trim();
+    if ((!trimmedText && selectedFiles.length === 0) || disabled || isUploading) return;
+
+    try {
+      let attachments = [];
+      if (selectedFiles.length > 0) {
+        attachments = await uploadFiles(selectedFiles);
+      }
+
+      onSend?.({
+        text: trimmedText,
+        attachments,
+        replyTo: replyTo?._id ?? null,
+      });
+
+      setText("");
+      setSelectedFiles([]);
+      setShowEmojiPicker(false);
+      textareaRef.current?.focus();
+    } catch (err) {
+      console.error("Failed to upload attachments / send message:", err);
+    }
+  }, [text, selectedFiles, disabled, isUploading, uploadFiles, onSend, replyTo]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -43,8 +76,19 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
 
   const replyPreviewText = replyTo?.content?.text ?? "Attachment";
 
+  const isSendDisabled = disabled || isUploading || (!text.trim() && selectedFiles.length === 0);
+
   return (
     <div className="px-4 pb-4 pt-2 shrink-0">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        multiple
+        className="hidden"
+      />
+
       {/* Reply-to banner */}
       {replyTo && (
         <div className="flex items-center gap-2 mb-2 px-3 py-1.5 bg-muted rounded-lg border-l-2 border-primary">
@@ -91,6 +135,48 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
         </div>
       )}
 
+      {/* Pending File Attachments Preview Chips */}
+      {selectedFiles.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2 p-2 bg-muted/30 rounded-lg border border-border/60 max-h-28 overflow-y-auto">
+          {selectedFiles.map((file, idx) => {
+            const isImage = file.type.startsWith("image/");
+            const previewUrl = isImage ? URL.createObjectURL(file) : null;
+            const sizeKb = (file.size / 1024).toFixed(0);
+
+            return (
+              <div
+                key={idx}
+                className="relative group flex items-center gap-2 p-1.5 bg-background rounded-md border border-border text-xs max-w-[200px]"
+              >
+                {isImage && previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt={file.name}
+                    className="size-8 object-cover rounded shrink-0 border border-border"
+                  />
+                ) : (
+                  <FileText className="size-5 text-primary shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground truncate text-[11px]">
+                    {file.name}
+                  </p>
+                  <p className="text-[9px] text-muted-foreground">{sizeKb} KB</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeFile(idx)}
+                  disabled={isUploading}
+                  className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Input area */}
       <div
         className={cn(
@@ -98,11 +184,13 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
           "focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30"
         )}
       >
-        {/* Attachment */}
+        {/* Attachment Button */}
         <Button
+          type="button"
           variant="ghost"
           size="icon"
-          disabled={disabled}
+          disabled={disabled || isUploading}
+          onClick={() => fileInputRef.current?.click()}
           className="size-8 shrink-0 text-muted-foreground hover:text-foreground mb-0.5"
         >
           <Paperclip className="size-4" />
@@ -115,7 +203,7 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Write a message..."
-          disabled={disabled}
+          disabled={disabled || isUploading}
           rows={1}
           className={cn(
             "flex-1 min-h-[36px] max-h-[140px] resize-none border-0 shadow-none p-0 text-sm leading-relaxed",
@@ -125,9 +213,10 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
 
         {/* Emoji Selector */}
         <Button
+          type="button"
           variant="ghost"
           size="icon"
-          disabled={disabled}
+          disabled={disabled || isUploading}
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           className={cn(
             "size-8 shrink-0 mb-0.5 transition-colors",
@@ -139,12 +228,17 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
 
         {/* Send */}
         <Button
+          type="button"
           size="icon"
-          disabled={disabled || !text.trim()}
+          disabled={isSendDisabled}
           onClick={handleSend}
           className="size-8 shrink-0 mb-0.5"
         >
-          <SendHorizonal className="size-4" />
+          {isUploading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <SendHorizonal className="size-4" />
+          )}
         </Button>
       </div>
 

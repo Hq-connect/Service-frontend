@@ -291,26 +291,39 @@ function MessageItem({
 
               {/* Attachments */}
               {!isEditing && (message.content?.attachments ?? []).length > 0 && (
-                <div className="flex flex-col gap-1 px-3 pb-3 pt-1">
+                <div className="flex flex-col gap-1.5 px-3 pb-3 pt-1">
                   {message.content.attachments.map((att, idx) => {
                     const Icon = ATTACHMENT_ICONS[att.type] ?? FileText;
                     return att.type === "image" ? (
-                      <img
+                      <a
                         key={idx}
-                        src={att.url}
-                        alt={att.name ?? "attachment"}
-                        className="rounded-md max-w-[260px] max-h-[200px] object-cover border border-border/40"
-                      />
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block max-w-[260px] overflow-hidden rounded-md border border-border/40 hover:opacity-95 transition-opacity"
+                      >
+                        <img
+                          src={att.url}
+                          alt={att.name ?? "attachment"}
+                          className="w-full max-h-[200px] object-cover"
+                        />
+                      </a>
                     ) : (
-                      <div key={idx} className="flex items-center gap-2 p-2 rounded-md bg-muted/60 text-xs">
+                      <a
+                        key={idx}
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2 rounded-md bg-muted/60 hover:bg-muted/90 text-xs transition-colors cursor-pointer"
+                      >
                         <Icon className="size-4 text-muted-foreground shrink-0" />
-                        <span className="truncate">{att.name ?? att.type}</span>
+                        <span className="truncate font-medium">{att.name ?? att.type}</span>
                         {att.size && (
-                          <span className="text-muted-foreground ml-auto shrink-0">
-                            {(att.size / 1024).toFixed(0)} kb
+                          <span className="text-muted-foreground/80 text-[10px] ml-auto shrink-0">
+                            {(att.size / 1024).toFixed(0)} KB
                           </span>
                         )}
-                      </div>
+                      </a>
                     );
                   })}
                 </div>

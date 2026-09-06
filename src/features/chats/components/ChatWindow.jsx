@@ -65,12 +65,13 @@ function ChatWindow({ chatId, chatType, chat }) {
     );
   }
 
-  const handleSend = ({ text, replyTo: replyToId }) => {
+  const handleSend = ({ text, attachments = [], replyTo: replyToId }) => {
     const isNew = chatId?.startsWith("new-");
+    const contentPayload = attachments.length > 0 ? { text, attachments } : text;
     sendMessage(
       {
         chatId: isNew ? null : chatId,
-        content: text,
+        content: contentPayload,
         replyTo: replyToId,
         ...(chatType === "dm" && { recieverId: chat.otherUser?.userId }),
       },

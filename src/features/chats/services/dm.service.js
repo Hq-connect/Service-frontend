@@ -5,10 +5,11 @@ const dmService = {
         const response = await api.get("/chats/dm");
         return response.data.data.dms;
     },
-    sendMessage: async (chatId, recieverId, text , replyTo=null) => {
+    sendMessage: async (chatId, recieverId, content , replyTo=null) => {
+        const formattedContent = typeof content === "object" && content !== null ? content : { text: content };
         const payload = {
             recieverId,
-            content: { text },
+            content: formattedContent,
             replyTo,
         };
         if (chatId && !chatId.startsWith("new-")) {
