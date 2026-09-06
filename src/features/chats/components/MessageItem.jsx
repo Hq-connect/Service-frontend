@@ -17,6 +17,8 @@ import { Reply, FileText, Image, Film, Volume2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MessageActions from "./MessageActions";
 import { useMessageScroller } from "@/components/ui/message-scroller";
+import FileViewerModal from "./FileViewerModal";
+import { getFileTypeConfig } from "../utils/fileTypeConfig";
 
 const ATTACHMENT_ICONS = {
   image: Image,
@@ -67,11 +69,12 @@ function MessageItem({
     return () => window.removeEventListener("highlight-message", handleHighlight);
   }, [message._id]);
 
-  // Local editing states
+  // Local editing & viewer states
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.content?.text ?? "");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMobileToolbar, setShowMobileToolbar] = useState(false);
+  const [viewerAttachment, setViewerAttachment] = useState(null);
 
   const timerRef = useRef(null);
   const isLongPressRef = useRef(false);
@@ -248,6 +251,69 @@ function MessageItem({
                 )
               )}
             >
+              {/* Attachments FIRST */}
+              {!isEditing && (message.content?.attachments ?? []).length > 0 && (
+                <div className="flex flex-col gap-2 p-1.5 pb-1">
+                  {message.content.attachments.map((att, idx) => {
+                    const config = getFileTypeConfig(att.name, att.mimeType, att.type, att.url);
+                    const Icon = config.icon;
+
+                    return att.type === "image" ? (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewerAttachment(att);
+                        }}
+                        className="block max-w-[280px] overflow-hidden rounded-lg border border-border/40 hover:opacity-90 transition-opacity text-left cursor-pointer shadow-xs"
+                      >
+                        <img
+                          src={att.url}
+                          alt={config.displayName}
+                          className="w-full max-h-[220px] object-cover"
+                        />
+                      </button>
+                    ) : (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewerAttachment(att);
+                        }}
+                        className={cn(
+                          "flex items-center gap-3 p-2.5 rounded-xl text-xs transition-all duration-200 cursor-pointer text-left w-full shadow-xs group/att max-w-[320px]",
+                          config.borderAccent
+                        )}
+                      >
+                        <div className={cn("size-10 rounded-lg flex items-center justify-center shrink-0 shadow-xs transition-transform group-hover/att:scale-105", config.bgColor)}>
+                          <Icon className={cn("size-5", config.iconColor)} />
+                        </div>
+                        <div className="flex-1 min-w-0 pr-1">
+                          <p className="font-semibold text-foreground truncate text-xs leading-tight">
+                            {config.displayName}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground">
+                            <span>{config.subtext}</span>
+                            {att.size && (
+                              <>
+                                <span>·</span>
+                                <span>{(att.size / 1024).toFixed(0)} KB</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <span className={cn("px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider shrink-0 shadow-2xs", config.badgeColor)}>
+                          {config.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Message Text SECOND */}
               {isEditing ? (
                 <div className="flex flex-col gap-2 p-2 min-w-[240px]">
                   <textarea
@@ -287,46 +353,6 @@ function MessageItem({
                 message.content?.text && (
                   <BubbleContent>{message.content.text}</BubbleContent>
                 )
-              )}
-
-              {/* Attachments */}
-              {!isEditing && (message.content?.attachments ?? []).length > 0 && (
-                <div className="flex flex-col gap-1.5 px-3 pb-3 pt-1">
-                  {message.content.attachments.map((att, idx) => {
-                    const Icon = ATTACHMENT_ICONS[att.type] ?? FileText;
-                    return att.type === "image" ? (
-                      <a
-                        key={idx}
-                        href={att.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block max-w-[260px] overflow-hidden rounded-md border border-border/40 hover:opacity-95 transition-opacity"
-                      >
-                        <img
-                          src={att.url}
-                          alt={att.name ?? "attachment"}
-                          className="w-full max-h-[200px] object-cover"
-                        />
-                      </a>
-                    ) : (
-                      <a
-                        key={idx}
-                        href={att.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-2 rounded-md bg-muted/60 hover:bg-muted/90 text-xs transition-colors cursor-pointer"
-                      >
-                        <Icon className="size-4 text-muted-foreground shrink-0" />
-                        <span className="truncate font-medium">{att.name ?? att.type}</span>
-                        {att.size && (
-                          <span className="text-muted-foreground/80 text-[10px] ml-auto shrink-0">
-                            {(att.size / 1024).toFixed(0)} KB
-                          </span>
-                        )}
-                      </a>
-                    );
-                  })}
-                </div>
               )}
 
               {/* Reactions */}
@@ -394,6 +420,15 @@ function MessageItem({
           </MessageFooter>
         </MessageContent>
       </Message>
+
+      {/* In-app File Viewer Modal */}
+      <FileViewerModal
+        open={!!viewerAttachment}
+        onOpenChange={(open) => {
+          if (!open) setViewerAttachment(null);
+        }}
+        attachment={viewerAttachment}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, SendHorizonal, Smile, X, FileText, Image as ImageIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadMedia } from "../hooks/useUploadMedia";
+import { getFileTypeConfig } from "../utils/fileTypeConfig";
 
 /**
  * Message composition input with auto-grow textarea, file attachments, and reply-to banner.
@@ -142,11 +143,16 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
             const isImage = file.type.startsWith("image/");
             const previewUrl = isImage ? URL.createObjectURL(file) : null;
             const sizeKb = (file.size / 1024).toFixed(0);
+            const config = getFileTypeConfig(file.name, file.type, isImage ? "image" : "file", "");
+            const Icon = config.icon;
 
             return (
               <div
                 key={idx}
-                className="relative group flex items-center gap-2 p-1.5 bg-background rounded-md border border-border text-xs max-w-[200px]"
+                className={cn(
+                  "relative group flex items-center gap-2 p-1.5 rounded-lg text-xs max-w-[230px] transition-all shadow-2xs",
+                  config.borderAccent
+                )}
               >
                 {isImage && previewUrl ? (
                   <img
@@ -155,19 +161,26 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
                     className="size-8 object-cover rounded shrink-0 border border-border"
                   />
                 ) : (
-                  <FileText className="size-5 text-primary shrink-0" />
+                  <div className={cn("size-8 rounded-md flex items-center justify-center shrink-0 shadow-2xs", config.bgColor)}>
+                    <Icon className={cn("size-4", config.iconColor)} />
+                  </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate text-[11px]">
+                  <p className="font-semibold text-foreground truncate text-[11px] leading-tight">
                     {file.name}
                   </p>
-                  <p className="text-[9px] text-muted-foreground">{sizeKb} KB</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[9px] text-muted-foreground">{sizeKb} KB</span>
+                    <span className={cn("px-1 py-0.2 rounded text-[8px] font-extrabold uppercase tracking-wider", config.badgeColor)}>
+                      {config.label}
+                    </span>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => removeFile(idx)}
                   disabled={isUploading}
-                  className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
+                  className="text-muted-foreground hover:text-destructive transition-colors p-0.5 shrink-0"
                 >
                   <X className="size-3.5" />
                 </button>
