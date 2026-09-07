@@ -14,6 +14,8 @@ import useAuth from "@/features/auth/hooks/useAuth";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
+import { useGroupMembers } from "../hooks/useGroupMembers";
+
 /**
  * Right panel of the chat layout - header, messages, input.
  * Uses chat.slice for replyingTo and activeChatId instead of local state.
@@ -29,6 +31,9 @@ function ChatWindow({ chatId, chatType, chat }) {
 
   // State for message deletion confirmation Dialog
   const [messageToDelete, setMessageToDelete] = React.useState(null);
+
+  // Group members lookup (enabled only for group chats)
+  const { data: groupMembers = [] } = useGroupMembers(chatType === "group" ? chatId : null);
 
   // Global state from chat.slice
   const replyingTo = useSelector((state) => state.chat.replyingTo);
@@ -60,12 +65,21 @@ function ChatWindow({ chatId, chatType, chat }) {
     );
   }
 
-  const handleSend = ({ text, replyTo: replyToId }) => {
+  const handleSend = ({ text, attachments = [], replyTo: replyToId, linkPreview = null }) => {
     const isNew = chatId?.startsWith("new-");
+    let contentPayload = text;
+    if (attachments.length > 0 || linkPreview) {
+      contentPayload = {
+        text: text || null,
+        attachments: attachments || [],
+        ...(linkPreview && { linkPreview }),
+      };
+    }
+
     sendMessage(
       {
         chatId: isNew ? null : chatId,
-        content: text,
+        content: contentPayload,
         replyTo: replyToId,
         ...(chatType === "dm" && { recieverId: chat.otherUser?.userId }),
       },
@@ -114,6 +128,7 @@ function ChatWindow({ chatId, chatType, chat }) {
           chatType={chatType}
           currentUserId={currentUserId}
           otherUser={chat?.otherUser}
+          groupMembers={groupMembers}
           typingUsers={[]}
           onReply={handleReply}
           onEdit={handleEdit}
