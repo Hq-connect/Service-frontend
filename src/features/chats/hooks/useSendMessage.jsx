@@ -4,6 +4,7 @@ import {
 } from "@tanstack/react-query";
 import dmService from "../services/dm.service";
 import { chatKeys } from "../queries/chat.keys";
+import groupService from "../services/group.service";
 
 export const useSendMessage = (type="dm") => {
     const queryClient = useQueryClient();
@@ -12,6 +13,8 @@ export const useSendMessage = (type="dm") => {
         switch(type){
             case "dm":
                 return dmService.sendMessage(chatId, recieverId, content , replyTo);
+            case "group":
+                return groupService.sendMessage(chatId, content , replyTo);
             default:
                 throw new Error(`Unknown chat type: ${type}`);
         }

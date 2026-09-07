@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import OnlineIndicator from "../../components/OnlineIndicator";
+import { getLastMessageInfo } from "../../utils/fileTypeConfig";
 
 /**
  * List item for a Direct Message conversation.
@@ -28,9 +29,8 @@ function DMListItem({ chat }) {
     .join("")
     .toUpperCase() || "U";
 
-  const lastText = !chat.lastMessage?.deletedAt
-    ? chat.lastMessage?.content?.text ?? ""
-    : "This message was deleted.";
+  const lastInfo = getLastMessageInfo(chat.lastMessage);
+  const LastIcon = lastInfo.icon;
   const unread = chat.unreadCount ?? 0;
 
   const timeLabel = chat.updatedAt
@@ -92,9 +92,10 @@ function DMListItem({ chat }) {
           </span>
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-            {lastText || "No messages yet"}
-          </p>
+          <div className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground truncate max-w-[160px]">
+            {LastIcon && <LastIcon className={cn("size-3.5 shrink-0", lastInfo.iconColor)} />}
+            <span className="truncate">{lastInfo.text}</span>
+          </div>
           {unread > 0 && (
             <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
               {unread > 99 ? "99+" : unread}

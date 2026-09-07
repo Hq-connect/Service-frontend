@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, Plus } from "lucide-react";
 import ChatList from "./ChatList";
 import { useChats } from "../hooks/useChats";
 import { useUsers } from "@/global/hooks/useUsers";
 import useAuth from "@/features/auth/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import CreateGroupDialog from "../variants/group/CreateGroupDialog";
 
 function NewUserListItem({ user, onClick }) {
   const displayName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.name || user.email || "Workspace User";
@@ -62,6 +64,7 @@ function ChatSidebar({ activeType = "dm" }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const { data: chats = [], isLoading } = useChats(activeType);
 
   const { user } = useAuth();
@@ -102,54 +105,78 @@ function ChatSidebar({ activeType = "dm" }) {
     : [];
 
   return (
-    <aside className={`flex-col w-full md:w-[280px] md:min-w-[240px] border-r border-border bg-background shrink-0 overflow-hidden ${
-      chatId ? "hidden md:flex" : "flex"
-    }`}>
-      {/* Search */}
-      <div className="px-3 py-3 shrink-0 border-b border-border">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search..."
-            className="pl-8 h-8 text-sm bg-muted border-0 focus-visible:ring-1"
-          />
-        </div>
-      </div>
-
-      {/* Chat list */}
-      <div className="flex-1 overflow-y-auto flex flex-col gap-4 py-2">
-        <div>
-          {search && activeType === "dm" && (
-            <h3 className="px-3 pb-1.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-              Conversations
-            </h3>
-          )}
-          <ChatList type={activeType} chats={filtered} isLoading={isLoading} />
-        </div>
-
-        {activeType === "dm" && search && newUsersToDm.length > 0 && (
-          <div className="px-2">
-            <h3 className="px-3 pb-1.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-              Start a new DM
-            </h3>
-            <div className="flex flex-col gap-0.5">
-              {newUsersToDm.map((u) => (
-                <NewUserListItem
-                  key={u._id}
-                  user={u}
-                  onClick={() => {
-                    setSearch("");
-                    navigate(`/chats/dm/new-${u._id}`);
-                  }}
-                />
-              ))}
+    <>
+      <aside className={`flex-col w-full md:w-[280px] md:min-w-[240px] border-r border-border bg-background shrink-0 overflow-hidden ${
+        chatId ? "hidden md:flex" : "flex"
+      }`}>
+        {/* Header Search & Create Action */}
+        <div className="px-3 py-3 shrink-0 border-b border-border space-y-2">
+          {activeType === "group" && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                Groups
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCreateGroupOpen(true)}
+                className="h-7 px-2 text-xs font-medium text-primary hover:bg-primary/10 gap-1"
+              >
+                <Plus className="size-3.5" />
+                New Group
+              </Button>
             </div>
+          )}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search..."
+              className="pl-8 h-8 text-sm bg-muted border-0 focus-visible:ring-1"
+            />
           </div>
-        )}
-      </div>
-    </aside>
+        </div>
+
+        {/* Chat list */}
+        <div className="flex-1 overflow-y-auto flex flex-col gap-4 py-2">
+          <div>
+            {search && activeType === "dm" && (
+              <h3 className="px-3 pb-1.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                Conversations
+              </h3>
+            )}
+            <ChatList type={activeType} chats={filtered} isLoading={isLoading} />
+          </div>
+
+          {activeType === "dm" && search && newUsersToDm.length > 0 && (
+            <div className="px-2">
+              <h3 className="px-3 pb-1.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                Start a new DM
+              </h3>
+              <div className="flex flex-col gap-0.5">
+                {newUsersToDm.map((u) => (
+                  <NewUserListItem
+                    key={u._id}
+                    user={u}
+                    onClick={() => {
+                      setSearch("");
+                      navigate(`/chats/dm/new-${u._id}`);
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Create Group Dialog */}
+      <CreateGroupDialog
+        open={createGroupOpen}
+        onOpenChange={setCreateGroupOpen}
+      />
+    </>
   );
 }
 
