@@ -7,6 +7,7 @@ import AppLayout from "@/global/layout/AppLayour"
 import UnderConstruction from "@/components/ui/UnderConstruction"
 import ChatPage from "@/features/chats/pages/ChatPage"
 import MeetsPage from "@/features/meets/pages/MeetsPage"
+import MeetingRoomContainer from "@/features/meets/containers/MeetingRoomContainer"
 
 export const router = createBrowserRouter([
   {
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
       { path: "docs",   element: <UnderConstruction /> },
       { path: "files",  element: <UnderConstruction /> },
       { path: "meets",  element: <MeetsPage /> },
+      { path: "meets/room/:joinCode", element: <MeetingRoomContainer /> },
       { path: "ask-ai", element: <UnderConstruction /> },
 
       // Chat routes - type-scoped
@@ -43,6 +45,14 @@ export const router = createBrowserRouter([
       { path: "chats/channel",            element: <ChatPage chatType="channel" /> },
       { path: "chats/channel/:chatId",    element: <ChatPage chatType="channel" /> },
     ]
+  },
+  {
+    path: "/meets/room/:joinCode",
+    element: (
+      <ProtectedRoutes>
+        <MeetingRoomContainer />
+      </ProtectedRoutes>
+    ),
   },
   { path: "*", element: <Navigate to="/auth/login" replace /> },
 ])

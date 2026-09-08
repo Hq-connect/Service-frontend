@@ -49,6 +49,29 @@ export const MeetsPage = () => {
         }
     };
 
+    const handleCreateMeeting = async (payload) => {
+        const created = await createMeeting(payload);
+        if (payload.type === "instant" && created?.joinCode) {
+            navigate(`/meets/room/${created.joinCode}`);
+        }
+    };
+
+    const handleInstantMeeting = async () => {
+        try {
+            const created = await createMeeting({
+                title: "Instant Meeting",
+                type: "instant",
+                duration: 45,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+            });
+            if (created?.joinCode) {
+                navigate(`/meets/room/${created.joinCode}`);
+            }
+        } catch (err) {
+            // handled in hook
+        }
+    };
+
     // Filter meetings according to active tab & search query
     const filteredMeetings = meetings.filter((m) => {
         const matchesSearch =
@@ -93,6 +116,15 @@ export const MeetsPage = () => {
                         title="Refresh meetings"
                     >
                         <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                    </button>
+
+                    <button
+                        onClick={handleInstantMeeting}
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-white font-medium text-sm transition-all"
+                    >
+                        <Video className="w-4 h-4 text-emerald-400" />
+                        <span className="hidden sm:inline">Instant Meet</span>
                     </button>
 
                     <button
@@ -233,7 +265,7 @@ export const MeetsPage = () => {
             <CreateMeetingDialog
                 isOpen={createDialogOpen}
                 onClose={() => toggleCreateDialog(false)}
-                onSubmit={createMeeting}
+                onSubmit={handleCreateMeeting}
                 loading={loading}
             />
         </div>
