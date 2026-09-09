@@ -199,6 +199,75 @@ export const useSocketSetup = (enabled) => {
             }
         };
 
+        // LAST MESSAGE / CONVERSATION PREVIEW UPDATE VIA TENANT BROADCAST
+        const handleLastMessage = ({ chatId, type, lastMessage, updatedAt, isUpdate, isDelete }) => {
+            if (!chatId) return;
+            const targetType = type || "dm";
+
+            queryClient.setQueryData(chatKeys.list(targetType), (oldChats) => {
+                if (!oldChats || !Array.isArray(oldChats)) return oldChats;
+
+                let chatFound = false;
+                const updatedChats = oldChats.map((chat) => {
+                    const cId = chat.chatId || chat._id;
+                    if (cId === chatId) {
+                        chatFound = true;
+                        if (isDelete) {
+                            if (chat.lastMessage?._id === lastMessage?._id) {
+                                return {
+                                    ...chat,
+                                    lastMessage: {
+                                        ...chat.lastMessage,
+                                        deletedAt: lastMessage.deletedAt,
+                                    },
+                                };
+                            }
+                            return chat;
+                        }
+
+                        if (isUpdate) {
+                            if (chat.lastMessage?._id === lastMessage?._id) {
+                                return {
+                                    ...chat,
+                                    lastMessage: {
+                                        ...chat.lastMessage,
+                                        content: lastMessage.content,
+                                    },
+                                };
+                            }
+                            return chat;
+                        }
+
+                        // Monotonic check: only update if incoming message is newer or equal
+                        const incomingTime = new Date(updatedAt || lastMessage?.createdAt || Date.now()).getTime();
+                        const existingTime = new Date(chat.updatedAt || chat.lastMessage?.createdAt || 0).getTime();
+
+                        if (existingTime > incomingTime) {
+                            return chat;
+                        }
+
+                        return {
+                            ...chat,
+                            lastMessage: {
+                                ...chat.lastMessage,
+                                ...lastMessage,
+                            },
+                            updatedAt: updatedAt || lastMessage?.createdAt || new Date().toISOString(),
+                        };
+                    }
+                    return chat;
+                });
+
+                if (chatFound && !isUpdate && !isDelete) {
+                    return [...updatedChats].sort(
+                        (a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)
+                    );
+                }
+
+                return updatedChats;
+            });
+        };
+
         // REGISTER EVENTS
         socket.on("connect", handleConnect);
         socket.on("disconnect", handleDisconnect);
@@ -208,6 +277,7 @@ export const useSocketSetup = (enabled) => {
         socket.on("user:offline", handleUserOffline);
         socket.on("typing:started", handleTypingStarted);
         socket.on("typing:stopped", handleTypingStopped);
+        socket.on("chat:lastMessage", handleLastMessage);
         socket.on("message:receive", handleMessageReceive);
         socket.on("message:update", handleMessageUpdated);
         socket.on("message:updated", handleMessageUpdated);
@@ -225,6 +295,7 @@ export const useSocketSetup = (enabled) => {
             socket.off("user:offline", handleUserOffline);
             socket.off("typing:started", handleTypingStarted);
             socket.off("typing:stopped", handleTypingStopped);
+            socket.off("chat:lastMessage", handleLastMessage);
             socket.off("message:receive", handleMessageReceive);
             socket.off("message:update", handleMessageUpdated);
             socket.off("message:updated", handleMessageUpdated);
