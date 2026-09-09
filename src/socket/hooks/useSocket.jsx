@@ -205,7 +205,12 @@ export const useSocketSetup = (enabled) => {
             const targetType = type || "dm";
 
             queryClient.setQueryData(chatKeys.list(targetType), (oldChats) => {
-                if (!oldChats || !Array.isArray(oldChats)) return oldChats;
+                if (!oldChats || !Array.isArray(oldChats)) {
+                    queryClient.invalidateQueries({
+                        queryKey: chatKeys.list(targetType),
+                    });
+                    return oldChats;
+                }
 
                 let chatFound = false;
                 const updatedChats = oldChats.map((chat) => {
@@ -257,6 +262,14 @@ export const useSocketSetup = (enabled) => {
                     }
                     return chat;
                 });
+
+                // If this is a brand new chat not yet present in the sidebar list, refresh the chat list query
+                if (!chatFound && !isDelete) {
+                    queryClient.invalidateQueries({
+                        queryKey: chatKeys.list(targetType),
+                    });
+                    return oldChats;
+                }
 
                 if (chatFound && !isUpdate && !isDelete) {
                     return [...updatedChats].sort(
