@@ -4,10 +4,12 @@ import { useEffect } from "react";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./router/Router";
 import useAuth from "@/features/auth/hooks/useAuth";
+import { useSocketSetup } from "@/socket/hooks/useSocket";
 
 function App() {
   const { fetchTenant , loading: tenantLoading ,initialized } = useTenant();
-  const { getCurrentUser , loading: authLoading } = useAuth();
+  const { getCurrentUser , loading: authLoading , user } = useAuth();
+  useSocketSetup( initialized && !!user );
   useEffect(()=>{
     console.log("running...");
     fetchTenant();

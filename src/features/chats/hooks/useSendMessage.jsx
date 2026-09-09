@@ -22,13 +22,13 @@ export const useSendMessage = (type="dm") => {
 
     return useMutation({
         mutationFn: sendMessage,
-        onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({
-                queryKey: chatKeys.messages(
-                    type,
-                    variables.chatId
-                ),
-            });
+        onSuccess: (data, variables) => {
+            const targetChatId = variables.chatId || data?.chatId;
+            if (targetChatId) {
+                queryClient.invalidateQueries({
+                    queryKey: chatKeys.messages(type, targetChatId),
+                });
+            }
 
             queryClient.invalidateQueries({
                 queryKey: chatKeys.list(type),

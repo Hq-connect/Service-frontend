@@ -12,9 +12,18 @@ import mediaService from "../services/media.service";
  * @param {Function} onSend - Called with { text, attachments, replyTo, linkPreview }
  * @param {object|null} replyTo - Message being replied to
  * @param {Function} onCancelReply
+ * @param {Function} [onTyping] - Called when typing starts/continues
+ * @param {Function} [onStopTyping] - Called when typing stops
  * @param {boolean} disabled
  */
-function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false }) {
+function MessageInput({
+  onSend,
+  replyTo = null,
+  onCancelReply,
+  onTyping,
+  onStopTyping,
+  disabled = false,
+}) {
   const [text, setText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -85,6 +94,7 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
         attachments = await uploadFiles(selectedFiles);
       }
 
+      onStopTyping?.();
       onSend?.({
         text: trimmedText,
         attachments,
@@ -301,7 +311,15 @@ function MessageInput({ onSend, replyTo = null, onCancelReply, disabled = false 
         <Textarea
           ref={textareaRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            if (e.target.value.trim().length > 0) {
+              onTyping?.();
+            } else {
+              onStopTyping?.();
+            }
+          }}
+          onBlur={() => onStopTyping?.()}
           onKeyDown={handleKeyDown}
           placeholder="Write a message..."
           disabled={disabled || isUploading}
