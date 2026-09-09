@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 
 import { useGroupMembers } from "../hooks/useGroupMembers";
+import { useChatSocket } from "../hooks/useChatSocket";
 
 /**
  * Right panel of the chat layout - header, messages, input.
@@ -57,6 +58,15 @@ function ChatWindow({ chatId, chatType, chat }) {
   const currentUser = extractUser(user);
   const currentUserId = currentUser?._id ?? currentUser?.id;
 
+  // Real-time socket room join/leave and typing status
+  const { emitTyping, stopTyping, typingUserNames } = useChatSocket({
+    chatId,
+    chatType,
+    currentUserId,
+    otherUser: chat?.otherUser,
+    groupMembers,
+  });
+
   if (!chatId || !chat) {
     return (
       <div className="hidden md:flex flex-col flex-1 min-w-0 min-h-0 bg-background">
@@ -66,6 +76,7 @@ function ChatWindow({ chatId, chatType, chat }) {
   }
 
   const handleSend = ({ text, attachments = [], replyTo: replyToId, linkPreview = null }) => {
+    stopTyping();
     const isNew = chatId?.startsWith("new-");
     let contentPayload = text;
     if (attachments.length > 0 || linkPreview) {
@@ -129,7 +140,7 @@ function ChatWindow({ chatId, chatType, chat }) {
           currentUserId={currentUserId}
           otherUser={chat?.otherUser}
           groupMembers={groupMembers}
-          typingUsers={[]}
+          typingUsers={typingUserNames}
           onReply={handleReply}
           onEdit={handleEdit}
           onDelete={handleDelete}
@@ -137,11 +148,13 @@ function ChatWindow({ chatId, chatType, chat }) {
         />
       </div>
 
-      {/* Input - receives replyingTo from Redux */}
+      {/* Input - receives replyingTo from Redux and typing listeners */}
       <MessageInput
         onSend={handleSend}
         replyTo={replyingTo}
         onCancelReply={handleCancelReply}
+        onTyping={emitTyping}
+        onStopTyping={stopTyping}
       />
 
       {/* Delete Confirmation Dialog */}
