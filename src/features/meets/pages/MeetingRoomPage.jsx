@@ -20,6 +20,8 @@ import {
     Radio,
     ChevronDown,
 } from "lucide-react";
+import useMeetingChat from "../hooks/useMeetingChat";
+import MeetingChat from "../components/MeetingChat";
 
 export const MeetingRoomPage = ({
     meeting,
@@ -101,6 +103,13 @@ export const MeetingRoomPage = ({
     };
 
     const currentUserName = user?.name || user?.fullName || (user?.firstName ? `${user.firstName} ${user.lastName || ""}` : "You");
+
+    // In-meeting chat state
+    const { messages, sending, unreadCount, sendMessage } = useMeetingChat(
+        meeting?._id,
+        isChatOpen,
+        currentUserName
+    );
 
     // Filter remote participants
     const currentUserId = user?._id || user?.id || user?.user?._id;
@@ -394,36 +403,14 @@ export const MeetingRoomPage = ({
                             </div>
                         )}
 
-                        {/* Chat Tab Preview */}
+                        {/* Chat Tab */}
                         {isChatOpen && (
-                            <div className="flex-1 flex flex-col justify-between p-4">
-                                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-500">
-                                    <MessageSquare className="w-8 h-8 text-zinc-600 mb-2" />
-                                    <p className="text-xs font-medium text-zinc-400">
-                                        Meeting Chat
-                                    </p>
-                                    <p className="text-[11px] text-zinc-600 mt-1">
-                                        Messages are saved and visible to active participants.
-                                    </p>
-                                </div>
-
-                                {/* Chat input placeholder (Day 5 integration point) */}
-                                <div className="pt-3 border-t border-zinc-800">
-                                    <div className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 rounded-xl p-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Send a message to everyone..."
-                                            className="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none px-2"
-                                        />
-                                        <button
-                                            type="button"
-                                            className="p-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition-colors"
-                                        >
-                                            <Send className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            <MeetingChat
+                                messages={messages}
+                                onSendMessage={sendMessage}
+                                currentUserId={currentUserId}
+                                sending={sending}
+                            />
                         )}
                     </aside>
                 )}
@@ -492,7 +479,7 @@ export const MeetingRoomPage = ({
                     {/* Chat Toggle */}
                     <button
                         onClick={toggleChat}
-                        className={`p-3 rounded-xl transition-all ${
+                        className={`relative p-3 rounded-xl transition-all ${
                             isChatOpen
                                 ? "bg-zinc-800 text-indigo-400 border border-indigo-500/30"
                                 : "bg-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-700"
@@ -500,6 +487,11 @@ export const MeetingRoomPage = ({
                         title="Meeting Chat"
                     >
                         <MessageSquare className="w-5 h-5" />
+                        {unreadCount > 0 && !isChatOpen && (
+                            <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-indigo-600 text-[10px] font-bold text-white animate-pulse">
+                                {unreadCount}
+                            </span>
+                        )}
                     </button>
 
                     <div className="w-[1px] h-6 bg-zinc-800 mx-1" />
