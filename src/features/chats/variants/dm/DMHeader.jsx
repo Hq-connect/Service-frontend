@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,12 @@ function DMHeader({ chat }) {
     .join("")
     .toUpperCase() || "U";
 
-  const presence = otherUser.presence ?? "offline";
+  const onlineUsers = useSelector((state) => state.chat.onlineUsers);
+  const targetUserId = otherUser.userId || otherUser._id || otherUser.id;
+  const isOnline = targetUserId ? onlineUsers[targetUserId] : undefined;
+  const presence =
+    isOnline === true ? "online" : isOnline === false ? "offline" : (otherUser.presence ?? "offline");
+
   const presenceLabel =
     presence === "online" ? "Active now" :
     presence === "away"   ? "Away"       : "Offline";
