@@ -13,7 +13,7 @@ export const MeetingRoomContainer = () => {
 
     if (roomLoading && !currentMeeting) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen w-screen bg-zinc-950 text-zinc-100 p-6">
+            <div className="flex flex-col items-center justify-center h-screen w-full bg-zinc-950 text-zinc-100 p-6">
                 <div className="relative mb-6">
                     <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
                         <Video className="w-8 h-8 animate-pulse" />
@@ -35,7 +35,7 @@ export const MeetingRoomContainer = () => {
 
     if (error && !currentMeeting) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen w-screen bg-zinc-950 text-zinc-100 p-6 text-center">
+            <div className="flex flex-col items-center justify-center h-screen w-full bg-zinc-950 text-zinc-100 p-6 text-center">
                 <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 mb-4">
                     <AlertCircle className="w-8 h-8" />
                 </div>

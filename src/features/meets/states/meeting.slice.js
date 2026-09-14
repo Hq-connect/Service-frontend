@@ -28,7 +28,14 @@ const meetingSlice = createSlice({
             state.messages = action.payload;
         },
         appendMessage: (state, action) => {
-            state.messages.push(action.payload);
+            const newMsg = action.payload;
+            if (!newMsg) return;
+            const exists = state.messages.some(
+                (m) => m._id && newMsg._id && m._id.toString() === newMsg._id.toString()
+            );
+            if (!exists) {
+                state.messages.push(newMsg);
+            }
         },
         setLoading: (state, action) => {
             state.loading = action.payload;

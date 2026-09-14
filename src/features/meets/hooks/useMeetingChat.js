@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import meetingService from "../services/meeting.service";
 import { setMessages, appendMessage } from "../states/meeting.slice";
+import { socket } from "@/socket/config/socket.config";
 import { toast } from "sonner";
 
 export const useMeetingChat = (meetingId, isChatOpen, currentUserName) => {
@@ -28,6 +29,25 @@ export const useMeetingChat = (meetingId, isChatOpen, currentUserName) => {
     useEffect(() => {
         fetchChatMessages();
     }, [fetchChatMessages]);
+
+    // Real-time socket message listener
+    useEffect(() => {
+        if (!meetingId) return;
+
+        const handleIncomingMessage = (newMsg) => {
+            if (!newMsg) return;
+            dispatch(appendMessage(newMsg));
+            if (!isChatOpen) {
+                setUnreadCount((prev) => prev + 1);
+            }
+        };
+
+        socket.on("meeting:message", handleIncomingMessage);
+
+        return () => {
+            socket.off("meeting:message", handleIncomingMessage);
+        };
+    }, [meetingId, isChatOpen, dispatch]);
 
     // Reset unread count when chat panel is opened
     useEffect(() => {

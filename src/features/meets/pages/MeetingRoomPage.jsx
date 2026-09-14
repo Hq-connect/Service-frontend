@@ -19,24 +19,41 @@ import {
     Minimize2,
     Radio,
     ChevronDown,
+    UserPlus,
+    CircleDot,
+    Sparkles,
 } from "lucide-react";
 import useMeetingChat from "../hooks/useMeetingChat";
 import MeetingChat from "../components/MeetingChat";
+import ScreenShareIndicator from "../components/ScreenShareIndicator";
+import LiveKitVideoStage from "../components/LiveKitVideoStage";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
 export const MeetingRoomPage = ({
     meeting,
-    participants,
+    participants = [],
     user,
     isHost,
     // Media states
     isMuted,
     isVideoOff,
     isScreenSharing,
+    remoteSharer,
     localStream,
     screenStream,
     toggleMic,
     toggleCam,
     toggleScreenShare,
+    // Recording states & actions
+    isRecording,
+    recordingDuration,
+    startRecording,
+    stopRecording,
+    // LiveKit states
+    livekitToken,
+    livekitUrl,
     // Drawer states
     isChatOpen,
     isParticipantsOpen,
@@ -48,6 +65,7 @@ export const MeetingRoomPage = ({
     endRoom,
     copyJoinCode,
     copyInviteUrl,
+    tenantSlug,
 }) => {
     const localVideoRef = useRef(null);
     const screenVideoRef = useRef(null);
@@ -55,6 +73,26 @@ export const MeetingRoomPage = ({
     const [copiedLink, setCopiedLink] = useState(false);
     const [showEndDialog, setShowEndDialog] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [dismissInviteCard, setDismissInviteCard] = useState(false);
+    const [livekitError, setLivekitError] = useState(null);
+
+    // Extract current user and ID robustly
+    const currentUser = user?.data?.user || user?.user || user?.data || user;
+    const currentUserId = currentUser?._id || currentUser?.id || user?._id || user?.id;
+    const currentUserName =
+        currentUser?.fullName ||
+        currentUser?.name ||
+        (currentUser?.firstName
+            ? `${currentUser.firstName} ${currentUser.lastName || ""}`.trim()
+            : "You");
+
+    // Filter remote participants to exclude current user
+    const remoteParticipants = participants.filter((p) => {
+        const pUid = typeof p.userId === "object" ? (p.userId?._id || p.userId?.id) : p.userId;
+        return pUid && currentUserId && String(pUid) !== String(currentUserId);
+    });
+
+    const totalParticipants = remoteParticipants.length + 1;
 
     // Attach local camera stream to local video element
     useEffect(() => {
@@ -102,215 +140,434 @@ export const MeetingRoomPage = ({
         }
     };
 
-    const currentUserName = user?.name || user?.fullName || (user?.firstName ? `${user.firstName} ${user.lastName || ""}` : "You");
-
-    // In-meeting chat state
+    // In-meeting chat hook
     const { messages, sending, unreadCount, sendMessage } = useMeetingChat(
         meeting?._id,
         isChatOpen,
         currentUserName
     );
 
-    // Filter remote participants
-    const currentUserId = user?._id || user?.id || user?.user?._id;
-    const remoteParticipants = participants.filter(
-        (p) => p.userId !== currentUserId && p.userId?._id !== currentUserId
-    );
-
-    return (
-        <div className="relative flex flex-col h-screen w-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans select-none">
-            {/* Top Navigation Bar */}
-            <header className="h-16 px-5 flex items-center justify-between border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md z-20">
-                {/* Left: Meeting Title & Status */}
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800">
-                        <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                        <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-                            Live
-                        </span>
+    /* -------------------------------------------------------------
+       Tile Renderer Helper
+       ------------------------------------------------------------- */
+    const renderLocalTile = (isCompact = false) => (
+        <div
+            key="local-tile"
+            className={`relative group w-full h-full rounded-2xl overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-950 border border-zinc-800 shadow-xl flex items-center justify-center transition-all ${
+                isCompact ? "min-h-[100px]" : ""
+            }`}
+        >
+            {!isVideoOff && localStream ? (
+                <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover -scale-x-100"
+                />
+            ) : (
+                <div className="flex flex-col items-center justify-center gap-2.5 p-4 text-center">
+                    <div
+                        className={`rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold shadow-xl shadow-indigo-600/25 border-2 border-indigo-400/30 ${
+                            isCompact ? "w-10 h-10 text-sm" : "w-16 h-16 sm:w-20 sm:h-20 text-xl sm:text-2xl"
+                        }`}
+                    >
+                        {getInitials(currentUserName)}
                     </div>
-
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-sm font-semibold text-white truncate max-w-[200px] sm:max-w-md">
-                            {meeting?.title || "Instant Meeting"}
-                        </h1>
-                        <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-400">
-                            <Clock className="w-3 h-3 text-zinc-500" />
-                            {elapsedTime}
+                    {!isCompact && (
+                        <span className="text-[11px] sm:text-xs text-zinc-400 font-medium tracking-wide">
+                            Camera Off
                         </span>
-                    </div>
+                    )}
+                </div>
+            )}
+
+            {/* Local User Name & Status Badge */}
+            <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950/80 backdrop-blur-md border border-zinc-800/80 text-[11px] font-medium text-zinc-200">
+                    <span className="truncate max-w-[120px]">{currentUserName} (You)</span>
+                    {isHost && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-semibold">
+                            Host
+                        </span>
+                    )}
                 </div>
 
-                {/* Right: Join Code & Share Actions */}
-                <div className="flex items-center gap-2 sm:gap-3">
-                    {/* Join Code Pill */}
-                    <button
-                        onClick={handleCopyCode}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs font-mono text-zinc-300 hover:text-white hover:border-zinc-700 transition-all"
-                        title="Copy meeting code"
-                    >
-                        {copiedCode ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                            <Copy className="w-3.5 h-3.5 text-zinc-400" />
-                        )}
-                        <span className="font-semibold">{meeting?.joinCode}</span>
-                    </button>
+                <div
+                    className={`p-1.5 rounded-lg backdrop-blur-md ${
+                        isMuted
+                            ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                            : "bg-zinc-950/80 text-zinc-300 border border-zinc-800/80"
+                    }`}
+                >
+                    {isMuted ? (
+                        <MicOff className="w-3.5 h-3.5" />
+                    ) : (
+                        <Mic className="w-3.5 h-3.5 text-emerald-400" />
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 
-                    {/* Share Link Pill */}
-                    <button
+    const renderRemoteTile = (p, idx, isCompact = false) => {
+        const pName =
+            p.userName ||
+            p.userId?.fullName ||
+            p.userId?.name ||
+            (p.userId?.firstName ? `${p.userId.firstName} ${p.userId.lastName || ""}`.trim() : `Participant ${idx + 1}`);
+        const pIsHost = p.role === "host";
+        const pJoined = p.status === "joined";
+
+        return (
+            <div
+                key={p._id || idx}
+                className={`relative group w-full h-full rounded-2xl overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-950 border shadow-xl flex items-center justify-center transition-all ${
+                    pJoined ? "border-zinc-800" : "border-zinc-800/40 opacity-60"
+                } ${isCompact ? "min-h-[100px]" : ""}`}
+            >
+                <div className="flex flex-col items-center justify-center gap-2.5 p-4 text-center">
+                    <div
+                        className={`rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white font-bold shadow-xl border-2 border-cyan-400/30 ${
+                            isCompact ? "w-10 h-10 text-sm" : "w-16 h-16 sm:w-20 sm:h-20 text-xl sm:text-2xl"
+                        }`}
+                    >
+                        {getInitials(pName)}
+                    </div>
+                    {!isCompact && (
+                        <span className="text-[11px] sm:text-xs text-zinc-400 font-medium tracking-wide">
+                            {pJoined ? "In Meeting" : "Left Room"}
+                        </span>
+                    )}
+                </div>
+
+                {/* Remote User Name & Status Badge */}
+                <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950/80 backdrop-blur-md border border-zinc-800/80 text-[11px] font-medium text-zinc-200">
+                        <span className="truncate max-w-[120px]">{pName}</span>
+                        {pIsHost && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-semibold">
+                                Host
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="p-1.5 rounded-lg backdrop-blur-md bg-zinc-950/80 text-zinc-400 border border-zinc-800/80">
+                        <Mic className="w-3.5 h-3.5 text-zinc-400" />
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="relative flex flex-col h-screen h-[100dvh] w-full max-w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans select-none">
+            {/* -------------------------------------------------------------
+               1. TOP HEADER (Always docked, never scrolls off)
+               ------------------------------------------------------------- */}
+            <header className="shrink-0 h-14 sm:h-16 px-3 sm:px-6 flex items-center justify-between border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md z-30">
+                {/* Left: Live Indicator, Title & Timer */}
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1.5 uppercase font-bold text-[10px] tracking-wider">
+                        <Radio className="size-3 text-emerald-400 animate-pulse" />
+                        Live
+                    </Badge>
+
+                    {isRecording && (
+                        <Badge variant="outline" className="bg-red-500/15 text-red-400 border-red-500/30 gap-1.5 font-mono text-[10px] font-semibold animate-pulse">
+                            <span className="size-2 rounded-full bg-red-500" />
+                            <span>REC {recordingDuration}</span>
+                        </Badge>
+                    )}
+
+                    <div className="flex items-center gap-2 min-w-0">
+                        <h1 className="text-xs sm:text-sm font-semibold text-white truncate max-w-[140px] sm:max-w-xs md:max-w-md">
+                            {meeting?.title || "Instant Meeting"}
+                        </h1>
+                        <Badge variant="outline" className="hidden sm:inline-flex gap-1 font-mono text-[11px] text-zinc-300 border-zinc-800 bg-zinc-900/80">
+                            <Clock className="size-3 text-zinc-400" />
+                            {elapsedTime}
+                        </Badge>
+                    </div>
+
+                    {livekitToken && !livekitError && (
+                        <Badge variant="outline" className="hidden md:inline-flex bg-cyan-500/10 text-cyan-400 border-cyan-500/30 gap-1 text-[10px] font-semibold">
+                            <Sparkles className="size-3 text-cyan-400" />
+                            LiveKit SFU
+                        </Badge>
+                    )}
+
+                    <ScreenShareIndicator
+                        isSharing={isScreenSharing || Boolean(remoteSharer)}
+                        isSelf={isScreenSharing}
+                        sharerName={remoteSharer?.userName || "Participant"}
+                        onStopShare={toggleScreenShare}
+                    />
+                </div>
+
+                {/* Right: Prominent Invite Link & Fullscreen */}
+                <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                    {/* Primary "Invite" / Copy Link Button */}
+                    <Button
+                        size="sm"
                         onClick={handleCopyLink}
-                        className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-600/20 text-xs font-medium inline-flex items-center gap-1.5 transition-all"
-                        title="Copy invite link"
+                        className="gap-1.5 text-xs font-semibold"
+                        title="Copy Meeting Invite Link (includes workspace credentials)"
                     >
                         {copiedLink ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            <Check className="size-3.5 text-emerald-300" />
                         ) : (
-                            <Share2 className="w-3.5 h-3.5" />
+                            <Share2 className="size-3.5" />
                         )}
-                        <span className="hidden sm:inline">Invite</span>
-                    </button>
+                        <span>{copiedLink ? "Link Copied!" : "Invite Link"}</span>
+                    </Button>
+
+                    {/* Join Code Pill */}
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCopyCode}
+                        className="hidden md:inline-flex gap-1.5 text-xs font-mono border-zinc-800 bg-zinc-900/80 text-zinc-300 hover:text-white hover:bg-zinc-850"
+                        title="Copy meeting join code"
+                    >
+                        {copiedCode ? (
+                            <Check className="size-3.5 text-emerald-400" />
+                        ) : (
+                            <Copy className="size-3.5 text-zinc-400" />
+                        )}
+                        <span>{meeting?.joinCode}</span>
+                    </Button>
 
                     {/* Fullscreen Toggle */}
-                    <button
+                    <Button
+                        size="icon-sm"
+                        variant="ghost"
                         onClick={toggleFullscreen}
-                        className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800 transition-all"
-                        title="Toggle Fullscreen"
+                        className="text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800"
+                        title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
                     >
                         {isFullscreen ? (
-                            <Minimize2 className="w-4 h-4" />
+                            <Minimize2 className="size-4" />
                         ) : (
-                            <Maximize2 className="w-4 h-4" />
+                            <Maximize2 className="size-4" />
                         )}
-                    </button>
+                    </Button>
                 </div>
             </header>
 
-            {/* Main Center Stage */}
-            <div className="flex-1 flex overflow-hidden relative">
-                {/* Video Area Grid */}
-                <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto">
-                    {/* If screen sharing is active */}
-                    {isScreenSharing && (
-                        <div className="relative w-full aspect-video max-h-[60vh] rounded-2xl overflow-hidden bg-zinc-900 border border-indigo-500/40 shadow-2xl mb-4">
-                            <video
-                                ref={screenVideoRef}
-                                autoPlay
-                                playsInline
-                                muted
-                                className="w-full h-full object-contain bg-black"
-                            />
-                            <div className="absolute top-3 left-3 px-3 py-1 rounded-lg bg-indigo-600/80 backdrop-blur-md text-white text-xs font-medium flex items-center gap-1.5">
-                                <MonitorUp className="w-3.5 h-3.5" />
-                                You are sharing your screen
+            {/* -------------------------------------------------------------
+               2. MAIN VIEWPORT (Video stage + Responsive Drawer)
+               ------------------------------------------------------------- */}
+            <div className="flex-1 flex min-h-0 min-w-0 w-full overflow-hidden relative">
+                {/* Center Stage: Video Grid / Screen Share */}
+                <main className="flex-1 flex flex-col p-2 sm:p-4 md:p-6 overflow-hidden min-h-0 min-w-0 relative justify-center items-center">
+                    {/* Google Meet Style "Meeting is ready" Floating Card (When Alone) */}
+                    {remoteParticipants.length === 0 && !dismissInviteCard && (
+                        <Card className="absolute top-3 left-3 sm:top-5 sm:left-5 max-w-xs sm:max-w-sm bg-card/95 backdrop-blur-xl border-border text-card-foreground p-4 shadow-2xl z-20">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-2 text-primary">
+                                    <Users className="size-4" />
+                                    <h4 className="text-xs font-semibold text-foreground">
+                                        Your meeting is ready
+                                    </h4>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    onClick={() => setDismissInviteCard(true)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                    title="Dismiss"
+                                >
+                                    <X className="size-3.5" />
+                                </Button>
                             </div>
-                        </div>
+
+                            <p className="text-[11px] text-muted-foreground mt-1.5 leading-relaxed">
+                                Share this link with others to join. You can open an incognito or private window to test the meeting simultaneously!
+                            </p>
+
+                            <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <Button
+                                    size="sm"
+                                    onClick={handleCopyLink}
+                                    className="flex-1 gap-1.5 text-xs font-semibold"
+                                >
+                                    {copiedLink ? (
+                                        <Check className="size-3.5 text-emerald-300" />
+                                    ) : (
+                                        <Copy className="size-3.5" />
+                                    )}
+                                    <span>{copiedLink ? "Link Copied!" : "Copy Invite Link"}</span>
+                                </Button>
+
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleCopyCode}
+                                    className="text-xs font-mono"
+                                    title="Copy Code"
+                                >
+                                    {copiedCode ? (
+                                        <Check className="size-3 text-emerald-500" />
+                                    ) : (
+                                        <span className="font-semibold">{meeting?.joinCode}</span>
+                                    )}
+                                </Button>
+                            </div>
+                        </Card>
                     )}
 
-                    {/* Participant Tiles Grid */}
-                    <div
-                        className={`flex-1 grid gap-4 w-full h-full items-center justify-center ${
-                            remoteParticipants.length === 0
-                                ? "grid-cols-1 max-w-2xl mx-auto"
-                                : remoteParticipants.length === 1
-                                ? "grid-cols-1 md:grid-cols-2"
-                                : remoteParticipants.length <= 3
-                                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                                : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-                        }`}
-                    >
-                        {/* 1. Local User Tile */}
-                        <div className="relative group w-full h-full min-h-[220px] max-h-[480px] rounded-2xl overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/80 border border-zinc-800/80 shadow-lg flex items-center justify-center">
-                            {!isVideoOff && localStream ? (
-                                <video
-                                    ref={localVideoRef}
-                                    autoPlay
-                                    playsInline
-                                    muted
-                                    className="w-full h-full object-cover -scale-x-100"
-                                />
-                            ) : (
-                                <div className="flex flex-col items-center gap-3">
-                                    <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white text-2xl font-bold shadow-xl shadow-indigo-600/20 border-2 border-indigo-400/30">
-                                        {getInitials(currentUserName)}
-                                    </div>
-                                    <span className="text-xs text-zinc-400 font-medium">
-                                        Camera Off
+                    {/* LIVEKIT REAL-TIME MULTI-PARTY MEDIA STAGE */}
+                    {livekitToken && livekitUrl && !livekitError ? (
+                        <LiveKitVideoStage
+                            serverUrl={livekitUrl}
+                            token={livekitToken}
+                            hostUserId={meeting?.createdBy?._id || meeting?.createdBy || currentUserId}
+                            isMuted={isMuted}
+                            isVideoOff={isVideoOff}
+                            isScreenSharing={isScreenSharing}
+                            onError={(err) => {
+                                console.warn("LiveKit connection issue, using fallback stage:", err);
+                                setLivekitError(err.message || "LiveKit connection failed");
+                            }}
+                        />
+                    ) : (
+                        /* FALLBACK STANDALONE STAGE (When LiveKit not configured or offline) */
+                        <>
+                            {/* Status Banner when in Standalone/Preview Mode */}
+                            {!livekitToken && (
+                                <div className="shrink-0 mb-3 px-3.5 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs flex items-center gap-2 max-w-xl mx-auto shadow-sm">
+                                    <Sparkles className="size-3.5 text-indigo-400 shrink-0" />
+                                    <span className="truncate">
+                                        Standalone Media Mode active. Add LiveKit API keys to .env to enable multi-peer SFU video.
                                     </span>
                                 </div>
                             )}
 
-                            {/* Name & Status Overlay */}
-                            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                                <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-950/70 backdrop-blur-md border border-zinc-800/60 text-xs font-medium text-zinc-200">
-                                    <span>{currentUserName} (You)</span>
-                                    {isHost && (
-                                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                                            Host
-                                        </span>
-                                    )}
-                                </div>
+                            {/* A. SCREEN SHARING MODE */}
+                            {(isScreenSharing || remoteSharer) ? (
+                                <div className="flex-1 flex flex-col w-full h-full min-h-0 items-center justify-center gap-3">
+                            {/* Dominant Screen Share Stage */}
+                            <div className="flex-1 min-h-0 w-full rounded-2xl overflow-hidden bg-black border border-indigo-500/40 shadow-2xl flex items-center justify-center relative">
+                                {isScreenSharing ? (
+                                    <video
+                                        ref={screenVideoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className="w-full h-full object-contain"
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center p-6 text-center">
+                                        <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-3 animate-pulse">
+                                            <MonitorUp className="w-8 h-8" />
+                                        </div>
+                                        <h3 className="text-base font-semibold text-white">
+                                            {remoteSharer?.userName || "A participant"} is presenting
+                                        </h3>
+                                        <p className="text-xs text-zinc-400 mt-1 max-w-sm">
+                                            Live screen broadcast active.
+                                        </p>
+                                    </div>
+                                )}
 
-                                <div className={`p-1.5 rounded-lg backdrop-blur-md ${
-                                    isMuted
-                                        ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                                        : "bg-zinc-950/70 text-zinc-300 border border-zinc-800/60"
-                                }`}>
-                                    {isMuted ? (
-                                        <MicOff className="w-3.5 h-3.5" />
-                                    ) : (
-                                        <Mic className="w-3.5 h-3.5 text-emerald-400" />
-                                    )}
+                                <div className="absolute top-3 left-3 px-3 py-1 rounded-lg bg-indigo-600/80 backdrop-blur-md text-white text-xs font-medium flex items-center gap-1.5">
+                                    <MonitorUp className="w-3.5 h-3.5" />
+                                    <span>
+                                        {isScreenSharing ? "You are presenting" : `${remoteSharer?.userName || "User"} presenting`}
+                                    </span>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* 2. Remote Participants Tiles */}
-                        {remoteParticipants.map((p, idx) => {
-                            const pName = p.userName || p.userId?.fullName || p.userId?.name || `Participant ${idx + 1}`;
-                            const pIsHost = p.role === "host";
-                            const pJoined = p.status === "joined";
-
-                            return (
-                                <div
-                                    key={p._id || idx}
-                                    className={`relative group w-full h-full min-h-[220px] max-h-[480px] rounded-2xl overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/80 border shadow-lg flex items-center justify-center transition-all ${
-                                        pJoined ? "border-zinc-800/80" : "border-zinc-800/40 opacity-60"
-                                    }`}
-                                >
-                                    <div className="flex flex-col items-center gap-3">
-                                        <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-xl border-2 border-cyan-400/30">
-                                            {getInitials(pName)}
-                                        </div>
-                                        <span className="text-xs text-zinc-400 font-medium">
-                                            {pJoined ? "Connected" : "Left meeting"}
-                                        </span>
+                            {/* Participant Filmstrip (Compact horizontal row) */}
+                            <div className="shrink-0 h-24 sm:h-28 w-full flex items-center justify-center gap-3 overflow-x-auto py-1 px-2">
+                                <div className="h-full aspect-video shrink-0">
+                                    {renderLocalTile(true)}
+                                </div>
+                                {remoteParticipants.map((p, idx) => (
+                                    <div key={p._id || idx} className="h-full aspect-video shrink-0">
+                                        {renderRemoteTile(p, idx, true)}
                                     </div>
-
-                                    {/* Name & Role overlay */}
-                                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                                        <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-950/70 backdrop-blur-md border border-zinc-800/60 text-xs font-medium text-zinc-200">
-                                            <span>{pName}</span>
-                                            {pIsHost && (
-                                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                                                    Host
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <div className="p-1.5 rounded-lg backdrop-blur-md bg-zinc-950/70 text-zinc-300 border border-zinc-800/60">
-                                            <Mic className="w-3.5 h-3.5 text-zinc-400" />
-                                        </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        /* B. DYNAMIC AUTO-FITTING GRID (Zero Scrollbars) */
+                        <div className="w-full h-full min-h-0 flex items-center justify-center">
+                            {/* 1 Participant: Single Large Center Stage */}
+                            {totalParticipants === 1 && (
+                                <div className="w-full h-full flex items-center justify-center p-1 sm:p-2">
+                                    <div className="w-full max-w-4xl h-full max-h-[72vh] aspect-[4/3] sm:aspect-video">
+                                        {renderLocalTile()}
                                     </div>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                            )}
 
-                {/* Sliding Right Drawer Panel */}
+                            {/* 2 Participants: Side-by-Side on Desktop, Stacked on Mobile */}
+                            {totalParticipants === 2 && (
+                                <div className="w-full h-full max-w-6xl flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-4 p-1 sm:p-2">
+                                    <div className="flex-1 w-full h-full max-h-[38vh] md:max-h-[70vh] aspect-video">
+                                        {renderLocalTile()}
+                                    </div>
+                                    <div className="flex-1 w-full h-full max-h-[38vh] md:max-h-[70vh] aspect-video">
+                                        {renderRemoteTile(remoteParticipants[0], 0)}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 3 or 4 Participants: 2x2 Responsive Grid */}
+                            {(totalParticipants === 3 || totalParticipants === 4) && (
+                                <div className="w-full h-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-center justify-center p-1 sm:p-2">
+                                    <div className="w-full h-full max-h-[34vh] sm:max-h-[36vh] aspect-video">
+                                        {renderLocalTile()}
+                                    </div>
+                                    {remoteParticipants.slice(0, 3).map((p, idx) => (
+                                        <div key={p._id || idx} className="w-full h-full max-h-[34vh] sm:max-h-[36vh] aspect-video">
+                                            {renderRemoteTile(p, idx)}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 5 or 6 Participants: 2 rows x 3 cols */}
+                            {(totalParticipants === 5 || totalParticipants === 6) && (
+                                <div className="w-full h-full max-w-6xl grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 items-center justify-center p-1 sm:p-2">
+                                    <div className="w-full h-full max-h-[30vh] sm:max-h-[33vh] aspect-video">
+                                        {renderLocalTile()}
+                                    </div>
+                                    {remoteParticipants.slice(0, 5).map((p, idx) => (
+                                        <div key={p._id || idx} className="w-full h-full max-h-[30vh] sm:max-h-[33vh] aspect-video">
+                                            {renderRemoteTile(p, idx)}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 7+ Participants: Grid with smooth dynamic scaling */}
+                            {totalParticipants > 6 && (
+                                <div className="w-full h-full max-w-7xl grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3 items-center justify-center overflow-y-auto max-h-[74vh] p-1 sm:p-2">
+                                    <div className="w-full h-full min-h-[140px] max-h-[26vh] aspect-video">
+                                        {renderLocalTile()}
+                                    </div>
+                                    {remoteParticipants.map((p, idx) => (
+                                        <div key={p._id || idx} className="w-full h-full min-h-[140px] max-h-[26vh] aspect-video">
+                                            {renderRemoteTile(p, idx)}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                        </>
+                    )}
+                </main>
+
+                {/* -------------------------------------------------------------
+               3. SLIDING DRAWER (Participants / Chat)
+               Responsive: overlay on mobile, docked panel on desktop
+               ------------------------------------------------------------- */}
                 {(isParticipantsOpen || isChatOpen) && (
-                    <aside className="w-80 lg:w-96 border-l border-zinc-800/80 bg-zinc-900/95 backdrop-blur-xl flex flex-col z-30 animate-in slide-in-from-right duration-200">
+                    <aside className="fixed sm:relative inset-y-0 right-0 w-full sm:w-80 lg:w-96 border-l border-zinc-800/80 bg-zinc-900/98 sm:bg-zinc-900/90 backdrop-blur-2xl flex flex-col z-40 animate-in slide-in-from-right duration-200 shadow-2xl">
                         {/* Drawer Header */}
                         <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -318,7 +575,7 @@ export const MeetingRoomPage = ({
                                     <>
                                         <Users className="w-4 h-4 text-indigo-400" />
                                         <h3 className="font-semibold text-sm">
-                                            People ({participants.length || 1})
+                                            People ({totalParticipants})
                                         </h3>
                                     </>
                                 ) : (
@@ -333,7 +590,8 @@ export const MeetingRoomPage = ({
                                     if (isParticipantsOpen) toggleParticipants();
                                     if (isChatOpen) toggleChat();
                                 }}
-                                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                                title="Close panel"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -341,7 +599,34 @@ export const MeetingRoomPage = ({
 
                         {/* Participants List Tab */}
                         {isParticipantsOpen && (
-                            <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                {/* Direct Invite Card inside People drawer */}
+                                <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/20 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
+                                            <UserPlus className="w-3.5 h-3.5" />
+                                            Invite Others
+                                        </span>
+                                        <span className="text-[10px] font-mono text-zinc-400">
+                                            {meeting?.joinCode}
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400">
+                                        Share the link to test together in another browser window.
+                                    </p>
+                                    <button
+                                        onClick={handleCopyLink}
+                                        className="w-full mt-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
+                                    >
+                                        {copiedLink ? (
+                                            <Check className="w-3.5 h-3.5 text-emerald-300" />
+                                        ) : (
+                                            <Share2 className="w-3.5 h-3.5" />
+                                        )}
+                                        <span>{copiedLink ? "Link Copied!" : "Copy Invite Link"}</span>
+                                    </button>
+                                </div>
+
                                 {/* Current User item */}
                                 <div className="p-3 rounded-xl bg-zinc-950/60 border border-zinc-800 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -373,7 +658,11 @@ export const MeetingRoomPage = ({
 
                                 {/* Remote participants */}
                                 {remoteParticipants.map((p, i) => {
-                                    const pName = p.userName || p.userId?.fullName || p.userId?.name || `Participant ${i + 1}`;
+                                    const pName =
+                                        p.userName ||
+                                        p.userId?.fullName ||
+                                        p.userId?.name ||
+                                        `Participant ${i + 1}`;
                                     const isJoined = p.status === "joined";
                                     return (
                                         <div
@@ -416,142 +705,166 @@ export const MeetingRoomPage = ({
                 )}
             </div>
 
-            {/* Bottom Floating Action Bar */}
-            <div className="h-20 px-6 flex items-center justify-center relative z-20">
-                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/80 shadow-2xl">
+            {/* -------------------------------------------------------------
+               4. BOTTOM FLOATING ACTION BAR (Always docked, perfectly centered)
+               ------------------------------------------------------------- */}
+            <footer className="shrink-0 h-16 sm:h-20 px-3 sm:px-6 flex items-center justify-center relative z-30">
+                <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 shadow-2xl">
                     {/* Microphone Toggle */}
-                    <button
+                    <Button
+                        size="icon"
+                        variant={isMuted ? "destructive" : "secondary"}
                         onClick={toggleMic}
-                        className={`p-3 rounded-xl transition-all ${
-                            isMuted
-                                ? "bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30"
-                                : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
-                        }`}
                         title={isMuted ? "Unmute Microphone" : "Mute Microphone"}
                     >
-                        {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                    </button>
+                        {isMuted ? <MicOff className="size-4 sm:size-4.5" /> : <Mic className="size-4 sm:size-4.5" />}
+                    </Button>
 
                     {/* Camera Toggle */}
-                    <button
+                    <Button
+                        size="icon"
+                        variant={isVideoOff ? "destructive" : "secondary"}
                         onClick={toggleCam}
-                        className={`p-3 rounded-xl transition-all ${
-                            isVideoOff
-                                ? "bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30"
-                                : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
-                        }`}
                         title={isVideoOff ? "Turn On Camera" : "Turn Off Camera"}
                     >
-                        {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
-                    </button>
+                        {isVideoOff ? <VideoOff className="size-4 sm:size-4.5" /> : <Video className="size-4 sm:size-4.5" />}
+                    </Button>
 
                     {/* Screen Share Toggle */}
-                    <button
+                    <Button
+                        size="icon"
+                        variant={isScreenSharing ? "default" : "secondary"}
                         onClick={toggleScreenShare}
-                        className={`p-3 rounded-xl transition-all ${
-                            isScreenSharing
-                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
-                                : "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700"
-                        }`}
                         title={isScreenSharing ? "Stop Sharing Screen" : "Share Screen"}
                     >
-                        <MonitorUp className="w-5 h-5" />
-                    </button>
+                        <MonitorUp className="size-4 sm:size-4.5" />
+                    </Button>
 
-                    <div className="w-[1px] h-6 bg-zinc-800 mx-1" />
+                    {/* Meeting Recording Toggle */}
+                    <Button
+                        size="icon"
+                        variant={isRecording ? "destructive" : "secondary"}
+                        onClick={isRecording ? stopRecording : startRecording}
+                        className={isRecording ? "animate-pulse border border-red-400/40" : ""}
+                        title={isRecording ? "Stop Recording (REC)" : "Record Meeting"}
+                    >
+                        <CircleDot className="size-4 sm:size-4.5" />
+                    </Button>
+
+                    {/* Invite / Share Link Quick Action */}
+                    <Button
+                        size="icon"
+                        variant="secondary"
+                        onClick={handleCopyLink}
+                        title="Copy Meeting Invite Link"
+                    >
+                        {copiedLink ? (
+                            <Check className="size-4 sm:size-4.5 text-emerald-400" />
+                        ) : (
+                            <Share2 className="size-4 sm:size-4.5 text-primary" />
+                        )}
+                    </Button>
+
+                    <div className="w-[1px] h-6 bg-border mx-0.5" />
 
                     {/* Participants Toggle */}
-                    <button
+                    <Button
+                        size="icon"
+                        variant={isParticipantsOpen ? "default" : "secondary"}
                         onClick={toggleParticipants}
-                        className={`relative p-3 rounded-xl transition-all ${
-                            isParticipantsOpen
-                                ? "bg-zinc-800 text-indigo-400 border border-indigo-500/30"
-                                : "bg-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-700"
-                        }`}
+                        className="relative"
                         title="Participants"
                     >
-                        <Users className="w-5 h-5" />
-                        <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-indigo-600 text-[10px] font-bold text-white">
-                            {participants.length || 1}
-                        </span>
-                    </button>
+                        <Users className="size-4 sm:size-4.5" />
+                        <Badge variant="default" className="absolute -top-1 -right-1 px-1 py-0 text-[9px] min-w-4 h-4 flex items-center justify-center">
+                            {totalParticipants}
+                        </Badge>
+                    </Button>
 
                     {/* Chat Toggle */}
-                    <button
+                    <Button
+                        size="icon"
+                        variant={isChatOpen ? "default" : "secondary"}
                         onClick={toggleChat}
-                        className={`relative p-3 rounded-xl transition-all ${
-                            isChatOpen
-                                ? "bg-zinc-800 text-indigo-400 border border-indigo-500/30"
-                                : "bg-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-700"
-                        }`}
+                        className="relative"
                         title="Meeting Chat"
                     >
-                        <MessageSquare className="w-5 h-5" />
+                        <MessageSquare className="size-4 sm:size-4.5" />
                         {unreadCount > 0 && !isChatOpen && (
-                            <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-indigo-600 text-[10px] font-bold text-white animate-pulse">
+                            <Badge variant="destructive" className="absolute -top-1 -right-1 px-1 py-0 text-[9px] min-w-4 h-4 flex items-center justify-center animate-pulse">
                                 {unreadCount}
-                            </span>
+                            </Badge>
                         )}
-                    </button>
+                    </Button>
 
-                    <div className="w-[1px] h-6 bg-zinc-800 mx-1" />
+                    <div className="w-[1px] h-6 bg-border mx-0.5" />
 
                     {/* Leave / End Button */}
                     {isHost ? (
                         <div className="relative">
-                            <button
-                                onClick={() => setShowEndDialog(true)}
-                                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium text-xs shadow-lg shadow-red-600/25 active:scale-95 transition-all"
+                            <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setShowEndDialog((prev) => !prev)}
+                                className="gap-1.5 text-xs font-semibold px-3 sm:px-4"
                                 title="Leave or End Meeting"
                             >
-                                <PhoneOff className="w-4 h-4" />
+                                <PhoneOff className="size-3.5" />
                                 <span className="hidden sm:inline">End / Leave</span>
-                                <ChevronDown className="w-3.5 h-3.5 opacity-80" />
-                            </button>
+                                <ChevronDown className="size-3 opacity-80" />
+                            </Button>
 
                             {/* Host Exit Options Popup */}
                             {showEndDialog && (
-                                <div className="absolute right-0 bottom-16 w-56 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95">
-                                    <button
+                                <div className="absolute right-0 bottom-12 w-52 rounded-xl bg-card border border-border shadow-2xl p-1.5 z-50 text-card-foreground">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
                                         onClick={() => {
                                             setShowEndDialog(false);
                                             endRoom();
                                         }}
-                                        className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors"
+                                        className="w-full justify-start text-destructive hover:bg-destructive/10 text-xs font-medium"
                                     >
                                         End Meeting for All
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
                                         onClick={() => {
                                             setShowEndDialog(false);
                                             leaveRoom();
                                         }}
-                                        className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+                                        className="w-full justify-start text-xs font-medium text-foreground hover:bg-muted"
                                     >
                                         Leave Meeting Only
-                                    </button>
-                                    <div className="h-[1px] bg-zinc-800 my-1" />
-                                    <button
+                                    </Button>
+                                    <div className="h-[1px] bg-border my-1" />
+                                    <Button
+                                        variant="ghost"
+                                        size="xs"
                                         onClick={() => setShowEndDialog(false)}
-                                        className="w-full text-center px-3 py-1.5 rounded-xl text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                                        className="w-full text-xs text-muted-foreground"
                                     >
                                         Cancel
-                                    </button>
+                                    </Button>
                                 </div>
                             )}
                         </div>
                     ) : (
-                        <button
+                        <Button
+                            size="sm"
+                            variant="destructive"
                             onClick={leaveRoom}
-                            className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium text-xs shadow-lg shadow-red-600/25 active:scale-95 transition-all"
+                            className="gap-1.5 text-xs font-semibold px-3 sm:px-4"
                             title="Leave Meeting"
                         >
-                            <PhoneOff className="w-4 h-4" />
+                            <PhoneOff className="size-3.5" />
                             <span className="hidden sm:inline">Leave</span>
-                        </button>
+                        </Button>
                     )}
                 </div>
-            </div>
+            </footer>
         </div>
     );
 };

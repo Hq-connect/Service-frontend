@@ -72,6 +72,20 @@ export const useMeetings = () => {
         }
     };
 
+    const endMeeting = async (meetingId) => {
+        try {
+            dispatch(setLoading(true));
+            await meetingService.endMeeting(meetingId);
+            toast.success("Meeting ended successfully");
+            await fetchMeetings();
+        } catch (err) {
+            const msg = err.response?.data?.message || "Failed to end meeting";
+            toast.error(msg);
+        } finally {
+            dispatch(setLoading(false));
+        }
+    };
+
     const joinByCode = async (joinCode) => {
         try {
             dispatch(setLoading(true));
@@ -99,6 +113,7 @@ export const useMeetings = () => {
         fetchMeetings,
         createMeeting,
         cancelMeeting,
+        endMeeting,
         joinByCode,
         toggleCreateDialog,
     };

@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import { Calendar, Clock, Copy, Check, Video, XCircle, Users } from "lucide-react";
 import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
-export const MeetingCard = ({ meeting, onJoin, onCancel }) => {
+export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd }) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = (e) => {
@@ -19,29 +22,29 @@ export const MeetingCard = ({ meeting, onJoin, onCancel }) => {
         switch (status) {
             case "ongoing":
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1.5 animate-pulse">
+                        <span className="size-1.5 rounded-full bg-emerald-500" />
                         Live Now
-                    </span>
+                    </Badge>
                 );
             case "scheduled":
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                    <Badge variant="secondary" className="gap-1.5">
+                        <span className="size-1.5 rounded-full bg-primary" />
                         Scheduled
-                    </span>
+                    </Badge>
                 );
             case "completed":
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+                    <Badge variant="outline" className="text-muted-foreground">
                         Completed
-                    </span>
+                    </Badge>
                 );
             case "cancelled":
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    <Badge variant="destructive">
                         Cancelled
-                    </span>
+                    </Badge>
                 );
             default:
                 return null;
@@ -61,80 +64,95 @@ export const MeetingCard = ({ meeting, onJoin, onCancel }) => {
     };
 
     return (
-        <div className="group relative bg-zinc-900/60 hover:bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 rounded-xl p-5 transition-all duration-200 backdrop-blur-sm flex flex-col justify-between shadow-lg hover:shadow-indigo-500/5">
+        <Card className="group relative flex flex-col justify-between border-border bg-card text-card-foreground hover:shadow-md transition-all duration-200">
             <div>
-                {/* Header & Status */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                    <h3 className="font-semibold text-lg text-zinc-100 group-hover:text-indigo-400 transition-colors line-clamp-1">
+                <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2 space-y-0">
+                    <CardTitle className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                         {meeting.title}
-                    </h3>
+                    </CardTitle>
                     {getStatusBadge(meeting.status)}
-                </div>
+                </CardHeader>
 
-                {/* Description */}
-                {meeting.description && (
-                    <p className="text-sm text-zinc-400 mb-4 line-clamp-2">
-                        {meeting.description}
-                    </p>
-                )}
-
-                {/* Metadata details */}
-                <div className="space-y-2 text-xs text-zinc-400 mb-5">
-                    <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-zinc-500" />
-                        <span>{formatDate(meeting.scheduledAt)}</span>
-                    </div>
-
-                    {meeting.duration && (
-                        <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-zinc-500" />
-                            <span>{meeting.duration} minutes</span>
-                        </div>
+                <CardContent className="space-y-4 pt-1">
+                    {meeting.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                            {meeting.description}
+                        </p>
                     )}
 
-                    <div className="flex items-center gap-2 pt-1">
-                        <Users className="w-4 h-4 text-zinc-500" />
-                        <span className="font-mono bg-zinc-800/80 px-2 py-0.5 rounded text-zinc-300 flex items-center gap-1.5">
-                            {meeting.joinCode}
-                            <button
-                                onClick={handleCopy}
-                                className="text-zinc-400 hover:text-white transition-colors"
-                                title="Copy join code"
-                            >
-                                {copied ? (
-                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                ) : (
-                                    <Copy className="w-3.5 h-3.5" />
-                                )}
-                            </button>
-                        </span>
+                    <div className="space-y-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                            <Calendar className="size-3.5 text-muted-foreground/70" />
+                            <span>{formatDate(meeting.scheduledAt)}</span>
+                        </div>
+
+                        {meeting.duration && (
+                            <div className="flex items-center gap-2">
+                                <Clock className="size-3.5 text-muted-foreground/70" />
+                                <span>{meeting.duration} minutes</span>
+                            </div>
+                        )}
+
+                        <div className="flex items-center gap-2 pt-1">
+                            <Users className="size-3.5 text-muted-foreground/70" />
+                            <span className="font-mono bg-muted px-2 py-0.5 rounded text-foreground text-xs flex items-center gap-1.5 border border-border">
+                                {meeting.joinCode}
+                                <button
+                                    onClick={handleCopy}
+                                    className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
+                                    title="Copy join code"
+                                >
+                                    {copied ? (
+                                        <Check className="size-3 text-emerald-500" />
+                                    ) : (
+                                        <Copy className="size-3" />
+                                    )}
+                                </button>
+                            </span>
+                        </div>
                     </div>
-                </div>
+                </CardContent>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2 pt-3 border-t border-zinc-800/60">
+            <CardFooter className="flex items-center gap-2 pt-3 border-t border-border bg-transparent">
                 {(meeting.status === "scheduled" || meeting.status === "ongoing") && (
-                    <button
+                    <Button
                         onClick={() => onJoin(meeting.joinCode)}
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-all shadow-md shadow-indigo-600/20 active:scale-[0.98]"
+                        className="flex-1 gap-2"
+                        size="sm"
                     >
-                        <Video className="w-4 h-4" />
+                        <Video className="size-3.5" />
                         Join Meeting
-                    </button>
+                    </Button>
+                )}
+
+                {meeting.status === "ongoing" && onEnd && (
+                    <Button
+                        onClick={() => onEnd(meeting._id)}
+                        variant="destructive"
+                        size="sm"
+                        className="gap-1.5"
+                        title="End Live Meeting"
+                    >
+                        <XCircle className="size-3.5" />
+                        <span>End</span>
+                    </Button>
                 )}
 
                 {meeting.status === "scheduled" && onCancel && (
-                    <button
+                    <Button
                         onClick={() => onCancel(meeting._id)}
-                        className="inline-flex items-center justify-center p-2 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all"
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-destructive gap-1.5"
                         title="Cancel Meeting"
                     >
-                        <XCircle className="w-4 h-4" />
-                    </button>
+                        <XCircle className="size-3.5" />
+                        <span>Cancel</span>
+                    </Button>
                 )}
-            </div>
-        </div>
+            </CardFooter>
+        </Card>
     );
 };
 

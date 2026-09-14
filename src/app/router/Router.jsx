@@ -7,6 +7,7 @@ import AppLayout from "@/global/layout/AppLayour"
 import UnderConstruction from "@/components/ui/UnderConstruction"
 import ChatPage from "@/features/chats/pages/ChatPage"
 import MeetsPage from "@/features/meets/pages/MeetsPage"
+import RecordedSessionsPage from "@/features/meets/pages/RecordedSessionsPage"
 import MeetingRoomContainer from "@/features/meets/containers/MeetingRoomContainer"
 
 export const router = createBrowserRouter([
@@ -33,7 +34,7 @@ export const router = createBrowserRouter([
       { path: "docs",   element: <UnderConstruction /> },
       { path: "files",  element: <UnderConstruction /> },
       { path: "meets",  element: <MeetsPage /> },
-      { path: "meets/room/:joinCode", element: <MeetingRoomContainer /> },
+      { path: "meets/recordings", element: <RecordedSessionsPage /> },
       { path: "ask-ai", element: <UnderConstruction /> },
 
       // Chat routes - type-scoped

@@ -1,5 +1,16 @@
 import React, { useState } from "react";
-import { X, Calendar, Clock, Video, FileText, Globe } from "lucide-react";
+import { Calendar, Video, Loader2 } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
     const [title, setTitle] = useState("");
@@ -10,8 +21,6 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
     const [timezone, setTimezone] = useState(
         Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
     );
-
-    if (!isOpen) return null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -28,7 +37,6 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
         }
 
         await onSubmit(payload);
-        // Reset form
         setTitle("");
         setDescription("");
         setScheduledAt("");
@@ -36,110 +44,102 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="relative w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden text-zinc-100">
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                            <Video className="w-5 h-5" />
-                        </div>
-                        <h2 className="text-lg font-semibold">New Meeting</h2>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="sm:max-w-lg border-border bg-card text-card-foreground">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-foreground font-heading">
+                        <span className="p-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+                            <Video className="size-4" />
+                        </span>
+                        New Meeting
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground">
+                        Schedule an upcoming conference or start an instant meeting with your team.
+                    </DialogDescription>
+                </DialogHeader>
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4 pt-1">
                     {/* Meeting Type Selector */}
-                    <div className="grid grid-cols-2 gap-3 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
-                        <button
+                    <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg border border-border">
+                        <Button
                             type="button"
+                            variant={type === "scheduled" ? "default" : "ghost"}
+                            size="sm"
                             onClick={() => setType("scheduled")}
-                            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                                type === "scheduled"
-                                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                                    : "text-zinc-400 hover:text-zinc-200"
-                            }`}
+                            className="gap-2"
                         >
-                            <Calendar className="w-4 h-4" />
+                            <Calendar className="size-3.5" />
                             Scheduled
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="button"
+                            variant={type === "instant" ? "default" : "ghost"}
+                            size="sm"
                             onClick={() => setType("instant")}
-                            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                                type === "instant"
-                                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                                    : "text-zinc-400 hover:text-zinc-200"
-                            }`}
+                            className="gap-2"
                         >
-                            <Video className="w-4 h-4" />
+                            <Video className="size-3.5" />
                             Instant Meet
-                        </button>
+                        </Button>
                     </div>
 
                     {/* Title */}
-                    <div>
-                        <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-                            Meeting Title <span className="text-rose-400">*</span>
-                        </label>
-                        <input
-                            type="text"
+                    <div className="space-y-1.5">
+                        <Label htmlFor="meeting-title" className="text-xs text-foreground">
+                            Meeting Title <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                            id="meeting-title"
                             required
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             placeholder="e.g. Weekly Product Sync"
-                            className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                         />
                     </div>
 
                     {/* Description */}
-                    <div>
-                        <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                    <div className="space-y-1.5">
+                        <Label htmlFor="meeting-desc" className="text-xs text-foreground">
                             Description (Optional)
-                        </label>
+                        </Label>
                         <textarea
+                            id="meeting-desc"
                             rows={2}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="Add meeting agenda or notes..."
-                            className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all resize-none"
+                            className="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none text-foreground"
                         />
                     </div>
 
                     {/* Scheduled Date/Time if scheduled */}
                     {type === "scheduled" && (
-                        <div>
-                            <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-                                Date & Time <span className="text-rose-400">*</span>
-                            </label>
-                            <input
+                        <div className="space-y-1.5">
+                            <Label htmlFor="meeting-datetime" className="text-xs text-foreground">
+                                Date & Time <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                                id="meeting-datetime"
                                 type="datetime-local"
                                 required={type === "scheduled"}
                                 value={scheduledAt}
                                 min={new Date().toISOString().slice(0, 16)}
                                 onChange={(e) => setScheduledAt(e.target.value)}
-                                className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                             />
                         </div>
                     )}
 
                     {/* Duration & Timezone Grid */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="meeting-duration" className="text-xs text-foreground">
                                 Duration
-                            </label>
+                            </Label>
                             <select
+                                id="meeting-duration"
                                 value={duration}
                                 onChange={(e) => setDuration(e.target.value)}
-                                className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 py-1 text-xs text-foreground transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                             >
                                 <option value="15">15 minutes</option>
                                 <option value="30">30 minutes</option>
@@ -150,43 +150,46 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
                             </select>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="meeting-timezone" className="text-xs text-foreground">
                                 Timezone
-                            </label>
-                            <input
+                            </Label>
+                            <Input
+                                id="meeting-timezone"
                                 type="text"
                                 value={timezone}
                                 onChange={(e) => setTimezone(e.target.value)}
-                                className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                                className="text-xs"
                             />
                         </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
-                        <button
+                    <DialogFooter className="pt-3 border-t border-border">
+                        <Button
                             type="button"
+                            variant="outline"
+                            size="sm"
                             onClick={onClose}
-                            className="px-4 py-2.5 rounded-xl border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 text-sm font-medium transition-all"
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
+                            size="sm"
                             disabled={loading}
-                            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium shadow-md shadow-indigo-600/20 active:scale-[0.98] transition-all disabled:opacity-50"
+                            className="gap-2"
                         >
+                            {loading && <Loader2 className="size-3.5 animate-spin" />}
                             {loading
                                 ? "Creating..."
                                 : type === "instant"
                                 ? "Start Instant Meet"
                                 : "Schedule Meeting"}
-                        </button>
-                    </div>
+                        </Button>
+                    </DialogFooter>
                 </form>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 };
 

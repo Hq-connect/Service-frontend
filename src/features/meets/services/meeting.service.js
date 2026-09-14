@@ -90,5 +90,36 @@ export const meetingService = {
         const response = await api.post(`/meetings/${meetingId}/screen-share/stop`);
         return response.data;
     },
+
+    // Get all recorded sessions
+    getRecordings: async (params) => {
+        const response = await api.get("/meetings/recordings", { params });
+        return response.data;
+    },
+
+    // Save a new recording
+    saveRecording: async (meetingId, recordingData) => {
+        const response = await api.post(`/meetings/${meetingId}/recordings`, recordingData);
+        return response.data;
+    },
+
+    // Get recordings for a specific meeting
+    getRecordingsByMeeting: async (meetingId) => {
+        const response = await api.get(`/meetings/${meetingId}/recordings`);
+        return response.data;
+    },
+
+    // Delete a recording
+    deleteRecording: async (recordingId) => {
+        const response = await api.delete(`/meetings/recordings/${recordingId}`);
+        return response.data;
+    },
+
+    // Get LiveKit media token for a meeting
+    getLiveKitToken: async (meetingId) => {
+        const response = await api.get(`/meetings/${meetingId}/livekit-token`);
+        return response.data;
+    },
 };
+
 export default meetingService;
