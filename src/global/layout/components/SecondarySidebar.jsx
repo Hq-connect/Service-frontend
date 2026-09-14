@@ -12,8 +12,11 @@ function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelec
           const Icon = item.icon;
 
           // If the item has a path, use a Link and derive active from URL
+          const currentUrl = location.pathname + location.search;
           const isActive = item.path
-            ? location.pathname.startsWith(item.path)
+            ? (item.path.includes("?")
+                ? currentUrl === item.path
+                : location.pathname === item.path || (item.path !== "/home" && item.path !== "/meets" && location.pathname.startsWith(item.path)))
             : selectedSpaceIdx === idx;
 
           const baseClass = cn(

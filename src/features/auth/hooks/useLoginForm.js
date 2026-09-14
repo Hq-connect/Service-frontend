@@ -43,7 +43,9 @@ function useLoginForm() {
     const result = await login(fields)
     if (result) {
       toast.success("Logged in successfully")
-      navigate("/")
+      const params = new URLSearchParams(window.location.search);
+      const redirectUrl = params.get("redirect") || "/";
+      navigate(redirectUrl);
     } else {
       toast.error("Login failed. Please check your credentials.")
     }
