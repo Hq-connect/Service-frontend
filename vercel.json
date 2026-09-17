@@ -21,7 +21,7 @@
           "value": "realtime.hqconnect.xyz"
         }
       ],
-      "destination": "https://hqconnect.xyz",
+      "destination": "https://hqrealtime-v1-0-1.onrender.com/$1",
       "permanent": false
     }
   ],
