@@ -48,7 +48,12 @@ export const getTenantSlug = () => {
     const parts = hostname.split(".");
 
     if (parts.length >= 3) {
-        return parts[0];
+        const subdomain = parts[0].toLowerCase();
+        // Reserved subdomains that are not tenant workspaces
+        if (subdomain === "api" || subdomain === "realtime" || subdomain === "www") {
+            return null;
+        }
+        return subdomain;
     }
 
     return null;
