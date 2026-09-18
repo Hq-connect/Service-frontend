@@ -23,20 +23,17 @@ export const useMeetingRoom = (joinCode) => {
         (state) => state.meetings
     );
 
-    // Media & UI states
+    // Media & UI states — these are used as props for LiveKitRoom
+    // LiveKit manages actual device acquisition; we only track toggle state
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
-    const [localStream, setLocalStream] = useState(null);
-    const [screenStream, setScreenStream] = useState(null);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [livekitToken, setLivekitToken] = useState(null);
     const [livekitUrl, setLivekitUrl] = useState(null);
 
-    const localStreamRef = useRef(null);
-    const screenStreamRef = useRef(null);
     const syncIntervalRef = useRef(null);
 
     // Extract current user ID robustly (supporting nested shapes from Redux)
@@ -54,7 +51,7 @@ export const useMeetingRoom = (joinCode) => {
          }))
     );
 
-    // 1. Initialize Room and Media
+    // 1. Initialize Room — fetch meeting data and LiveKit token
     useEffect(() => {
         if (!joinCode) return;
 
@@ -65,8 +62,13 @@ export const useMeetingRoom = (joinCode) => {
             dispatch(setError(null));
 
             try {
-                // Join or get meeting session
-                const response = await meetingService.joinMeeting(joinCode);
+                // Determine user display name
+                const displayName = currentUser
+                    ? `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() || currentUser.name || currentUser.email || ""
+                    : "";
+
+                // Join or get meeting session with user's display name
+                const response = await meetingService.joinMeeting(joinCode, displayName);
                 const meeting = response?.data?.meeting;
 
                 if (!isMounted) return;
@@ -83,7 +85,7 @@ export const useMeetingRoom = (joinCode) => {
                     setLivekitUrl(response.data.livekit.serverUrl);
                 } else {
                     // Try dedicated LiveKit token endpoint
-                    meetingService.getLiveKitToken(meeting._id).then((tokenRes) => {
+                    meetingService.getLiveKitToken(meeting._id, displayName).then((tokenRes) => {
                         if (isMounted && tokenRes?.data?.livekit?.token) {
                             setLivekitToken(tokenRes.data.livekit.token);
                             setLivekitUrl(tokenRes.data.livekit.serverUrl);
@@ -97,27 +99,6 @@ export const useMeetingRoom = (joinCode) => {
                 const partRes = await meetingService.getParticipants(meeting._id);
                 if (isMounted) {
                     dispatch(setParticipants(partRes?.data?.participants || []));
-                }
-
-                // Acquire local camera and audio tracks
-                try {
-                    if (navigator?.mediaDevices?.getUserMedia) {
-                        const stream = await navigator.mediaDevices.getUserMedia({
-                            audio: true,
-                            video: true,
-                        });
-                        if (isMounted) {
-                            localStreamRef.current = stream;
-                            setLocalStream(stream);
-                        } else {
-                            stream.getTracks().forEach((track) => track.stop());
-                        }
-                    }
-                } catch (mediaErr) {
-                    console.warn("Camera/Microphone access not permitted or unavailable:", mediaErr);
-                    if (isMounted) {
-                        setIsVideoOff(true);
-                    }
                 }
             } catch (err) {
                 if (isMounted) {
@@ -136,15 +117,6 @@ export const useMeetingRoom = (joinCode) => {
 
         return () => {
             isMounted = false;
-            // Teardown tracks
-            if (localStreamRef.current) {
-                localStreamRef.current.getTracks().forEach((track) => track.stop());
-                localStreamRef.current = null;
-            }
-            if (screenStreamRef.current) {
-                screenStreamRef.current.getTracks().forEach((track) => track.stop());
-                screenStreamRef.current = null;
-            }
             if (syncIntervalRef.current) {
                 clearInterval(syncIntervalRef.current);
             }
@@ -253,86 +225,45 @@ export const useMeetingRoom = (joinCode) => {
         return `${pad(minutes)}:${pad(seconds)}`;
     }, []);
 
-    // Media Controls
+    // Media Controls — these toggle state that LiveKitRoom reads as props
+    // LiveKit internally calls room.localParticipant.setMicrophoneEnabled() etc.
     const toggleMic = useCallback(() => {
-        if (localStreamRef.current) {
-            const audioTracks = localStreamRef.current.getAudioTracks();
-            audioTracks.forEach((track) => {
-                track.enabled = !track.enabled;
-            });
-            setIsMuted((prev) => !prev);
-        } else {
-            setIsMuted((prev) => !prev);
-        }
+        setIsMuted((prev) => !prev);
     }, []);
 
-    const toggleCam = useCallback(async () => {
-        if (localStreamRef.current) {
-            const videoTracks = localStreamRef.current.getVideoTracks();
-            if (videoTracks.length > 0) {
-                videoTracks.forEach((track) => {
-                    track.enabled = !track.enabled;
-                });
-                setIsVideoOff((prev) => !prev);
+    const toggleCam = useCallback(() => {
+        setIsVideoOff((prev) => !prev);
+    }, []);
+
+    const toggleScreenShare = useCallback(() => {
+        if (!isScreenSharing) {
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                toast.error(
+                    isMobile
+                        ? "Screen sharing is not supported by your mobile browser. Please open the meeting in a desktop browser."
+                        : "Screen sharing is not supported on this browser."
+                );
+                return;
+            }
+        }
+
+        const newState = !isScreenSharing;
+        setIsScreenSharing(newState);
+
+        // Notify backend about screen share state change
+        if (currentMeeting?._id) {
+            if (newState) {
+                meetingService.startScreenShare(currentMeeting._id).catch(() => {});
             } else {
-                // If stream didn't have video track initially, try re-acquiring
-                try {
-                    const videoOnly = await navigator.mediaDevices.getUserMedia({ video: true });
-                    const newTrack = videoOnly.getVideoTracks()[0];
-                    localStreamRef.current.addTrack(newTrack);
-                    setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
-                    setIsVideoOff(false);
-                } catch (err) {
-                    toast.error("Unable to enable camera");
-                }
-            }
-        } else {
-            setIsVideoOff((prev) => !prev);
-        }
-    }, []);
-
-    const toggleScreenShare = useCallback(async () => {
-        if (isScreenSharing) {
-            // Stop sharing
-            if (screenStreamRef.current) {
-                screenStreamRef.current.getTracks().forEach((track) => track.stop());
-                screenStreamRef.current = null;
-            }
-            setScreenStream(null);
-            setIsScreenSharing(false);
-            if (currentMeeting?._id) {
                 meetingService.stopScreenShare(currentMeeting._id).catch(() => {});
             }
-            toast.info("Screen sharing ended");
+        }
+
+        if (newState) {
+            toast.success("Sharing your screen");
         } else {
-            // Start sharing
-            try {
-                if (navigator?.mediaDevices?.getDisplayMedia) {
-                    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                    screenStreamRef.current = stream;
-                    setScreenStream(stream);
-                    setIsScreenSharing(true);
-
-                    if (currentMeeting?._id) {
-                        meetingService.startScreenShare(currentMeeting._id).catch(() => {});
-                    }
-
-                    stream.getVideoTracks()[0].onended = () => {
-                        setIsScreenSharing(false);
-                        setScreenStream(null);
-                        screenStreamRef.current = null;
-                        if (currentMeeting?._id) {
-                            meetingService.stopScreenShare(currentMeeting._id).catch(() => {});
-                        }
-                    };
-
-                    toast.success("Sharing your screen");
-                } else {
-                    toast.error("Screen sharing not supported on this device/browser");
-                }
-            } catch (err) {
-                console.warn("Screen share cancelled or not allowed:", err);
-            }
+            toast.info("Screen sharing ended");
         }
     }, [isScreenSharing, currentMeeting?._id]);
 
@@ -349,12 +280,6 @@ export const useMeetingRoom = (joinCode) => {
     // Room Exit Actions
     const leaveRoom = useCallback(async () => {
         try {
-            if (localStreamRef.current) {
-                localStreamRef.current.getTracks().forEach((track) => track.stop());
-            }
-            if (screenStreamRef.current) {
-                screenStreamRef.current.getTracks().forEach((track) => track.stop());
-            }
             if (currentMeeting?._id) {
                 await meetingService.leaveMeeting(currentMeeting._id);
             }
@@ -368,12 +293,6 @@ export const useMeetingRoom = (joinCode) => {
 
     const endRoom = useCallback(async () => {
         try {
-            if (localStreamRef.current) {
-                localStreamRef.current.getTracks().forEach((track) => track.stop());
-            }
-            if (screenStreamRef.current) {
-                screenStreamRef.current.getTracks().forEach((track) => track.stop());
-            }
             if (currentMeeting?._id) {
                 await meetingService.endMeeting(currentMeeting._id);
             }
@@ -423,19 +342,16 @@ export const useMeetingRoom = (joinCode) => {
 
     const startRecording = useCallback(async () => {
         try {
-            // Select active stream to record (screen share priority, fallback to local camera)
-            let streamToRecord = screenStreamRef.current || localStreamRef.current;
-
-            if (!streamToRecord || streamToRecord.getTracks().length === 0) {
-                try {
-                    streamToRecord = await navigator.mediaDevices.getDisplayMedia({
-                        video: true,
-                        audio: true,
-                    });
-                } catch (_) {
-                    toast.error("An active video or screen share stream is required to record");
-                    return;
-                }
+            // For recording, we capture the screen independently from LiveKit
+            let streamToRecord;
+            try {
+                streamToRecord = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: true,
+                });
+            } catch (_) {
+                toast.error("Please select a screen or window to record");
+                return;
             }
 
             recordedChunksRef.current = [];
@@ -454,6 +370,9 @@ export const useMeetingRoom = (joinCode) => {
             };
 
             recorder.onstop = async () => {
+                // Stop all tracks from the recording stream
+                streamToRecord.getTracks().forEach((track) => track.stop());
+
                 const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
                 const fileUrl = URL.createObjectURL(blob);
 
@@ -481,6 +400,11 @@ export const useMeetingRoom = (joinCode) => {
             recordingIntervalRef.current = setInterval(() => {
                 setRecordingSeconds((prev) => prev + 1);
             }, 1000);
+
+            // If user stops the screen capture via browser UI
+            streamToRecord.getVideoTracks()[0].onended = () => {
+                stopRecording();
+            };
 
             toast.info("Meeting recording started");
         } catch (err) {
@@ -520,8 +444,6 @@ export const useMeetingRoom = (joinCode) => {
         isVideoOff,
         isScreenSharing,
         remoteSharer,
-        localStream,
-        screenStream,
         toggleMic,
         toggleCam,
         toggleScreenShare,

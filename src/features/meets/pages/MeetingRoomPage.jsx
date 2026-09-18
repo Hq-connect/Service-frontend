@@ -41,11 +41,13 @@ export const MeetingRoomPage = ({
     isVideoOff,
     isScreenSharing,
     remoteSharer,
-    localStream,
-    screenStream,
     toggleMic,
     toggleCam,
     toggleScreenShare,
+    // State setters for LiveKit bidirectional sync
+    setIsScreenSharing,
+    setIsMuted,
+    setIsVideoOff,
     // Recording states & actions
     isRecording,
     recordingDuration,
@@ -67,14 +69,15 @@ export const MeetingRoomPage = ({
     copyInviteUrl,
     tenantSlug,
 }) => {
-    const localVideoRef = useRef(null);
-    const screenVideoRef = useRef(null);
     const [copiedCode, setCopiedCode] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
     const [showEndDialog, setShowEndDialog] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [dismissInviteCard, setDismissInviteCard] = useState(false);
     const [livekitError, setLivekitError] = useState(null);
+
+    // Detect mobile device for screen share guard
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     // Extract current user and ID robustly
     const currentUser = user?.data?.user || user?.user || user?.data || user;
@@ -93,20 +96,6 @@ export const MeetingRoomPage = ({
     });
 
     const totalParticipants = remoteParticipants.length + 1;
-
-    // Attach local camera stream to local video element
-    useEffect(() => {
-        if (localVideoRef.current && localStream && !isVideoOff) {
-            localVideoRef.current.srcObject = localStream;
-        }
-    }, [localStream, isVideoOff]);
-
-    // Attach screen share stream to screen video element
-    useEffect(() => {
-        if (screenVideoRef.current && screenStream && isScreenSharing) {
-            screenVideoRef.current.srcObject = screenStream;
-        }
-    }, [screenStream, isScreenSharing]);
 
     // Helper for initials
     const getInitials = (name = "User") => {
@@ -157,30 +146,21 @@ export const MeetingRoomPage = ({
                 isCompact ? "min-h-[100px]" : ""
             }`}
         >
-            {!isVideoOff && localStream ? (
-                <video
-                    ref={localVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover -scale-x-100"
-                />
-            ) : (
-                <div className="flex flex-col items-center justify-center gap-2.5 p-4 text-center">
-                    <div
-                        className={`rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold shadow-xl shadow-indigo-600/25 border-2 border-indigo-400/30 ${
-                            isCompact ? "w-10 h-10 text-sm" : "w-16 h-16 sm:w-20 sm:h-20 text-xl sm:text-2xl"
-                        }`}
-                    >
-                        {getInitials(currentUserName)}
-                    </div>
-                    {!isCompact && (
-                        <span className="text-[11px] sm:text-xs text-zinc-400 font-medium tracking-wide">
-                            Camera Off
-                        </span>
-                    )}
+            {/* Fallback: show avatar when LiveKit is not active */}
+            <div className="flex flex-col items-center justify-center gap-2.5 p-4 text-center">
+                <div
+                    className={`rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold shadow-xl shadow-indigo-600/25 border-2 border-indigo-400/30 ${
+                        isCompact ? "w-10 h-10 text-sm" : "w-16 h-16 sm:w-20 sm:h-20 text-xl sm:text-2xl"
+                    }`}
+                >
+                    {getInitials(currentUserName)}
                 </div>
-            )}
+                {!isCompact && (
+                    <span className="text-[11px] sm:text-xs text-zinc-400 font-medium tracking-wide">
+                        {isVideoOff ? "Camera Off" : "Standalone Mode"}
+                    </span>
+                )}
+            </div>
 
             {/* Local User Name & Status Badge */}
             <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
@@ -426,6 +406,8 @@ export const MeetingRoomPage = ({
                             isMuted={isMuted}
                             isVideoOff={isVideoOff}
                             isScreenSharing={isScreenSharing}
+                            setIsScreenSharing={setIsScreenSharing}
+                            dbParticipants={participants}
                             onError={(err) => {
                                 console.warn("LiveKit connection issue, using fallback stage:", err);
                                 setLivekitError(err.message || "LiveKit connection failed");
@@ -450,13 +432,17 @@ export const MeetingRoomPage = ({
                             {/* Dominant Screen Share Stage */}
                             <div className="flex-1 min-h-0 w-full rounded-2xl overflow-hidden bg-black border border-indigo-500/40 shadow-2xl flex items-center justify-center relative">
                                 {isScreenSharing ? (
-                                    <video
-                                        ref={screenVideoRef}
-                                        autoPlay
-                                        playsInline
-                                        muted
-                                        className="w-full h-full object-contain"
-                                    />
+                                    <div className="flex flex-col items-center justify-center p-6 text-center">
+                                        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-3 animate-pulse">
+                                            <MonitorUp className="w-8 h-8" />
+                                        </div>
+                                        <h3 className="text-base font-semibold text-white">
+                                            You are presenting
+                                        </h3>
+                                        <p className="text-xs text-zinc-400 mt-1 max-w-sm">
+                                            Screen sharing active.
+                                        </p>
+                                    </div>
                                 ) : (
                                     <div className="flex flex-col items-center justify-center p-6 text-center">
                                         <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-3 animate-pulse">
