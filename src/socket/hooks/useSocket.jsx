@@ -16,7 +16,6 @@ import {
 import { chatKeys } from "@/features/chats/queries/chat.keys";
 
 export const useSocketSetup = (enabled) => {
-    console.log("useSocketSetup called with enabled:", enabled);
     const dispatch = useDispatch();
     const queryClient = useQueryClient();
 

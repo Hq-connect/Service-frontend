@@ -11,7 +11,6 @@ function App() {
   const { getCurrentUser , loading: authLoading , user } = useAuth();
   useSocketSetup( initialized && !!user );
   useEffect(()=>{
-    console.log("running...");
     fetchTenant();
     getCurrentUser();
   },[fetchTenant, getCurrentUser])

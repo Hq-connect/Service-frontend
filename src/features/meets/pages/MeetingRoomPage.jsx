@@ -270,12 +270,7 @@ export const MeetingRoomPage = ({
                         </Badge>
                     </div>
 
-                    {livekitToken && !livekitError && (
-                        <Badge variant="outline" className="hidden md:inline-flex bg-cyan-500/10 text-cyan-400 border-cyan-500/30 gap-1 text-[10px] font-semibold">
-                            <Sparkles className="size-3 text-cyan-400" />
-                            LiveKit SFU
-                        </Badge>
-                    )}
+        
 
                     <ScreenShareIndicator
                         isSharing={isScreenSharing || Boolean(remoteSharer)}

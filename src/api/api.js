@@ -10,12 +10,9 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const tenantSlug =
-            store.getState().tenant.slug;
-        console.log("Tenant Slug from store:", tenantSlug);
+        const tenantSlug = store.getState().tenant.slug;
         if (tenantSlug) {
-            config.headers["X-Tenant-Slug"] =
-                tenantSlug;
+            config.headers["X-Tenant-Slug"] = tenantSlug;
         }
 
         return config;
