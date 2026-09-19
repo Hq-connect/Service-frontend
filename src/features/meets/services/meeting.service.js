@@ -32,8 +32,8 @@ export const meetingService = {
     },
 
     // Join a meeting using unique join code
-    joinMeeting: async (joinCode) => {
-        const response = await api.post("/meetings/join", { joinCode });
+    joinMeeting: async (joinCode, userName) => {
+        const response = await api.post("/meetings/join", { joinCode, ...(userName ? { userName } : {}) });
         return response.data;
     },
 
@@ -116,8 +116,10 @@ export const meetingService = {
     },
 
     // Get LiveKit media token for a meeting
-    getLiveKitToken: async (meetingId) => {
-        const response = await api.get(`/meetings/${meetingId}/livekit-token`);
+    getLiveKitToken: async (meetingId, userName) => {
+        const response = await api.get(`/meetings/${meetingId}/livekit-token`, {
+            params: userName ? { userName } : {},
+        });
         return response.data;
     },
 };

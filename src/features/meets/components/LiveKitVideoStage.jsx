@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useCallback } from "react";
 import {
     LiveKitRoom,
     RoomAudioRenderer,
@@ -6,10 +6,12 @@ import {
     useTracks,
     useParticipants,
     useLocalParticipant,
+    useRoomContext,
 } from "@livekit/components-react";
-import { Track } from "livekit-client";
+import { Track, RoomEvent } from "livekit-client";
 import { Mic, MicOff, Video, VideoOff, MonitorUp, Radio, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 const getInitials = (name) => {
     if (!name) return "U";
@@ -29,12 +31,19 @@ const LiveKitParticipantTile = ({
     cameraTrack,
     isHost = false,
     isCompact = false,
+    participantNameMap = {},
 }) => {
     const isLocal = participant.isLocal;
     const isSpeaking = participant.isSpeaking;
     const isMicOn = participant.isMicrophoneEnabled;
-    const isCameraOn = participant.isCameraEnabled && cameraTrack?.publication?.track && !cameraTrack.publication.isMuted;
-    const displayName = participant.name || (isLocal ? "You" : participant.identity);
+    const isCameraOn = Boolean(cameraTrack?.publication?.track && !cameraTrack?.publication?.isMuted);
+    
+    // Resolve display name: LiveKit token name > DB participant name > fallback
+    const resolvedDbName = participantNameMap[String(participant.identity)];
+    const displayName =
+        participant.name ||
+        resolvedDbName ||
+        (isLocal ? "You" : `Participant ${String(participant.identity).slice(-4)}`);
 
     return (
         <div
@@ -98,7 +107,7 @@ const LiveKitParticipantTile = ({
                     className={`p-1.5 rounded-lg backdrop-blur-md shadow-md ${
                         !isMicOn
                             ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                            : "bg-zinc-950/85 text-zinc-300 border border-zinc-800/80"
+                            : "bg-zinc-950/80 text-zinc-300 border border-zinc-800/80"
                     }`}
                 >
                     {isMicOn ? (
@@ -113,13 +122,109 @@ const LiveKitParticipantTile = ({
 };
 
 // -------------------------------------------------------------
+// LiveKit Media Sync — syncs parent state with LiveKit room
+// -------------------------------------------------------------
+const LiveKitMediaSync = ({ isMuted, isVideoOff, isScreenSharing, setIsScreenSharing }) => {
+    const room = useRoomContext();
+    const { localParticipant } = useLocalParticipant();
+
+    // Sync microphone state with LiveKit
+    useEffect(() => {
+        if (!localParticipant) return;
+        const shouldEnable = !isMuted;
+        localParticipant.setMicrophoneEnabled(shouldEnable).catch((err) => {
+            console.warn("LiveKit microphone toggle:", err?.message);
+        });
+    }, [isMuted, localParticipant]);
+
+    // Sync camera state with LiveKit
+    useEffect(() => {
+        if (!localParticipant) return;
+        const shouldEnable = !isVideoOff;
+        localParticipant.setCameraEnabled(shouldEnable).catch((err) => {
+            console.warn("LiveKit camera toggle:", err?.message);
+        });
+    }, [isVideoOff, localParticipant]);
+
+    // Sync screen share state with LiveKit
+    useEffect(() => {
+        if (!localParticipant) return;
+        localParticipant.setScreenShareEnabled(isScreenSharing).catch((err) => {
+            console.warn("LiveKit screen share error:", err);
+            if (isScreenSharing && setIsScreenSharing) {
+                setIsScreenSharing(false);
+            }
+            if (err?.name === "NotAllowedError") {
+                toast.info("Screen sharing cancelled or permission denied");
+            } else {
+                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (isMobile) {
+                    toast.error("Screen sharing is not supported by your mobile browser. Please use Chrome on desktop or an updated mobile browser.");
+                } else {
+                    toast.error("Failed to share screen: " + (err?.message || "Unknown error"));
+                }
+            }
+        });
+    }, [isScreenSharing, localParticipant, setIsScreenSharing]);
+
+    // Listen for screen share ending via browser UI (user clicks "Stop sharing")
+    useEffect(() => {
+        if (!room) return;
+
+        const handleTrackUnpublished = (publication, participant) => {
+            if (
+                participant.isLocal &&
+                publication.source === Track.Source.ScreenShare &&
+                setIsScreenSharing
+            ) {
+                setIsScreenSharing(false);
+            }
+        };
+
+        room.on(RoomEvent.LocalTrackUnpublished, handleTrackUnpublished);
+        return () => {
+            room.off(RoomEvent.LocalTrackUnpublished, handleTrackUnpublished);
+        };
+    }, [room, setIsScreenSharing]);
+
+    return null; // Invisible sync component
+};
+
+// -------------------------------------------------------------
 // LiveKit Active Room Stage (Inner Grid Layout)
 // -------------------------------------------------------------
-const LiveKitStageInner = ({ hostUserId }) => {
+const LiveKitStageInner = ({
+    hostUserId,
+    isMuted,
+    isVideoOff,
+    isScreenSharing,
+    setIsScreenSharing,
+    dbParticipants = [],
+}) => {
     const participants = useParticipants();
     const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], {
         onlySubscribed: false,
     });
+
+    // Build lookup map for participant names from database state
+    const participantNameMap = useMemo(() => {
+        const map = {};
+        if (Array.isArray(dbParticipants)) {
+            for (const p of dbParticipants) {
+                const uid = typeof p.userId === "object" ? (p.userId?._id || p.userId?.id) : p.userId;
+                const name =
+                    p.userName ||
+                    (p.userId?.firstName ? `${p.userId.firstName} ${p.userId.lastName || ""}`.trim() : null) ||
+                    p.userId?.fullName ||
+                    p.userId?.name ||
+                    p.name;
+                if (uid && name) {
+                    map[String(uid)] = name;
+                }
+            }
+        }
+        return map;
+    }, [dbParticipants]);
 
     // Detect active screen share track
     const screenShareTrack = useMemo(() => {
@@ -131,10 +236,21 @@ const LiveKitStageInner = ({ hostUserId }) => {
     // A. SCREEN SHARING MODE
     if (screenShareTrack) {
         const sharer = screenShareTrack.participant;
-        const sharerName = sharer?.name || (sharer?.isLocal ? "You" : sharer?.identity || "Participant");
+        const sharerName =
+            sharer?.name ||
+            participantNameMap[String(sharer?.identity)] ||
+            (sharer?.isLocal ? "You" : "Participant");
 
         return (
             <div className="flex-1 flex flex-col w-full h-full min-h-0 items-center justify-center gap-3">
+                {/* Media Sync (invisible) */}
+                <LiveKitMediaSync
+                    isMuted={isMuted}
+                    isVideoOff={isVideoOff}
+                    isScreenSharing={isScreenSharing}
+                    setIsScreenSharing={setIsScreenSharing}
+                />
+
                 {/* Dominant Screen Share Stage */}
                 <div className="flex-1 min-h-0 w-full rounded-2xl overflow-hidden bg-black border border-indigo-500/40 shadow-2xl flex items-center justify-center relative">
                     <VideoTrack
@@ -160,6 +276,7 @@ const LiveKitStageInner = ({ hostUserId }) => {
                                     cameraTrack={camTrack}
                                     isHost={String(p.identity) === String(hostUserId)}
                                     isCompact={true}
+                                    participantNameMap={participantNameMap}
                                 />
                             </div>
                         );
@@ -172,6 +289,14 @@ const LiveKitStageInner = ({ hostUserId }) => {
     // B. DYNAMIC AUTO-FITTING PARTICIPANT GRID
     return (
         <div className="w-full h-full min-h-0 flex items-center justify-center">
+            {/* Media Sync (invisible) */}
+            <LiveKitMediaSync
+                isMuted={isMuted}
+                isVideoOff={isVideoOff}
+                isScreenSharing={isScreenSharing}
+                setIsScreenSharing={setIsScreenSharing}
+            />
+
             {/* 1 Participant: Single Large Center Stage */}
             {totalCount <= 1 && (
                 <div className="w-full h-full flex items-center justify-center p-1 sm:p-2">
@@ -183,6 +308,7 @@ const LiveKitStageInner = ({ hostUserId }) => {
                                     (t) => t.participant.identity === participants[0].identity && t.source === Track.Source.Camera
                                 )}
                                 isHost={String(participants[0].identity) === String(hostUserId)}
+                                participantNameMap={participantNameMap}
                             />
                         )}
                     </div>
@@ -200,6 +326,7 @@ const LiveKitStageInner = ({ hostUserId }) => {
                                     (t) => t.participant.identity === p.identity && t.source === Track.Source.Camera
                                 )}
                                 isHost={String(p.identity) === String(hostUserId)}
+                                participantNameMap={participantNameMap}
                             />
                         </div>
                     ))}
@@ -217,6 +344,7 @@ const LiveKitStageInner = ({ hostUserId }) => {
                                     (t) => t.participant.identity === p.identity && t.source === Track.Source.Camera
                                 )}
                                 isHost={String(p.identity) === String(hostUserId)}
+                                participantNameMap={participantNameMap}
                             />
                         </div>
                     ))}
@@ -234,6 +362,7 @@ const LiveKitStageInner = ({ hostUserId }) => {
                                     (t) => t.participant.identity === p.identity && t.source === Track.Source.Camera
                                 )}
                                 isHost={String(p.identity) === String(hostUserId)}
+                                participantNameMap={participantNameMap}
                             />
                         </div>
                     ))}
@@ -251,6 +380,7 @@ const LiveKitStageInner = ({ hostUserId }) => {
                                     (t) => t.participant.identity === p.identity && t.source === Track.Source.Camera
                                 )}
                                 isHost={String(p.identity) === String(hostUserId)}
+                                participantNameMap={participantNameMap}
                             />
                         </div>
                     ))}
@@ -270,6 +400,8 @@ export const LiveKitVideoStage = ({
     isMuted,
     isVideoOff,
     isScreenSharing,
+    setIsScreenSharing,
+    dbParticipants = [],
     onDisconnected,
     onError,
 }) => {
@@ -280,7 +412,6 @@ export const LiveKitVideoStage = ({
             connect={Boolean(serverUrl && token)}
             audio={!isMuted}
             video={!isVideoOff}
-            screen={isScreenSharing}
             onDisconnected={onDisconnected}
             onError={onError}
             className="w-full h-full min-h-0 flex flex-col relative"
@@ -289,7 +420,14 @@ export const LiveKitVideoStage = ({
             <RoomAudioRenderer />
 
             {/* Visual Media & Grid Layout */}
-            <LiveKitStageInner hostUserId={hostUserId} />
+            <LiveKitStageInner
+                hostUserId={hostUserId}
+                isMuted={isMuted}
+                isVideoOff={isVideoOff}
+                isScreenSharing={isScreenSharing}
+                setIsScreenSharing={setIsScreenSharing}
+                dbParticipants={dbParticipants}
+            />
         </LiveKitRoom>
     );
 };
