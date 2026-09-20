@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { 
   Menu, Plus, User, Settings, LogOut 
 } from "lucide-react";
@@ -14,30 +14,34 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PRIMARY_NAV_ITEMS } from "./navigation";
 import Logo from "@/components/ui/Logo";
+import NotificationBell from "@/features/notifications/components/NotificationBell";
 
 function MobileNavigation({ 
   tenant, user, logout, secondaryNav, selectedSpaceIdx, setSelectedSpaceIdx, 
   currentPath, getInitials, getUserName, getAvatarStyle, mobileDrawerOpen, setMobileDrawerOpen 
 }) {
+  const location = useLocation();
+
   const renderSecondaryItems = () => {
     return (
       <div className="flex flex-col gap-0.5 p-2">
         {secondaryNav.items.map((item, idx) => {
           const Icon = item.icon;
-          const isSelected = selectedSpaceIdx === idx;
-          return (
-            <button
-              key={idx}
-              onClick={() => {
-                setSelectedSpaceIdx(idx);
-                setMobileDrawerOpen(false);
-              }}
-              className={`flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 group cursor-pointer ${
-                isSelected 
-                  ? "bg-accent/80 text-foreground" 
-                  : "text-foreground/80 hover:bg-accent/40 hover:text-foreground"
-              }`}
-            >
+          const currentUrl = location.pathname + location.search;
+          const isSelected = item.path
+            ? (item.path.includes("?")
+                ? currentUrl === item.path
+                : location.pathname === item.path || (item.path !== "/home" && item.path !== "/meets" && location.pathname.startsWith(item.path)))
+            : selectedSpaceIdx === idx;
+
+          const baseClass = `flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 group cursor-pointer ${
+            isSelected 
+              ? "bg-accent/80 text-foreground" 
+              : "text-foreground/80 hover:bg-accent/40 hover:text-foreground"
+          }`;
+
+          const content = (
+            <>
               <div className="flex items-center gap-3">
                 {typeof Icon === "string" ? (
                   <span 
@@ -51,11 +55,37 @@ function MobileNavigation({
                 )}
                 <span>{item.label}</span>
               </div>
-              {item.count !== undefined && (
+              {item.count !== undefined && item.count > 0 && (
                 <span className="px-1.5 py-0.5 text-xs font-semibold rounded-md bg-muted text-muted-foreground group-hover:bg-accent-foreground/10 group-hover:text-accent-foreground">
-                  {item.count}
+                  {item.count > 99 ? "99+" : item.count}
                 </span>
               )}
+            </>
+          );
+
+          if (item.path) {
+            return (
+              <Link
+                key={idx}
+                to={item.path}
+                onClick={() => setMobileDrawerOpen(false)}
+                className={baseClass}
+              >
+                {content}
+              </Link>
+            );
+          }
+
+          return (
+            <button
+              key={idx}
+              onClick={() => {
+                setSelectedSpaceIdx(idx);
+                setMobileDrawerOpen(false);
+              }}
+              className={baseClass}
+            >
+              {content}
             </button>
           );
         })}
@@ -101,7 +131,8 @@ function MobileNavigation({
         </div>
 
         {/* User Dropdown on Mobile */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger className="focus:outline-hidden cursor-pointer rounded-full">
               <Avatar className="size-8">

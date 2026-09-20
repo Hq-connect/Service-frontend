@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,13 @@ function DMListItem({ chat }) {
   const navigate = useNavigate();
   const { chatId: activeChatId } = useParams();
   const isActive = activeChatId === chat.chatId;
+
+  const onlineUsers = useSelector((state) => state.chat.onlineUsers);
+  const rawTargetUserId = chat.otherUser?.userId || chat.otherUser?._id || chat.otherUser?.id;
+  const targetUserId = rawTargetUserId ? String(rawTargetUserId) : null;
+  const isOnline = targetUserId ? onlineUsers[targetUserId] : undefined;
+  const presence =
+    isOnline === true ? "online" : isOnline === false ? "offline" : (chat.otherUser?.presence ?? "offline");
 
   const displayName = chat.otherUser?.name || "Unknown";
   const initials = displayName
@@ -72,7 +80,7 @@ function DMListItem({ chat }) {
           </AvatarFallback>
         </Avatar>
         <div className="absolute -bottom-0.5 -right-0.5">
-          <OnlineIndicator status={chat.otherUser?.presence ?? "offline"} size="xs" />
+          <OnlineIndicator status={presence} size="xs" />
         </div>
       </div>
 

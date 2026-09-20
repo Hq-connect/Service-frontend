@@ -1,67 +1,102 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  activeChatId: null,
+    activeChatId: null,
+    replyingTo: null,
 
-  replyingTo: null,
+    socketStatus: "disconnected",
 
-  socketStatus: "disconnected",
-
-  typingUsers: {},
-
-  onlineUsers: {},
+    typingUsers: {},
+    onlineUsers: {},
 };
 
 const chatSlice = createSlice({
-  name: "chat",
+    name: "chat",
 
-  initialState,
+    initialState,
 
-  reducers: {
-    setActiveChat: (state, action) => {
-      state.activeChatId = action.payload;
+    reducers: {
+        setActiveChat: (state, action) => {
+            state.activeChatId = action.payload;
+        },
+
+        setReplyingTo: (state, action) => {
+            state.replyingTo = action.payload;
+        },
+
+        clearReplyingTo: (state) => {
+            state.replyingTo = null;
+        },
+
+        setSocketStatus: (state, action) => {
+            state.socketStatus = action.payload;
+        },
+
+        setOnlineUsers: (state, action) => {
+            const userIds = Array.isArray(action.payload) ? action.payload : [];
+            const newOnline = {};
+            userIds.forEach((id) => {
+                if (id) {
+                    newOnline[String(id)] = true;
+                }
+            });
+            state.onlineUsers = newOnline;
+        },
+
+        setUserOnline: (state, action) => {
+            const raw = action.payload;
+            const uid = (raw && typeof raw === "object") ? (raw.userId || raw._id || raw.id) : raw;
+            if (uid) {
+                state.onlineUsers[String(uid)] = true;
+            }
+        },
+
+        setUserOffline: (state, action) => {
+            const raw = action.payload;
+            const uid = (raw && typeof raw === "object") ? (raw.userId || raw._id || raw.id) : raw;
+            if (uid) {
+                state.onlineUsers[String(uid)] = false;
+            }
+        },
+
+        addTypingUser: (state, action) => {
+            const { chatId, userId } = action.payload;
+
+            if (!state.typingUsers[chatId]) {
+                state.typingUsers[chatId] = [];
+            }
+
+            if (!state.typingUsers[chatId].includes(userId)) {
+                state.typingUsers[chatId].push(userId);
+            }
+        },
+
+        removeTypingUser: (state, action) => {
+            const { chatId, userId } = action.payload;
+
+            if (!state.typingUsers[chatId]) return;
+
+            state.typingUsers[chatId] =
+                state.typingUsers[chatId].filter(
+                    (id) => id !== userId
+                );
+        },
     },
-
-    setReplyingTo: (state, action) => {
-      state.replyingTo = action.payload;
-    },
-
-    clearReplyingTo: (state) => {
-      state.replyingTo = null;
-    },
-
-    setSocketStatus: (state, action) => {
-      state.socketStatus = action.payload;
-    },
-
-    setUserOnline: (state, action) => {
-      const userId = action.payload;
-
-      state.onlineUsers[userId] = true;
-    },
-
-    setUserOffline: (state, action) => {
-      const userId = action.payload;
-
-      state.onlineUsers[userId] = false;
-    },
-
-    setTypingUsers: (state, action) => {
-      const { chatId, users } = action.payload;
-
-      state.typingUsers[chatId] = users;
-    },
-  },
 });
 
 export const {
-  setActiveChat,
-  setReplyingTo,
-  clearReplyingTo,
-  setSocketStatus,
-  setUserOnline,
-  setUserOffline,
-  setTypingUsers,
+    setActiveChat,
+    setReplyingTo,
+    clearReplyingTo,
+
+    setSocketStatus,
+
+    setOnlineUsers,
+    setUserOnline,
+    setUserOffline,
+
+    addTypingUser,
+    removeTypingUser,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 
 import { useGroupMembers } from "../hooks/useGroupMembers";
+import { useChatSocket } from "../hooks/useChatSocket";
+import { useMarkChatRead } from "../hooks/useMarkChatRead";
 
 /**
  * Right panel of the chat layout - header, messages, input.
@@ -41,11 +43,30 @@ function ChatWindow({ chatId, chatType, chat }) {
   const { mutate: updateMessage } = useUpdateMessage(chatType);
   const { mutate: deleteMessage } = useDeleteMessage(chatType);
   const { mutate: addReaction } = useAddReaction(chatType);
+  const { mutate: markChatRead } = useMarkChatRead();
 
   // Sync activeChatId into Redux whenever chatId changes
   React.useEffect(() => {
     dispatch(setActiveChat(chatId ?? null));
   }, [chatId, dispatch]);
+
+  // Mark chat as read when opening conversation or switching chats
+  React.useEffect(() => {
+    if (chatId && !chatId.startsWith("new-")) {
+      markChatRead({ chatId, messageId: chat?.lastMessage?._id || null });
+    }
+  }, [chatId, markChatRead]);
+
+  // Mark chat as read when tab regains focus
+  React.useEffect(() => {
+    const handleFocus = () => {
+      if (chatId && !chatId.startsWith("new-")) {
+        markChatRead({ chatId, messageId: chat?.lastMessage?._id || null });
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [chatId, chat?.lastMessage?._id, markChatRead]);
 
   // Extract current user id
   const extractUser = (u) => {
@@ -57,6 +78,15 @@ function ChatWindow({ chatId, chatType, chat }) {
   const currentUser = extractUser(user);
   const currentUserId = currentUser?._id ?? currentUser?.id;
 
+  // Real-time socket room join/leave and typing status
+  const { emitTyping, stopTyping, typingUserNames } = useChatSocket({
+    chatId,
+    chatType,
+    currentUserId,
+    otherUser: chat?.otherUser,
+    groupMembers,
+  });
+
   if (!chatId || !chat) {
     return (
       <div className="hidden md:flex flex-col flex-1 min-w-0 min-h-0 bg-background">
@@ -66,6 +96,7 @@ function ChatWindow({ chatId, chatType, chat }) {
   }
 
   const handleSend = ({ text, attachments = [], replyTo: replyToId, linkPreview = null }) => {
+    stopTyping();
     const isNew = chatId?.startsWith("new-");
     let contentPayload = text;
     if (attachments.length > 0 || linkPreview) {
@@ -129,7 +160,7 @@ function ChatWindow({ chatId, chatType, chat }) {
           currentUserId={currentUserId}
           otherUser={chat?.otherUser}
           groupMembers={groupMembers}
-          typingUsers={[]}
+          typingUsers={typingUserNames}
           onReply={handleReply}
           onEdit={handleEdit}
           onDelete={handleDelete}
@@ -137,11 +168,13 @@ function ChatWindow({ chatId, chatType, chat }) {
         />
       </div>
 
-      {/* Input - receives replyingTo from Redux */}
+      {/* Input - receives replyingTo from Redux and typing listeners */}
       <MessageInput
         onSend={handleSend}
         replyTo={replyingTo}
         onCancelReply={handleCancelReply}
+        onTyping={emitTyping}
+        onStopTyping={stopTyping}
       />
 
       {/* Delete Confirmation Dialog */}

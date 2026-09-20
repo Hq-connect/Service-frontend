@@ -62,9 +62,10 @@ export const SECONDARY_NAV_DATA = {
   "/meets": {
     title: "Meets",
     items: [
-      { label: "Schedule Meet", icon: Calendar },
-      { label: "Instant Meeting", icon: Video },
-      { label: "Recorded Sessions", icon: PlayCircle },
+      { label: "All Meetings", icon: Video, path: "/meets" },
+      { label: "Schedule Meet", icon: Calendar, path: "/meets?action=schedule" },
+      { label: "Instant Meeting", icon: Video, path: "/meets?action=instant" },
+      { label: "Recorded Sessions", icon: PlayCircle, path: "/meets/recordings" },
       { label: "Calendar Sync", icon: RefreshCw }
     ]
   },
@@ -80,9 +81,9 @@ export const SECONDARY_NAV_DATA = {
   "/chats": {
     title: "Chats",
     items: [
-      { label: "Direct Messages", icon: MessageCircle, count: 5, path: "/chats/dm" },
-      { label: "Channels",        icon: Hash,          count: 3, path: "/chats/channel" },
-      { label: "Group Chats",     icon: Users,          count: 2, path: "/chats/group" },
+      { label: "Direct Messages", icon: MessageCircle, count: 0, path: "/chats/dm" },
+      { label: "Channels",        icon: Hash,          count: 0, path: "/chats/channel" },
+      { label: "Group Chats",     icon: Users,          count: 0, path: "/chats/group" },
       { label: "Muted",           icon: BellOff,                  path: "/chats/muted" },
     ]
   }

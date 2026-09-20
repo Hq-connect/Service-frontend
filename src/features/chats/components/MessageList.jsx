@@ -136,8 +136,8 @@ function MessageList({
 
               return (
                 <MessageScrollerItem
-                  key={message._id}
-                  messageId={message._id}
+                  key={message._id || message.messageId || message.id || i}
+                  messageId={message._id || message.messageId || message.id}
                   scrollAnchor={false}
                 >
                   <MessageItem
