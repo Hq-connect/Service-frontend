@@ -42,14 +42,17 @@ export const useSocketSetup = (enabled) => {
         };
 
         const handlePresenceInit = (onlineUserIds) => {
+            console.log("[useSocket] presence:init event:", onlineUserIds);
             dispatch(setOnlineUsers(onlineUserIds));
         };
 
         const handleUserOnline = (userId) => {
+            console.log("[useSocket] user:online event:", userId);
             dispatch(setUserOnline(userId));
         };
 
         const handleUserOffline = (userId) => {
+            console.log("[useSocket] user:offline event:", userId);
             dispatch(setUserOffline(userId));
         };
 

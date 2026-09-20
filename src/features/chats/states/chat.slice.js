@@ -36,19 +36,27 @@ const chatSlice = createSlice({
             const userIds = Array.isArray(action.payload) ? action.payload : [];
             const newOnline = {};
             userIds.forEach((id) => {
-                newOnline[id] = true;
+                if (id) {
+                    newOnline[String(id)] = true;
+                }
             });
-            state.onlineUsers = { ...state.onlineUsers, ...newOnline };
+            state.onlineUsers = newOnline;
         },
 
         setUserOnline: (state, action) => {
-            const userId = action.payload;
-            state.onlineUsers[userId] = true;
+            const raw = action.payload;
+            const uid = (raw && typeof raw === "object") ? (raw.userId || raw._id || raw.id) : raw;
+            if (uid) {
+                state.onlineUsers[String(uid)] = true;
+            }
         },
 
         setUserOffline: (state, action) => {
-            const userId = action.payload;
-            state.onlineUsers[userId] = false;
+            const raw = action.payload;
+            const uid = (raw && typeof raw === "object") ? (raw.userId || raw._id || raw.id) : raw;
+            if (uid) {
+                state.onlineUsers[String(uid)] = false;
+            }
         },
 
         addTypingUser: (state, action) => {

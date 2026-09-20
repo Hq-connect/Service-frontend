@@ -39,9 +39,10 @@ function ChatList({ type, chats = [], isLoading = false }) {
 
   return (
     <div className="flex flex-col gap-0.5 px-2 py-1">
-      {chats.map((chat) => (
-        <ChatListItem key={chat._id} type={type} chat={chat} />
-      ))}
+      {chats.map((chat, idx) => {
+        const itemKey = chat.chatId || chat._id || chat.id || chat.otherUser?.userId || idx;
+        return <ChatListItem key={itemKey} type={type} chat={chat} />;
+      })}
     </div>
   );
 }

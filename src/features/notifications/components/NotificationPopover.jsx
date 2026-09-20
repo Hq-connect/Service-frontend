@@ -79,9 +79,7 @@ export function NotificationPopover({ children, open, onOpenChange }) {
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        {children}
-      </PopoverTrigger>
+      <PopoverTrigger render={children} />
       <PopoverContent
         align="end"
         sideOffset={8}

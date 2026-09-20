@@ -23,7 +23,8 @@ function DMHeader({ chat }) {
     .toUpperCase() || "U";
 
   const onlineUsers = useSelector((state) => state.chat.onlineUsers);
-  const targetUserId = otherUser.userId || otherUser._id || otherUser.id;
+  const rawTargetUserId = otherUser.userId || otherUser._id || otherUser.id;
+  const targetUserId = rawTargetUserId ? String(rawTargetUserId) : null;
   const isOnline = targetUserId ? onlineUsers[targetUserId] : undefined;
   const presence =
     isOnline === true ? "online" : isOnline === false ? "offline" : (otherUser.presence ?? "offline");
