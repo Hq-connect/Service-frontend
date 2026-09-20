@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import useTenant from "@/global/hooks/useTenant";
 import useAuth from "@/features/auth/hooks/useAuth";
+import { useChatUnreadCount } from "@/features/chats/hooks/useChatUnreadCount";
+import { usePrimaryNavUnread } from "./hooks/usePrimaryNavUnread";
 
 // Import layout sub-components
 import { SECONDARY_NAV_DATA } from "./components/navigation";
@@ -18,11 +20,38 @@ function AppLayout() {
   const [selectedSpaceIdx, setSelectedSpaceIdx] = useState(0);
   const [isSecondarySidebarOpen, setIsSecondarySidebarOpen] = useState(true);
 
+  // 1. Dedicated hook for Primary Navigation (Chats icon badge) - updates everywhere
+  const { totalUnread: primaryChatUnreadCount } = usePrimaryNavUnread();
+
+  // 2. Dedicated hook for Secondary Navigation (breakdown for /chats routes)
+  const { data: chatUnread = { total: 0, dm: 0, group: 0, channel: 0 } } = useChatUnreadCount();
+
   // Normalize pathname (e.g. "/" goes to "/home")
   const currentPath = location.pathname === "/" ? "/home" : location.pathname;
   // For secondary nav lookup, use the base route segment (e.g. /chats/dm/xxx -> /chats)
   const navLookupPath = `/${currentPath.split("/")[1]}`;
-  const secondaryNav = SECONDARY_NAV_DATA[navLookupPath] || SECONDARY_NAV_DATA["/home"];
+  const baseSecondaryNav = SECONDARY_NAV_DATA[navLookupPath] || SECONDARY_NAV_DATA["/home"];
+
+  // Dynamically inject live unread counts for chat routes
+  const secondaryNav = React.useMemo(() => {
+    if (navLookupPath !== "/chats") return baseSecondaryNav;
+
+    return {
+      ...baseSecondaryNav,
+      items: baseSecondaryNav.items.map((item) => {
+        if (item.path === "/chats/dm") {
+          return { ...item, count: chatUnread.dm };
+        }
+        if (item.path === "/chats/group") {
+          return { ...item, count: chatUnread.group };
+        }
+        if (item.path === "/chats/channel") {
+          return { ...item, count: chatUnread.channel };
+        }
+        return item;
+      }),
+    };
+  }, [baseSecondaryNav, navLookupPath, chatUnread]);
 
   // Chat routes need full-height with no padding/scroll so ChatLayout can manage its own layout
   const isChatsRoute = currentPath.startsWith("/chats");
@@ -78,6 +107,7 @@ function AppLayout() {
         currentPath={currentPath}
         isSecondarySidebarOpen={isSecondarySidebarOpen}
         setIsSecondarySidebarOpen={setIsSecondarySidebarOpen}
+        chatUnreadCount={primaryChatUnreadCount}
       />
 
       {/* 2. Desktop Middle Secondary Sidebar (Light Theme) */}

@@ -41,9 +41,9 @@ function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelec
                 )}
                 <span>{item.label}</span>
               </div>
-              {item.count !== undefined && (
+              {item.count !== undefined && item.count > 0 && (
                 <span className="px-1.5 py-0.5 text-xs font-semibold rounded-md bg-muted text-muted-foreground group-hover:bg-accent-foreground/10 group-hover:text-accent-foreground">
-                  {item.count}
+                  {item.count > 99 ? "99+" : item.count}
                 </span>
               )}
             </>

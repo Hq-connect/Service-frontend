@@ -4,7 +4,7 @@ import { UserPlus } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import { PRIMARY_NAV_ITEMS, EXTRA_NAV_ITEMS } from "./navigation";
 
-function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySidebarOpen }) {
+function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySidebarOpen, chatUnreadCount = 0 }) {
   return (
     <aside className="hidden md:flex flex-col items-center w-[72px] bg-[#131517] border-r border-[#222528] text-white shrink-0 z-30 select-none">
       {/* Logo Icon Only */}
@@ -20,6 +20,8 @@ function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySid
         {PRIMARY_NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = item.path === currentPath || currentPath.startsWith(item.path + "/");
+          const hasUnread = item.path === "/chats" && chatUnreadCount > 0;
+
           return (
             <Link
               key={item.path}
@@ -34,6 +36,11 @@ function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySid
                 isActive ? "text-white" : "text-[#8e9297] group-hover:text-white"
               }`} />
               <span className="text-[9px] mt-0.5 tracking-wide select-none">{item.label}</span>
+              {hasUnread && (
+                <span className="absolute top-1 right-2 min-w-4 h-4 px-1 rounded-full bg-[#f23c3c] text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-[#131517]">
+                  {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                </span>
+              )}
             </Link>
           );
         })}

@@ -20,6 +20,25 @@ import { playNotificationChime } from "@/features/notifications/utils/sound";
 import { showTeamsNotificationToast } from "@/features/notifications/components/TeamsNotificationToast";
 import { router } from "@/app/router/Router";
 import { store } from "@/app/store/store";
+import chatService from "@/features/chats/services/chat.service";
+
+const extractUserId = (userObj) => {
+    if (!userObj) return null;
+    if (typeof userObj === "string") return userObj;
+    return (
+        userObj?._id ||
+        userObj?.id ||
+        userObj?.user?._id ||
+        userObj?.user?.id ||
+        userObj?.data?._id ||
+        userObj?.data?.user?._id ||
+        userObj?.data?.user?.id ||
+        null
+    );
+};
+
+// Track recently processed message IDs to guarantee idempotency across multiple socket broadcasts
+const processedMessageIds = new Set();
 
 export const useSocketSetup = (enabled) => {
     const dispatch = useDispatch();
@@ -68,6 +87,13 @@ export const useSocketSetup = (enabled) => {
         const handleMessageReceive = (message) => {
             const { chatId, type } = message;
             const messageId = message.messageId || message._id;
+            if (messageId) {
+                processedMessageIds.add(String(messageId));
+                if (processedMessageIds.size > 500) {
+                    const first = processedMessageIds.values().next().value;
+                    processedMessageIds.delete(first);
+                }
+            }
             const normalizedMsg = {
                 ...message,
                 _id: messageId,
@@ -100,9 +126,12 @@ export const useSocketSetup = (enabled) => {
                 );
             }
 
-            // Invalidate chat lists so the conversation preview & unread indicators update
+            // Invalidate chat lists and unread count so the conversation preview & nav badges update
             queryClient.invalidateQueries({
                 queryKey: chatKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: chatKeys.unread(),
             });
         };
 
@@ -212,6 +241,51 @@ export const useSocketSetup = (enabled) => {
             if (!chatId) return;
             const targetType = type || "dm";
 
+            const msgId = lastMessage?._id ? String(lastMessage._id) : null;
+            const isDuplicate = Boolean(msgId && processedMessageIds.has(msgId));
+            if (msgId && !isUpdate && !isDelete) {
+                processedMessageIds.add(msgId);
+                if (processedMessageIds.size > 500) {
+                    const first = processedMessageIds.values().next().value;
+                    processedMessageIds.delete(first);
+                }
+            }
+
+            const activeChatId = store.getState().chat?.activeChatId;
+            const authUser = store.getState().auth?.user;
+            const currentUserId = extractUserId(authUser);
+            const senderId = extractUserId(lastMessage?.senderId) || (typeof lastMessage?.senderId === "string" ? lastMessage.senderId : null);
+
+            const isFromOther = senderId && currentUserId ? String(senderId) !== String(currentUserId) : true;
+            const isCurrentChatActive = activeChatId && String(activeChatId) === String(chatId);
+
+            // If message is for currently active chat, keep unread as 0 and mark read on backend
+            if (isCurrentChatActive && isFromOther && !isUpdate && !isDelete && !isDuplicate) {
+                chatService.markChatAsRead({ chatId, messageId: lastMessage?._id }).catch((e) =>
+                    console.error("Error auto-marking active chat as read:", e)
+                );
+            }
+
+            // If message is from someone else, chat is not active, and NOT duplicate, increment unread counts
+            if (isFromOther && !isCurrentChatActive && !isUpdate && !isDelete && !isDuplicate) {
+                queryClient.setQueryData(chatKeys.unread(), (old) => {
+                    const prev = old || { total: 0, dm: 0, group: 0, channel: 0, byChat: {} };
+                    const byChat = { ...(prev.byChat || {}) };
+                    byChat[chatId] = (byChat[chatId] || 0) + 1;
+
+                    return {
+                        ...prev,
+                        total: (prev.total || 0) + 1,
+                        [targetType]: (prev[targetType] || 0) + 1,
+                        byChat,
+                    };
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: chatKeys.unread(),
+                });
+            }
+
             queryClient.setQueryData(chatKeys.list(targetType), (oldChats) => {
                 if (!oldChats || !Array.isArray(oldChats)) {
                     queryClient.invalidateQueries({
@@ -251,6 +325,17 @@ export const useSocketSetup = (enabled) => {
                             return chat;
                         }
 
+                        // Deduplication: if chat already has this message as lastMessage and it's not an update/delete
+                        if (
+                            !isUpdate &&
+                            !isDelete &&
+                            chat.lastMessage?._id &&
+                            lastMessage?._id &&
+                            String(chat.lastMessage._id) === String(lastMessage._id)
+                        ) {
+                            return chat;
+                        }
+
                         // Monotonic check: only update if incoming message is newer or equal
                         const incomingTime = new Date(updatedAt || lastMessage?.createdAt || Date.now()).getTime();
                         const existingTime = new Date(chat.updatedAt || chat.lastMessage?.createdAt || 0).getTime();
@@ -259,12 +344,19 @@ export const useSocketSetup = (enabled) => {
                             return chat;
                         }
 
+                        const unreadCount = isCurrentChatActive
+                            ? 0
+                            : (isFromOther && !isDuplicate)
+                            ? (chat.unreadCount || 0) + 1
+                            : (chat.unreadCount || 0);
+
                         return {
                             ...chat,
                             lastMessage: {
                                 ...chat.lastMessage,
                                 ...lastMessage,
                             },
+                            unreadCount,
                             updatedAt: updatedAt || lastMessage?.createdAt || new Date().toISOString(),
                         };
                     }
@@ -276,6 +368,9 @@ export const useSocketSetup = (enabled) => {
                     queryClient.invalidateQueries({
                         queryKey: chatKeys.list(targetType),
                     });
+                    queryClient.invalidateQueries({
+                        queryKey: chatKeys.unread(),
+                    });
                     return oldChats;
                 }
 
@@ -286,6 +381,53 @@ export const useSocketSetup = (enabled) => {
                 }
 
                 return updatedChats;
+            });
+        };
+
+        // CHAT READ SYNC ACROSS TABS / SESSIONS
+        const handleChatRead = ({ chatId, userId }) => {
+            const authUser = store.getState().auth?.user;
+            const currentUserId = extractUserId(authUser);
+            const targetUserId = extractUserId(userId) || (typeof userId === "string" ? userId : null);
+
+            if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
+                return;
+            }
+
+            // Zero out unread count for this chat in list queries
+            ["dm", "group"].forEach((type) => {
+                queryClient.setQueryData(chatKeys.list(type), (oldChats) => {
+                    if (!oldChats || !Array.isArray(oldChats)) return oldChats;
+                    return oldChats.map((chat) => {
+                        const cId = chat.chatId || chat._id;
+                        if (cId === chatId) {
+                            return { ...chat, unreadCount: 0 };
+                        }
+                        return chat;
+                    });
+                });
+            });
+
+            // Update unread count summary
+            queryClient.setQueryData(chatKeys.unread(), (old) => {
+                if (!old) return old;
+                const prevCount = old.byChat?.[chatId] || 0;
+                if (prevCount === 0) return old;
+
+                const byChat = { ...(old.byChat || {}) };
+                delete byChat[chatId];
+
+                return {
+                    ...old,
+                    total: Math.max(0, (old.total || 0) - prevCount),
+                    dm: Math.max(0, (old.dm || 0) - prevCount),
+                    group: Math.max(0, (old.group || 0) - prevCount),
+                    byChat,
+                };
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: chatKeys.unread(),
             });
         };
 
@@ -301,6 +443,20 @@ export const useSocketSetup = (enabled) => {
             queryClient.invalidateQueries({
                 queryKey: notificationKeys.all,
             });
+
+            // Invalidate chat unread counts if notification is chat-related
+            const isChatNotification =
+                notification.type === "chat" ||
+                notification.type === "message" ||
+                (typeof notification.event === "string" && notification.event.startsWith("chat.")) ||
+                notification.action?.type === "chat" ||
+                Boolean(notification.metadata?.chatId);
+
+            if (isChatNotification) {
+                queryClient.invalidateQueries({
+                    queryKey: chatKeys.unread(),
+                });
+            }
 
             // 3. Play audio chime if sound is enabled
             const isSoundEnabled = store.getState().notifications?.soundEnabled ?? true;
@@ -337,6 +493,7 @@ export const useSocketSetup = (enabled) => {
         socket.on("message:deleted", handleMessageDeleted);
         socket.on("message:reaction", handleMessageReaction);
         socket.on("notification:receive", handleNotificationReceive);
+        socket.on("chat:read", handleChatRead);
 
         // CLEANUP
         return () => {
@@ -356,6 +513,7 @@ export const useSocketSetup = (enabled) => {
             socket.off("message:deleted", handleMessageDeleted);
             socket.off("message:reaction", handleMessageReaction);
             socket.off("notification:receive", handleNotificationReceive);
+            socket.off("chat:read", handleChatRead);
 
             disconnectSocket();
         };

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 
 import { useGroupMembers } from "../hooks/useGroupMembers";
 import { useChatSocket } from "../hooks/useChatSocket";
+import { useMarkChatRead } from "../hooks/useMarkChatRead";
 
 /**
  * Right panel of the chat layout - header, messages, input.
@@ -42,11 +43,30 @@ function ChatWindow({ chatId, chatType, chat }) {
   const { mutate: updateMessage } = useUpdateMessage(chatType);
   const { mutate: deleteMessage } = useDeleteMessage(chatType);
   const { mutate: addReaction } = useAddReaction(chatType);
+  const { mutate: markChatRead } = useMarkChatRead();
 
   // Sync activeChatId into Redux whenever chatId changes
   React.useEffect(() => {
     dispatch(setActiveChat(chatId ?? null));
   }, [chatId, dispatch]);
+
+  // Mark chat as read when opening conversation or switching chats
+  React.useEffect(() => {
+    if (chatId && !chatId.startsWith("new-")) {
+      markChatRead({ chatId, messageId: chat?.lastMessage?._id || null });
+    }
+  }, [chatId, markChatRead]);
+
+  // Mark chat as read when tab regains focus
+  React.useEffect(() => {
+    const handleFocus = () => {
+      if (chatId && !chatId.startsWith("new-")) {
+        markChatRead({ chatId, messageId: chat?.lastMessage?._id || null });
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [chatId, chat?.lastMessage?._id, markChatRead]);
 
   // Extract current user id
   const extractUser = (u) => {
