@@ -23,4 +23,9 @@ export const chatKeys = {
     "members",
     chatId,
   ],
+
+  unread: () => [
+    ...chatKeys.all,
+    "unread",
+  ],
 };

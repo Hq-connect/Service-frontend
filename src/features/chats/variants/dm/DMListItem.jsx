@@ -23,7 +23,8 @@ function DMListItem({ chat }) {
   const isActive = activeChatId === chat.chatId;
 
   const onlineUsers = useSelector((state) => state.chat.onlineUsers);
-  const targetUserId = chat.otherUser?.userId || chat.otherUser?._id || chat.otherUser?.id;
+  const rawTargetUserId = chat.otherUser?.userId || chat.otherUser?._id || chat.otherUser?.id;
+  const targetUserId = rawTargetUserId ? String(rawTargetUserId) : null;
   const isOnline = targetUserId ? onlineUsers[targetUserId] : undefined;
   const presence =
     isOnline === true ? "online" : isOnline === false ? "offline" : (chat.otherUser?.presence ?? "offline");

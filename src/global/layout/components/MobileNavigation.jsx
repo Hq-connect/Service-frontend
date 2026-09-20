@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PRIMARY_NAV_ITEMS } from "./navigation";
 import Logo from "@/components/ui/Logo";
+import NotificationBell from "@/features/notifications/components/NotificationBell";
 
 function MobileNavigation({ 
   tenant, user, logout, secondaryNav, selectedSpaceIdx, setSelectedSpaceIdx, 
@@ -54,9 +55,9 @@ function MobileNavigation({
                 )}
                 <span>{item.label}</span>
               </div>
-              {item.count !== undefined && (
+              {item.count !== undefined && item.count > 0 && (
                 <span className="px-1.5 py-0.5 text-xs font-semibold rounded-md bg-muted text-muted-foreground group-hover:bg-accent-foreground/10 group-hover:text-accent-foreground">
-                  {item.count}
+                  {item.count > 99 ? "99+" : item.count}
                 </span>
               )}
             </>
@@ -130,7 +131,8 @@ function MobileNavigation({
         </div>
 
         {/* User Dropdown on Mobile */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger className="focus:outline-hidden cursor-pointer rounded-full">
               <Avatar className="size-8">

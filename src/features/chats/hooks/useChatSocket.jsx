@@ -12,6 +12,8 @@ import { socket } from "@/socket/config/socket.config";
  * @param {object|null} [params.otherUser] - Other user object in DM
  * @param {Array} [params.groupMembers=[]] - Members array in Group
  */
+const EMPTY_TYPING = [];
+
 export const useChatSocket = ({
   chatId,
   chatType = "dm",
@@ -24,7 +26,7 @@ export const useChatSocket = ({
 
   const socketStatus = useSelector((state) => state.chat.socketStatus);
   const typingUserIds = useSelector(
-    (state) => (chatId ? state.chat.typingUsers[chatId] || [] : [])
+    (state) => (chatId ? state.chat.typingUsers[chatId] || EMPTY_TYPING : EMPTY_TYPING)
   );
 
   const isValidChat = Boolean(chatId && !chatId.startsWith("new-"));
