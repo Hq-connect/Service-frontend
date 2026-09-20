@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PRIMARY_NAV_ITEMS } from "./navigation";
 import Logo from "@/components/ui/Logo";
+import NotificationBell from "@/features/notifications/components/NotificationBell";
 
 function MobileNavigation({ 
   tenant, user, logout, secondaryNav, selectedSpaceIdx, setSelectedSpaceIdx, 
@@ -130,7 +131,8 @@ function MobileNavigation({
         </div>
 
         {/* User Dropdown on Mobile */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger className="focus:outline-hidden cursor-pointer rounded-full">
               <Avatar className="size-8">

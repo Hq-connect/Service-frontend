@@ -3,6 +3,7 @@ import {
   LayoutGrid, Search, Smartphone, Calendar, Bell, User, Settings, LogOut 
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import NotificationBell from "@/features/notifications/components/NotificationBell";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -38,14 +39,7 @@ function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle 
         <button className="text-gray-500 hover:text-gray-800 cursor-pointer">
           <Calendar className="size-5" />
         </button>
-        <div className="relative">
-          <button className="text-gray-500 hover:text-gray-800 cursor-pointer">
-            <Bell className="size-5" />
-          </button>
-          <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 rounded-full bg-[#f23c3c] text-white text-[7px] font-bold flex items-center justify-center ring-2 ring-white">
-            23
-          </span>
-        </div>
+        <NotificationBell />
         
         <DropdownMenu>
           <DropdownMenuTrigger className="focus:outline-hidden cursor-pointer group rounded-full">

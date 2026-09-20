@@ -5,6 +5,7 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./router/Router";
 import useAuth from "@/features/auth/hooks/useAuth";
 import { useSocketSetup } from "@/socket/hooks/useSocket";
+import { registerServiceWorker } from "@/features/notifications/utils/pushManager";
 
 function App() {
   const { fetchTenant , loading: tenantLoading ,initialized } = useTenant();
@@ -13,6 +14,7 @@ function App() {
   useEffect(()=>{
     fetchTenant();
     getCurrentUser();
+    registerServiceWorker();
   },[fetchTenant, getCurrentUser])
 
   if(tenantLoading || authLoading){
