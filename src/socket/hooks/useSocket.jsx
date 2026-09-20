@@ -14,6 +14,12 @@ import {
 } from "@/features/chats/states/chat.slice";
 
 import { chatKeys } from "@/features/chats/queries/chat.keys";
+import { incrementUnreadCount } from "@/features/notifications/states/notification.slice";
+import { notificationKeys } from "@/features/notifications/queries/notification.keys";
+import { playNotificationChime } from "@/features/notifications/utils/sound";
+import { showTeamsNotificationToast } from "@/features/notifications/components/TeamsNotificationToast";
+import { router } from "@/app/router/Router";
+import { store } from "@/app/store/store";
 
 export const useSocketSetup = (enabled) => {
     const dispatch = useDispatch();
@@ -280,6 +286,37 @@ export const useSocketSetup = (enabled) => {
             });
         };
 
+        // NOTIFICATION RECEIVED
+        const handleNotificationReceive = (data) => {
+            const notification = data?.notification || data;
+            if (!notification) return;
+
+            // 1. Increment Redux unread count
+            dispatch(incrementUnreadCount(1));
+
+            // 2. Invalidate notification list & unread count in TanStack query cache
+            queryClient.invalidateQueries({
+                queryKey: notificationKeys.all,
+            });
+
+            // 3. Play audio chime if sound is enabled
+            const isSoundEnabled = store.getState().notifications?.soundEnabled ?? true;
+            if (isSoundEnabled) {
+                playNotificationChime();
+            }
+
+            // 4. Show Microsoft Teams style floating toast at the bottom-right
+            showTeamsNotificationToast(notification, (targetUrl) => {
+                if (targetUrl) {
+                    if (router?.navigate) {
+                        router.navigate(targetUrl);
+                    } else {
+                        window.location.assign(targetUrl);
+                    }
+                }
+            });
+        };
+
         // REGISTER EVENTS
         socket.on("connect", handleConnect);
         socket.on("disconnect", handleDisconnect);
@@ -296,6 +333,7 @@ export const useSocketSetup = (enabled) => {
         socket.on("message:delete", handleMessageDeleted);
         socket.on("message:deleted", handleMessageDeleted);
         socket.on("message:reaction", handleMessageReaction);
+        socket.on("notification:receive", handleNotificationReceive);
 
         // CLEANUP
         return () => {
@@ -314,6 +352,7 @@ export const useSocketSetup = (enabled) => {
             socket.off("message:delete", handleMessageDeleted);
             socket.off("message:deleted", handleMessageDeleted);
             socket.off("message:reaction", handleMessageReaction);
+            socket.off("notification:receive", handleNotificationReceive);
 
             disconnectSocket();
         };
