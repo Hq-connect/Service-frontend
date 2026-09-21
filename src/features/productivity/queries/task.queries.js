@@ -48,13 +48,47 @@ export const useDeleteTask = () => {
     });
 };
 
+export const useMoveTask = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ projectId, taskId, moveData }) => taskService.moveTask(projectId, taskId, moveData),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['productivity-tasks', variables.projectId] });
+        },
+    });
+};
+
 export const useReorderTasks = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ projectId, payload }) => taskService.reorderTasks(projectId, payload),
+        mutationFn: ({ projectId, updates }) => taskService.reorderTasks(projectId, updates),
         // Optimistic updates handled in the component
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['productivity-tasks', variables.projectId] });
+        },
+    });
+};
+
+export const useAssignTask = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ projectId, taskId, userId }) => taskService.assignTask(projectId, taskId, userId),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['productivity-tasks', variables.projectId] });
+            queryClient.invalidateQueries({ queryKey: ['productivity-task', variables.projectId, variables.taskId] });
+            queryClient.invalidateQueries({ queryKey: ['task-activities', variables.taskId] });
+        },
+    });
+};
+
+export const useUnassignTask = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ projectId, taskId }) => taskService.unassignTask(projectId, taskId),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['productivity-tasks', variables.projectId] });
+            queryClient.invalidateQueries({ queryKey: ['productivity-task', variables.projectId, variables.taskId] });
+            queryClient.invalidateQueries({ queryKey: ['task-activities', variables.taskId] });
         },
     });
 };
