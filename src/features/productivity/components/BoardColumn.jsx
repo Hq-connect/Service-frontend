@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, Trash2, Edit2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, Edit2, Plus } from 'lucide-react';
 import { useDeleteColumn, useUpdateColumn } from '../queries/board.queries';
+import { Droppable } from '@hello-pangea/dnd';
+import { TaskCard } from './TaskCard';
 
-export const BoardColumn = ({ column, boardId, provided, isDragging }) => {
+export const BoardColumn = ({ column, boardId, provided, isDragging, tasks = [], onAddTask }) => {
     const deleteColumnMutation = useDeleteColumn();
     const updateColumnMutation = useUpdateColumn();
     
@@ -31,7 +33,7 @@ export const BoardColumn = ({ column, boardId, provided, isDragging }) => {
         <div 
             ref={provided.innerRef}
             {...provided.draggableProps}
-            className={`shrink-0 w-80 flex flex-col rounded-xl bg-card border ${isDragging ? 'shadow-xl ring-2 ring-primary/20' : 'shadow-sm'} transition-shadow h-full max-h-full`}
+            className={`shrink-0 w-[280px] sm:w-80 flex flex-col rounded-xl bg-card border ${isDragging ? 'shadow-xl ring-2 ring-primary/20' : 'shadow-sm'} transition-shadow h-full max-h-full`}
         >
             <div 
                 {...provided.dragHandleProps}
