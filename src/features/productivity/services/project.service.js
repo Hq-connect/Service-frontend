@@ -1,19 +1,5 @@
 import api from '@/api/api';
-import { store } from '@/app/store/store';
-
-// Helper to get required headers
-const getHeaders = () => {
-    const state = store.getState();
-    // Assuming auth and tenant slices have user._id and currentTenant._id
-    // Adjust these selectors based on your actual state structure
-    const userId = state.auth?.user?._id; 
-    const tenantId = state.tenant?.currentTenant?._id || state.tenant?.id || 'temp-tenant-id';
-
-    return {
-        'x-user-id': userId,
-        'x-tenant-id': tenantId,
-    };
-};
+import { getHeaders } from './headers';
 
 export const getProjects = async () => {
     const response = await api.get('/projects', { headers: getHeaders() });

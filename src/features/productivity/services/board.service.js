@@ -1,16 +1,5 @@
 import api from '@/api/api';
-import { store } from '@/app/store/store';
-
-const getHeaders = () => {
-    const state = store.getState();
-    const userId = state.auth?.user?._id; 
-    const tenantId = state.tenant?.currentTenant?._id || state.tenant?.id || 'temp-tenant-id';
-
-    return {
-        'x-user-id': userId,
-        'x-tenant-id': tenantId,
-    };
-};
+import { getHeaders } from './headers';
 
 export const getBoards = async (projectId) => {
     const response = await api.get(`/projects/${projectId}/boards`, { headers: getHeaders() });

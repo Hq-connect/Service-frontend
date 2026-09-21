@@ -1,16 +1,5 @@
 import api from '@/api/api';
-import { store } from '@/app/store/store';
-
-const getHeaders = () => {
-    const state = store.getState();
-    const userId = state.auth?.user?._id; 
-    const tenantId = state.tenant?.currentTenant?._id || state.tenant?.id || 'temp-tenant-id';
-
-    return {
-        'x-user-id': userId,
-        'x-tenant-id': tenantId,
-    };
-};
+import { getHeaders } from './headers';
 
 export const getTasks = async (projectId) => {
     const response = await api.get(`/projects/${projectId}/tasks`, { headers: getHeaders() });
@@ -37,9 +26,34 @@ export const deleteTask = async (projectId, taskId) => {
     return response.data;
 };
 
-export const reorderTasks = async (projectId, payload) => {
-    // Expected payload: { updates: [{ taskId: '...', position: 0, columnId: '...' }, ...] }
-    // Note: Backend might expect a different format for cross-column reordering.
-    const response = await api.patch(`/projects/${projectId}/tasks/reorder`, payload, { headers: getHeaders() });
+export const moveTask = async (projectId, taskId, { columnId, position, status }) => {
+    const response = await api.patch(
+        `/projects/${projectId}/tasks/${taskId}/move`,
+        { columnId, position, status },
+        { headers: getHeaders() }
+    );
+    return response.data;
+};
+
+export const reorderTasks = async (projectId, updates) => {
+    // Backend expects a raw array: [{ taskId, columnId, position }, ...]
+    const response = await api.patch(`/projects/${projectId}/tasks/reorder`, updates, { headers: getHeaders() });
+    return response.data;
+};
+
+export const assignTask = async (projectId, taskId, userId) => {
+    const response = await api.patch(
+        `/projects/${projectId}/tasks/${taskId}/assignee`,
+        { userId },
+        { headers: getHeaders() }
+    );
+    return response.data;
+};
+
+export const unassignTask = async (projectId, taskId) => {
+    const response = await api.delete(
+        `/projects/${projectId}/tasks/${taskId}/assignee`,
+        { headers: getHeaders() }
+    );
     return response.data;
 };
