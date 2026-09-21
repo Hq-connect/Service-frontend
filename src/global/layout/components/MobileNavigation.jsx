@@ -28,11 +28,21 @@ function MobileNavigation({
         {secondaryNav.items.map((item, idx) => {
           const Icon = item.icon;
           const currentUrl = location.pathname + location.search;
-          const isSelected = item.path
-            ? (item.path.includes("?")
-                ? currentUrl === item.path
-                : location.pathname === item.path || (item.path !== "/home" && item.path !== "/meets" && location.pathname.startsWith(item.path)))
-            : selectedSpaceIdx === idx;
+          const searchParams = new URLSearchParams(location.search);
+          const currentView = searchParams.get("view");
+
+          let isSelected = false;
+          if (item.path) {
+            if (item.path.includes("?")) {
+              isSelected = currentUrl === item.path;
+            } else if (item.id === "inbox" || item.label === "Inbox") {
+              isSelected = (!currentView || currentView === "inbox") && location.pathname === item.path;
+            } else {
+              isSelected = location.pathname === item.path || (item.path !== "/home" && item.path !== "/meets" && !location.pathname.startsWith("/tasks") && location.pathname.startsWith(item.path));
+            }
+          } else {
+            isSelected = selectedSpaceIdx === idx;
+          }
 
           const baseClass = `flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 group cursor-pointer ${
             isSelected 
