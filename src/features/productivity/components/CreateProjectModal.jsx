@@ -11,6 +11,7 @@ export const CreateProjectModal = () => {
 
     const [formData, setFormData] = useState({
         name: '',
+        key: '',
         description: '',
     });
 
@@ -21,7 +22,7 @@ export const CreateProjectModal = () => {
         createProjectMutation.mutate(formData, {
             onSuccess: () => {
                 dispatch(setCreateProjectModalOpen(false));
-                setFormData({ name: '', description: '' });
+                setFormData({ name: '', key: '', description: '' });
             },
         });
     };
@@ -52,6 +53,23 @@ export const CreateProjectModal = () => {
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="e.g. Website Redesign"
+                        />
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <label htmlFor="key" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            Project Key (2-10 chars)
+                        </label>
+                        <input 
+                            id="key"
+                            type="text" 
+                            required
+                            minLength={2}
+                            maxLength={10}
+                            value={formData.key}
+                            onChange={(e) => setFormData({ ...formData, key: e.target.value.toUpperCase() })}
+                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 uppercase"
+                            placeholder="e.g. PROJ"
                         />
                     </div>
                     
