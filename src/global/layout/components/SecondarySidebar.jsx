@@ -13,11 +13,21 @@ function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelec
 
           // If the item has a path, use a Link and derive active from URL
           const currentUrl = location.pathname + location.search;
-          const isActive = item.path
-            ? (item.path.includes("?")
-                ? currentUrl === item.path
-                : location.pathname === item.path || (item.path !== "/home" && item.path !== "/meets" && location.pathname.startsWith(item.path)))
-            : selectedSpaceIdx === idx;
+          const searchParams = new URLSearchParams(location.search);
+          const currentView = searchParams.get("view");
+
+          let isActive = false;
+          if (item.path) {
+            if (item.path.includes("?")) {
+              isActive = currentUrl === item.path;
+            } else if (item.id === "inbox" || item.label === "Inbox") {
+              isActive = (!currentView || currentView === "inbox") && location.pathname === item.path;
+            } else {
+              isActive = location.pathname === item.path || (item.path !== "/home" && item.path !== "/meets" && !location.pathname.startsWith("/tasks") && location.pathname.startsWith(item.path));
+            }
+          } else {
+            isActive = selectedSpaceIdx === idx;
+          }
 
           const baseClass = cn(
             "flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 group cursor-pointer",

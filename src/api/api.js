@@ -1,5 +1,6 @@
 import axios from "axios";
 import { store } from "@/app/store/store";
+import { getTenantSlug } from "@/global/utils/tenant";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/+$/, "");
 
@@ -10,7 +11,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const tenantSlug = store.getState().tenant.slug;
+        const tenantSlug = store.getState().tenant?.slug || getTenantSlug();
         if (tenantSlug) {
             config.headers["X-Tenant-Slug"] = tenantSlug;
         }

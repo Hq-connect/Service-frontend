@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 import useTenant from "@/global/hooks/useTenant";
 import useAuth from "@/features/auth/hooks/useAuth";
 import { useChatUnreadCount } from "@/features/chats/hooks/useChatUnreadCount";
@@ -26,32 +27,58 @@ function AppLayout() {
   // 2. Dedicated hook for Secondary Navigation (breakdown for /chats routes)
   const { data: chatUnread = { total: 0, dm: 0, group: 0, channel: 0 } } = useChatUnreadCount();
 
+  // Dynamic task counts from Redux productivity slice
+  const taskCounts = useSelector((state) => state.productivity?.taskCounts);
+
   // Normalize pathname (e.g. "/" goes to "/home")
   const currentPath = location.pathname === "/" ? "/home" : location.pathname;
   // For secondary nav lookup, use the base route segment (e.g. /chats/dm/xxx -> /chats)
   const navLookupPath = `/${currentPath.split("/")[1]}`;
   const baseSecondaryNav = SECONDARY_NAV_DATA[navLookupPath] || SECONDARY_NAV_DATA["/home"];
 
-  // Dynamically inject live unread counts for chat routes
+  // Dynamically inject live counts & project-aware paths for chat & tasks routes
   const secondaryNav = React.useMemo(() => {
-    if (navLookupPath !== "/chats") return baseSecondaryNav;
+    if (navLookupPath === "/chats") {
+      return {
+        ...baseSecondaryNav,
+        items: baseSecondaryNav.items.map((item) => {
+          if (item.path === "/chats/dm") {
+            return { ...item, count: chatUnread.dm };
+          }
+          if (item.path === "/chats/group") {
+            return { ...item, count: chatUnread.group };
+          }
+          if (item.path === "/chats/channel") {
+            return { ...item, count: chatUnread.channel };
+          }
+          return item;
+        }),
+      };
+    }
 
-    return {
-      ...baseSecondaryNav,
-      items: baseSecondaryNav.items.map((item) => {
-        if (item.path === "/chats/dm") {
-          return { ...item, count: chatUnread.dm };
-        }
-        if (item.path === "/chats/group") {
-          return { ...item, count: chatUnread.group };
-        }
-        if (item.path === "/chats/channel") {
-          return { ...item, count: chatUnread.channel };
-        }
-        return item;
-      }),
-    };
-  }, [baseSecondaryNav, navLookupPath, chatUnread]);
+    if (navLookupPath === "/tasks") {
+      const match = location.pathname.match(/\/tasks\/projects\/([^/?]+)/);
+      const currentProjectId = match ? match[1] : null;
+      const tasksBasePath = currentProjectId ? `/tasks/projects/${currentProjectId}` : "/tasks";
+
+      return {
+        ...baseSecondaryNav,
+        items: baseSecondaryNav.items.map((item) => {
+          const itemPath = item.id === "inbox" 
+            ? tasksBasePath 
+            : `${tasksBasePath}?view=${item.id}`;
+          const count = taskCounts?.[item.id] ?? item.count;
+          return {
+            ...item,
+            path: itemPath,
+            count: count > 0 ? count : undefined,
+          };
+        }),
+      };
+    }
+
+    return baseSecondaryNav;
+  }, [baseSecondaryNav, navLookupPath, chatUnread, location.pathname, taskCounts]);
 
   // Chat routes need full-height with no padding/scroll so ChatLayout can manage its own layout
   const isChatsRoute = currentPath.startsWith("/chats");

@@ -34,11 +34,11 @@ export const SECONDARY_NAV_DATA = {
   "/tasks": {
     title: "Tasks",
     items: [
-      { label: "Inbox", icon: Inbox, count: 4 },
-      { label: "Assigned to me", icon: UserCheck, count: 7 },
-      { label: "Created by me", icon: ClipboardList, count: 2 },
-      { label: "Completed", icon: CheckCircle },
-      { label: "Archived", icon: Archive }
+      { id: "inbox", label: "Inbox", icon: Inbox, path: "/tasks" },
+      { id: "assigned", label: "Assigned to me", icon: UserCheck, path: "/tasks?view=assigned" },
+      { id: "created", label: "Created by me", icon: ClipboardList, path: "/tasks?view=created" },
+      { id: "completed", label: "Completed", icon: CheckCircle, path: "/tasks?view=completed" },
+      { id: "archived", label: "Archived", icon: Archive, path: "/tasks?view=archived" }
     ]
   },
   "/docs": {

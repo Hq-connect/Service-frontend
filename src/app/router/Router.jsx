@@ -9,6 +9,7 @@ import ChatPage from "@/features/chats/pages/ChatPage"
 import MeetsPage from "@/features/meets/pages/MeetsPage"
 import RecordedSessionsPage from "@/features/meets/pages/RecordedSessionsPage"
 import MeetingRoomContainer from "@/features/meets/containers/MeetingRoomContainer"
+import { ProjectsDashboard, BoardView } from "@/features/productivity"
 
 export const router = createBrowserRouter([
   {
@@ -30,7 +31,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/home" replace /> },
       { path: "home",   element: <UnderConstruction /> },
-      { path: "tasks",  element: <UnderConstruction /> },
+      { path: "tasks",  element: <ProjectsDashboard /> },
+      { path: "tasks/projects/:projectId", element: <BoardView /> },
       { path: "docs",   element: <UnderConstruction /> },
       { path: "files",  element: <UnderConstruction /> },
       { path: "meets",  element: <MeetsPage /> },
