@@ -3,6 +3,7 @@ export { CreateProjectModal } from './components/CreateProjectModal';
 export { BoardView } from './pages/BoardView';
 export { TaskCard } from './components/TaskCard';
 export { CreateTaskModal } from './components/CreateTaskModal';
+export { TaskCountdown } from './components/TaskCountdown';
 export { ProjectMembersModal } from './components/ProjectMembersModal';
 export * from './services/project.service';
 export * from './queries/project.queries';

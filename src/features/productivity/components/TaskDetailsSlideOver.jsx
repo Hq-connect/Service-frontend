@@ -13,6 +13,7 @@ import TaskComments from './TaskComments';
 import TaskLabels from './TaskLabels';
 import TaskAttachments from './TaskAttachments';
 import TaskActivityFeed from './TaskActivityFeed';
+import { TaskCountdown } from './TaskCountdown';
 
 const TaskDetailsSlideOver = () => {
     const dispatch = useDispatch();
@@ -82,6 +83,23 @@ const TaskDetailsSlideOver = () => {
             taskId: selectedTaskId,
             data: { dueDate: newDueDate }
         });
+    };
+
+    const handleAddPresetHours = (hours) => {
+        const newDueDate = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+        updateTaskMutation.mutate({
+            projectId,
+            taskId: selectedTaskId,
+            data: { dueDate: newDueDate }
+        });
+    };
+
+    const formatDateTimeLocal = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
 
     const handlePriorityChange = (e) => {
@@ -450,24 +468,54 @@ const TaskDetailsSlideOver = () => {
                             </select>
                         </div>
 
-                        {/* Due Date */}
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-zinc-500 flex items-center gap-1.5">
-                                <Calendar className="w-3.5 h-3.5" />
-                                <span>Due Date</span>
-                            </label>
+                        {/* Time Schedule & Due Date */}
+                        <div className="space-y-2 pt-2 border-t border-zinc-200/60">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-semibold text-zinc-500 flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>Time Schedule / Due</span>
+                                </label>
+                                {task?.dueDate && (
+                                    <TaskCountdown dueDate={task?.dueDate} status={task?.status} />
+                                )}
+                            </div>
+
+                            {/* Quick Time Presets */}
+                            <div className="flex flex-wrap gap-1">
+                                {[
+                                    { label: '+1h', hours: 1 },
+                                    { label: '+6h', hours: 6 },
+                                    { label: '+12h', hours: 12 },
+                                    { label: '+24h', hours: 24 },
+                                    { label: '+48h', hours: 48 },
+                                    { label: '+7d', hours: 168 },
+                                ].map((preset) => (
+                                    <button
+                                        key={preset.label}
+                                        type="button"
+                                        disabled={updateTaskMutation.isPending}
+                                        onClick={() => handleAddPresetHours(preset.hours)}
+                                        className="px-2 py-0.5 text-[11px] font-semibold bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 border border-zinc-200 rounded-md shadow-2xs transition-colors"
+                                        title={`Set deadline to ${preset.hours} hours from now`}
+                                    >
+                                        {preset.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Exact Date & Time Picker */}
                             <div className="flex items-center gap-2 p-2 bg-white border border-zinc-200 rounded-xl shadow-xs">
                                 <input
-                                    type="date"
-                                    value={task?.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''}
+                                    type="datetime-local"
+                                    value={formatDateTimeLocal(task?.dueDate)}
                                     onChange={handleDueDateChange}
                                     disabled={updateTaskMutation.isPending}
-                                    className="text-sm font-semibold text-zinc-900 bg-transparent flex-1 cursor-pointer focus:outline-none"
+                                    className="text-xs font-semibold text-zinc-900 bg-transparent flex-1 cursor-pointer focus:outline-none"
                                 />
                                 {task?.dueDate && (
                                     <button
                                         type="button"
-                                        title="Clear due date"
+                                        title="Clear time schedule"
                                         onClick={() => updateTaskMutation.mutate({ projectId, taskId: selectedTaskId, data: { dueDate: null } })}
                                         className="p-1 text-zinc-400 hover:text-zinc-600 rounded-full hover:bg-zinc-100 transition-colors"
                                     >

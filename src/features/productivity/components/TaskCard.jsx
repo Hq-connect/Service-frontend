@@ -3,6 +3,7 @@ import { Draggable } from '@hello-pangea/dnd';
 import { Calendar, MessageSquare, Paperclip, AlertCircle } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { setSelectedTaskId } from '../states/productivity.slice';
+import { TaskCountdown } from './TaskCountdown';
 
 export const TaskCard = ({ task, index }) => {
     const dispatch = useDispatch();
@@ -64,10 +65,7 @@ export const TaskCard = ({ task, index }) => {
                     <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50 text-xs text-muted-foreground">
                         <div className="flex items-center gap-2.5">
                             {task.dueDate && (
-                                <span className="flex items-center gap-1 text-[11px] text-zinc-500 font-medium" title="Due Date">
-                                    <Calendar className="w-3.5 h-3.5" />
-                                    {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                </span>
+                                <TaskCountdown dueDate={task.dueDate} status={task.status} />
                             )}
                             <span className="flex items-center gap-1" title="Comments">
                                 <MessageSquare className="w-3.5 h-3.5" />

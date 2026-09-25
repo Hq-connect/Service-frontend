@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useCreateTask } from '../queries/task.queries';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Clock } from 'lucide-react';
 // Assuming you have an action in your slice or you manage this via local state in BoardView.
 // For now we'll accept props: isOpen, onClose, projectId, defaultColumnId
 
@@ -12,23 +12,26 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId, boardId, defaultCo
         title: '',
         description: '',
         priority: 'medium', // Note: task.validation expects low, medium, high, urgent
+        dueDate: '',
     });
 
     if (!isOpen) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        const payload = {
+            ...formData,
+            dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null,
+            boardId,
+            columnId: defaultColumnId,
+        };
         createTaskMutation.mutate({
             projectId,
-            data: { 
-                ...formData, 
-                boardId,
-                columnId: defaultColumnId 
-            }
+            data: payload
         }, {
             onSuccess: () => {
                 onClose();
-                setFormData({ title: '', description: '', priority: 'medium' });
+                setFormData({ title: '', description: '', priority: 'medium', dueDate: '' });
             },
         });
     };
@@ -91,6 +94,57 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId, boardId, defaultCo
                             <option value="high">High</option>
                             <option value="urgent">Urgent</option>
                         </select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <label htmlFor="dueDate" className="text-sm font-medium leading-none flex items-center gap-1.5">
+                                <Clock className="w-3.5 h-3.5 text-blue-600" />
+                                <span>Time Schedule / Deadline</span>
+                            </label>
+                            {formData.dueDate && (
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData((prev) => ({ ...prev, dueDate: '' }))}
+                                    className="text-xs text-muted-foreground hover:text-foreground"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Quick Presets */}
+                        <div className="flex flex-wrap gap-1.5">
+                            {[
+                                { label: '+6h', hours: 6 },
+                                { label: '+12h', hours: 12 },
+                                { label: '+24h (1d)', hours: 24 },
+                                { label: '+48h (2d)', hours: 48 },
+                                { label: '+7d', hours: 168 },
+                            ].map((preset) => (
+                                <button
+                                    key={preset.label}
+                                    type="button"
+                                    onClick={() => {
+                                        const d = new Date(Date.now() + preset.hours * 60 * 60 * 1000);
+                                        const pad = (n) => String(n).padStart(2, '0');
+                                        const formatted = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                                        setFormData((prev) => ({ ...prev, dueDate: formatted }));
+                                    }}
+                                    className="px-2 py-1 text-xs font-medium rounded border bg-muted/40 hover:bg-muted text-foreground transition-colors"
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <input 
+                            id="dueDate"
+                            type="datetime-local"
+                            value={formData.dueDate}
+                            onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        />
                     </div>
 
                     {createTaskMutation.isError && (
