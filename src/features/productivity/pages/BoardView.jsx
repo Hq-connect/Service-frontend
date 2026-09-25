@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setTaskCounts } from '../states/productivity.slice';
 import { useBoards, useCreateBoard } from '../queries/board.queries';
@@ -11,7 +11,7 @@ import { BoardColumn } from '../components/BoardColumn';
 import { CreateTaskModal } from '../components/CreateTaskModal';
 import { ProjectMembersModal } from '../components/ProjectMembersModal';
 import TaskDetailsSlideOver from '../components/TaskDetailsSlideOver';
-import { Plus, Loader2, UserPlus, Users, X, Filter } from 'lucide-react';
+import { Plus, Loader2, UserPlus, Users, X, Filter, Lock, ArrowLeft } from 'lucide-react';
 
 export const BoardView = () => {
     const { projectId } = useParams();
@@ -22,7 +22,7 @@ export const BoardView = () => {
     const currentUser = useSelector((state) => state.auth?.user);
     const currentUserId = currentUser?._id || currentUser?.id;
 
-    const { data: boardsData, isLoading: isLoadingBoards } = useBoards(projectId);
+    const { data: boardsData, isLoading: isLoadingBoards, error: boardsError } = useBoards(projectId);
     
     const boards = boardsData?.data?.boards || (Array.isArray(boardsData?.data) ? boardsData.data : []);
     const activeBoard = boards.length > 0 ? boards[0] : null;
@@ -180,6 +180,31 @@ export const BoardView = () => {
         return (
             <div className="flex items-center justify-center h-full min-h-[50vh]">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
+    const isForbidden = boardsError?.response?.status === 403 || 
+        boardsError?.response?.data?.message?.toLowerCase().includes("not a member") ||
+        boardsError?.message?.toLowerCase().includes("not a member");
+
+    if (isForbidden) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center px-4">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-5 border border-amber-500/20 shadow-sm">
+                    <Lock className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl font-bold text-foreground tracking-tight">You are not a member of this project</h2>
+                <p className="text-sm text-muted-foreground max-w-md mt-2 mb-6 leading-relaxed">
+                    This is a public project visible to members of your organization. However, to view boards, create tasks, and collaborate, you need to be added as a member by a project admin or owner.
+                </p>
+                <Link
+                    to="/tasks"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to All Projects
+                </Link>
             </div>
         );
     }

@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setActiveProject, setCreateProjectModalOpen } from '../states/productivity.slice';
 import { CreateProjectModal } from '../components/CreateProjectModal';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, FolderKanban, Trash2, Filter, X } from 'lucide-react';
+import { Plus, FolderKanban, Trash2, Filter, X, Globe, Lock } from 'lucide-react';
 
 export const ProjectsDashboard = () => {
     const dispatch = useDispatch();
@@ -14,7 +14,7 @@ export const ProjectsDashboard = () => {
     const currentUser = useSelector((state) => state.auth?.user);
     const currentUserId = currentUser?._id || currentUser?.id;
 
-    const { data: projectsData, isLoading, error } = useProjects();
+    const { data: projectsData, isLoading, error } = useProjects(currentUserId);
     const deleteProjectMutation = useDeleteProject();
 
     const projects = projectsData?.data?.projects || (Array.isArray(projectsData?.data) ? projectsData.data : []);
@@ -115,10 +115,27 @@ export const ProjectsDashboard = () => {
                             className="group relative flex flex-col justify-between rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50 overflow-hidden"
                         >
                             <div className="p-6">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-semibold text-lg leading-none tracking-tight">
-                                        {project.name}
-                                    </h3>
+                                <div className="flex justify-between items-start mb-2 gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h3 className="font-semibold text-lg leading-none tracking-tight">
+                                            {project.name}
+                                        </h3>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                                            project.visibility === 'private'
+                                                ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                                                : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
+                                        }`}>
+                                            {project.visibility === 'private' ? (
+                                                <>
+                                                    <Lock className="w-3 h-3" /> Private
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Globe className="w-3 h-3" /> Public
+                                                </>
+                                            )}
+                                        </span>
+                                    </div>
                                     <button 
                                         onClick={(e) => handleDelete(e, project._id)}
                                         className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1 rounded-md"

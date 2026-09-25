@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as projectService from '../services/project.service';
 
-export const useProjects = () => {
+export const useProjects = (userId) => {
     return useQuery({
-        queryKey: ['productivity-projects'],
+        queryKey: ['productivity-projects', userId],
         queryFn: projectService.getProjects,
     });
 };

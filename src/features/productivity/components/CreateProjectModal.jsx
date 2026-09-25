@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCreateProjectModalOpen } from '../states/productivity.slice';
 import { useCreateProject } from '../queries/project.queries';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Globe, Lock } from 'lucide-react';
 
 export const CreateProjectModal = () => {
     const dispatch = useDispatch();
@@ -13,6 +13,7 @@ export const CreateProjectModal = () => {
         name: '',
         key: '',
         description: '',
+        visibility: 'public',
     });
 
     if (!isOpen) return null;
@@ -22,7 +23,7 @@ export const CreateProjectModal = () => {
         createProjectMutation.mutate(formData, {
             onSuccess: () => {
                 dispatch(setCreateProjectModalOpen(false));
-                setFormData({ name: '', key: '', description: '' });
+                setFormData({ name: '', key: '', description: '', visibility: 'public' });
             },
         });
     };
@@ -81,9 +82,53 @@ export const CreateProjectModal = () => {
                             id="description"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex min-h-[70px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="Briefly describe the project goals..."
                         />
+                    </div>
+
+                    {/* Visibility Selection */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium leading-none">
+                            Project Visibility
+                        </label>
+                        <div className="grid grid-cols-2 gap-3 pt-1">
+                            {/* Public Option */}
+                            <div
+                                onClick={() => setFormData({ ...formData, visibility: 'public' })}
+                                className={`flex flex-col p-3 rounded-xl border cursor-pointer transition-all ${
+                                    formData.visibility === 'public'
+                                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                        : 'border-border hover:bg-muted/50'
+                                }`}
+                            >
+                                <div className="flex items-center gap-1.5 font-semibold text-sm text-foreground">
+                                    <Globe className="w-4 h-4 text-blue-500" />
+                                    <span>Public</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                                    Visible to organization. Membership required to view boards.
+                                </p>
+                            </div>
+
+                            {/* Private Option */}
+                            <div
+                                onClick={() => setFormData({ ...formData, visibility: 'private' })}
+                                className={`flex flex-col p-3 rounded-xl border cursor-pointer transition-all ${
+                                    formData.visibility === 'private'
+                                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                        : 'border-border hover:bg-muted/50'
+                                }`}
+                            >
+                                <div className="flex items-center gap-1.5 font-semibold text-sm text-foreground">
+                                    <Lock className="w-4 h-4 text-amber-500" />
+                                    <span>Private</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                                    Only added project members can see and access this project.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     {createProjectMutation.isError && (
