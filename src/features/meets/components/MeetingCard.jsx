@@ -1,12 +1,17 @@
 import React, { useState } from "react";
-import { Calendar, Clock, Copy, Check, Video, XCircle, Users } from "lucide-react";
+import { Calendar, Clock, Copy, Check, Video, XCircle, Users, Edit3, Play } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import useAuth from "@/features/auth/hooks/useAuth";
 
-export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd }) => {
+export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
     const [copied, setCopied] = useState(false);
+    const { user } = useAuth();
+    const currentUser = user?.user || user?.data || user;
+    const currentUserId = currentUser?._id || currentUser?.id;
+    const isHost = String(meeting?.hostId || meeting?.createdBy) === String(currentUserId);
 
     const handleCopy = (e) => {
         e.stopPropagation();
@@ -16,6 +21,12 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd }) => {
             toast.success("Join code copied to clipboard!");
             setTimeout(() => setCopied(false), 2000);
         }
+    };
+
+    const isStartingSoon = () => {
+        if (meeting.status !== "scheduled" || !meeting.scheduledAt) return false;
+        const diff = new Date(meeting.scheduledAt).getTime() - Date.now();
+        return diff > 0 && diff <= 15 * 60 * 1000;
     };
 
     const getStatusBadge = (status) => {
@@ -28,6 +39,14 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd }) => {
                     </Badge>
                 );
             case "scheduled":
+                if (isStartingSoon()) {
+                    return (
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1.5 animate-bounce">
+                            <span className="size-1.5 rounded-full bg-amber-500" />
+                            Starts in &lt;15m
+                        </Badge>
+                    );
+                }
                 return (
                     <Badge variant="secondary" className="gap-1.5">
                         <span className="size-1.5 rounded-full bg-primary" />
@@ -93,36 +112,73 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd }) => {
                             </div>
                         )}
 
-                        <div className="flex items-center gap-2 pt-1">
-                            <Users className="size-3.5 text-muted-foreground/70" />
-                            <span className="font-mono bg-muted px-2 py-0.5 rounded text-foreground text-xs flex items-center gap-1.5 border border-border">
-                                {meeting.joinCode}
-                                <button
-                                    onClick={handleCopy}
-                                    className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
-                                    title="Copy join code"
-                                >
-                                    {copied ? (
-                                        <Check className="size-3 text-emerald-500" />
-                                    ) : (
-                                        <Copy className="size-3" />
-                                    )}
-                                </button>
-                            </span>
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                            <div className="flex items-center gap-2">
+                                <Users className="size-3.5 text-muted-foreground/70" />
+                                <span className="font-mono bg-muted px-2 py-0.5 rounded text-foreground text-xs flex items-center gap-1.5 border border-border">
+                                    {meeting.joinCode}
+                                    <button
+                                        onClick={handleCopy}
+                                        className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded cursor-pointer"
+                                        title="Copy join code"
+                                    >
+                                        {copied ? (
+                                            <Check className="size-3 text-emerald-500" />
+                                        ) : (
+                                            <Copy className="size-3" />
+                                        )}
+                                    </button>
+                                </span>
+                            </div>
+
+                            {isHost && (
+                                <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-medium">
+                                    Host
+                                </span>
+                            )}
                         </div>
                     </div>
                 </CardContent>
             </div>
 
-            <CardFooter className="flex items-center gap-2 pt-3 border-t border-border bg-transparent">
+            <CardFooter className="flex items-center gap-2 pt-3 border-t border-border bg-transparent flex-wrap">
                 {(meeting.status === "scheduled" || meeting.status === "ongoing") && (
                     <Button
                         onClick={() => onJoin(meeting.joinCode)}
-                        className="flex-1 gap-2"
+                        className="flex-1 gap-2 min-w-[110px]"
                         size="sm"
                     >
-                        <Video className="size-3.5" />
-                        Join Meeting
+                        {meeting.status === "scheduled" ? (
+                            isHost ? (
+                                <>
+                                    <Play className="size-3.5" />
+                                    Start Meeting
+                                </>
+                            ) : (
+                                <>
+                                    <Video className="size-3.5" />
+                                    Join Meeting
+                                </>
+                            )
+                        ) : (
+                            <>
+                                <Video className="size-3.5" />
+                                Join Live
+                            </>
+                        )}
+                    </Button>
+                )}
+
+                {meeting.status === "scheduled" && onEdit && (
+                    <Button
+                        onClick={() => onEdit(meeting)}
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        title="Reschedule / Edit Meeting"
+                    >
+                        <Edit3 className="size-3.5" />
+                        <span>Edit</span>
                     </Button>
                 )}
 
