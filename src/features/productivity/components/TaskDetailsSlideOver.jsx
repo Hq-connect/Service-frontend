@@ -4,22 +4,23 @@ import { useParams } from 'react-router-dom';
 import { setSelectedTaskId } from '../states/productivity.slice';
 import { useTask, useUpdateTask, useAssignTask, useUnassignTask } from '../queries/task.queries';
 import { useProjectMembers } from '../queries/project.queries';
-import { 
-    X, Calendar, User, AlignLeft, Tag, Paperclip, MessageSquare, 
+import {
+    X, Calendar, User, AlignLeft, Tag, Paperclip, MessageSquare,
     Activity, Check, ChevronDown, Loader2, Clock, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import TaskComments from './TaskComments';
+import { useBoardColumns } from '../queries/board.queries';
 import TaskLabels from './TaskLabels';
 import TaskAttachments from './TaskAttachments';
 import TaskActivityFeed from './TaskActivityFeed';
 import { TaskCountdown } from './TaskCountdown';
 
-const TaskDetailsSlideOver = () => {
+const TaskDetailsSlideOver = ({ boardColumns = [] }) => {
     const dispatch = useDispatch();
     const { activeProject, selectedTaskId } = useSelector((state) => state.productivity);
     const { projectId: urlProjectId } = useParams();
-    
+
     // Fallback to URL param if Redux state was lost
     const projectId = activeProject?._id || urlProjectId;
 
@@ -39,6 +40,11 @@ const TaskDetailsSlideOver = () => {
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [titleText, setTitleText] = useState('');
     const [activeTab, setActiveTab] = useState('comments'); // 'comments' | 'activity'
+    const { data: columnsData } = useBoardColumns(task?.boardId);
+    const columns = boardColumns && boardColumns.length > 0
+        ? boardColumns
+        : (columnsData?.data?.columns || (Array.isArray(columnsData?.data) ? columnsData.data : []));
+
 
     useEffect(() => {
         if (task) {
@@ -110,13 +116,49 @@ const TaskDetailsSlideOver = () => {
         });
     };
 
-    const handleStatusChange = (e) => {
+    const handleColumnChange = (e) => {
+        const selectedVal = e.target.value;
+
+        const targetColumn = columns.find(c => String(c._id) === String(selectedVal));
+
+        if (targetColumn) {
+            const name = targetColumn.name.toLowerCase();
+            let newStatus = 'todo';
+            if (name.includes('progress') || name.includes('doing') || name.includes('dev')) newStatus = 'in_progress';
+            else if (name.includes('review') || name.includes('qa') || name.includes('test')) newStatus = 'review';
+            else if (name.includes('done') || name.includes('complete') || name.includes('finished')) newStatus = 'done';
+
+            updateTaskMutation.mutate({
+                projectId,
+                taskId: selectedTaskId,
+                data: {
+                    columnId: targetColumn._id,
+                    status: newStatus,
+                }
+            });
+            return;
+        }
+
+
+        const fallbackCol = columns.find((c) => {
+            const name = c.name.toLowerCase();
+            if (selectedVal === 'todo') return name.includes('to do') || name.includes('todo');
+            if (selectedVal === 'in_progress') return name.includes('progress') || name.includes('doing');
+            if (selectedVal === 'review') return name.includes('review');
+            if (selectedVal === 'done') return name.includes('done') || name.includes('complete');
+            return false;
+        });
+
         updateTaskMutation.mutate({
             projectId,
             taskId: selectedTaskId,
-            data: { status: e.target.value }
+            data: {
+                status: selectedVal,
+                ...(fallbackCol ? { columnId: fallbackCol._id } : {}),
+            }
         });
     };
+
 
     const handleSaveDescription = () => {
         updateTaskMutation.mutate({
@@ -145,14 +187,14 @@ const TaskDetailsSlideOver = () => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 lg:p-8 overflow-y-auto">
             {/* Backdrop with blur */}
-            <div 
+            <div
                 className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in-0 duration-200"
                 onClick={handleClose}
             />
 
             {/* Main Centered Dialog Panel - Spacious & Clear (Linear / Jira style) */}
             <div className="relative w-full max-w-5xl xl:max-w-6xl max-h-[92vh] bg-white rounded-2xl shadow-2xl border border-zinc-200/80 flex flex-col overflow-hidden z-10 animate-in fade-in-0 zoom-in-95 duration-200">
-                
+
                 {/* Modal Top Bar */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-white sticky top-0 z-20">
                     <div className="flex items-center gap-3">
@@ -165,7 +207,7 @@ const TaskDetailsSlideOver = () => {
                         </span>
                     </div>
 
-                    <button 
+                    <button
                         onClick={handleClose}
                         className="p-2 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 rounded-full transition-colors"
                         title="Close dialog (Esc)"
@@ -176,10 +218,10 @@ const TaskDetailsSlideOver = () => {
 
                 {/* 2-Column Responsive Body */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-y-auto min-h-0">
-                    
+
                     {/* Left Column: Main Content (Title, Description, Attachments, Comments) */}
                     <div className="lg:col-span-8 p-6 sm:p-8 space-y-8 overflow-y-auto border-b lg:border-b-0 lg:border-r border-zinc-100">
-                        
+
                         {/* Title Section */}
                         <div>
                             {isLoading ? (
@@ -214,7 +256,7 @@ const TaskDetailsSlideOver = () => {
                                     </button>
                                 </div>
                             ) : (
-                                <h1 
+                                <h1
                                     onClick={() => setIsEditingTitle(true)}
                                     className="text-2xl sm:text-3xl font-bold text-zinc-900 tracking-tight leading-snug cursor-pointer hover:bg-zinc-100/70 p-1.5 -ml-1.5 rounded-xl transition-colors"
                                     title="Click to edit title"
@@ -271,7 +313,7 @@ const TaskDetailsSlideOver = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <div 
+                                <div
                                     onClick={() => setIsEditingDesc(true)}
                                     className="text-sm text-zinc-700 bg-zinc-50/70 p-4 rounded-xl border border-zinc-200/80 min-h-[90px] whitespace-pre-wrap cursor-pointer hover:border-zinc-300 transition-colors leading-relaxed"
                                 >
@@ -301,11 +343,10 @@ const TaskDetailsSlideOver = () => {
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('comments')}
-                                    className={`flex items-center gap-2 pb-2.5 text-sm font-semibold transition-all relative ${
-                                        activeTab === 'comments'
-                                            ? 'text-zinc-900 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-zinc-900'
-                                            : 'text-zinc-400 hover:text-zinc-600'
-                                    }`}
+                                    className={`flex items-center gap-2 pb-2.5 text-sm font-semibold transition-all relative ${activeTab === 'comments'
+                                        ? 'text-zinc-900 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-zinc-900'
+                                        : 'text-zinc-400 hover:text-zinc-600'
+                                        }`}
                                 >
                                     <MessageSquare className="w-4 h-4" />
                                     <span>Comments</span>
@@ -313,11 +354,10 @@ const TaskDetailsSlideOver = () => {
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('activity')}
-                                    className={`flex items-center gap-2 pb-2.5 text-sm font-semibold transition-all relative ${
-                                        activeTab === 'activity'
-                                            ? 'text-zinc-900 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-zinc-900'
-                                            : 'text-zinc-400 hover:text-zinc-600'
-                                    }`}
+                                    className={`flex items-center gap-2 pb-2.5 text-sm font-semibold transition-all relative ${activeTab === 'activity'
+                                        ? 'text-zinc-900 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-zinc-900'
+                                        : 'text-zinc-400 hover:text-zinc-600'
+                                        }`}
                                 >
                                     <Activity className="w-4 h-4" />
                                     <span>Activity History</span>
@@ -334,7 +374,7 @@ const TaskDetailsSlideOver = () => {
 
                     {/* Right Column: Properties & Metadata Sidebar */}
                     <div className="lg:col-span-4 p-6 sm:p-7 bg-zinc-50/60 space-y-6 overflow-y-auto">
-                        
+
                         <div className="pb-2 border-b border-zinc-200/60">
                             <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Task Properties</h3>
                         </div>
@@ -345,7 +385,7 @@ const TaskDetailsSlideOver = () => {
                                 <User className="w-3.5 h-3.5" />
                                 <span>Assignee</span>
                             </label>
-                            
+
                             <div className="relative">
                                 <button
                                     type="button"
@@ -354,9 +394,9 @@ const TaskDetailsSlideOver = () => {
                                 >
                                     <div className="flex items-center gap-2.5 truncate">
                                         {currentAssigneeAvatar ? (
-                                            <img 
-                                                src={currentAssigneeAvatar} 
-                                                alt={currentAssigneeName} 
+                                            <img
+                                                src={currentAssigneeAvatar}
+                                                alt={currentAssigneeName}
                                                 className="w-7 h-7 rounded-full border border-zinc-200 object-cover"
                                             />
                                         ) : (
@@ -425,22 +465,32 @@ const TaskDetailsSlideOver = () => {
                             </div>
                         </div>
 
-                        {/* Status */}
+                        {/* Status / Column */}
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold text-zinc-500 flex items-center gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Status</span>
+                                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                                <span>Status / Column</span>
                             </label>
                             <select
-                                value={task?.status || 'todo'}
-                                onChange={handleStatusChange}
+                                value={task?.columnId || task?.status || 'todo'}
+                                onChange={handleColumnChange}
                                 disabled={updateTaskMutation.isPending}
-                                className="w-full text-sm font-semibold p-2.5 bg-white border border-zinc-200 rounded-xl cursor-pointer hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900 shadow-xs capitalize"
+                                className="w-full text-sm font-semibold p-2.5 bg-white border border-zinc-200 rounded-xl cursor-pointer hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900 shadow-xs"
                             >
-                                <option value="todo">To Do</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="review">In Review</option>
-                                <option value="done">Done</option>
+                                {columns && columns.length > 0 ? (
+                                    columns.map((col) => (
+                                        <option key={col._id} value={col._id}>
+                                            {col.name}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <>
+                                        <option value="todo">To Do</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="review">In Review</option>
+                                        <option value="done">Done</option>
+                                    </>
+                                )}
                             </select>
                         </div>
 
@@ -454,12 +504,11 @@ const TaskDetailsSlideOver = () => {
                                 value={task?.priority || 'medium'}
                                 onChange={handlePriorityChange}
                                 disabled={updateTaskMutation.isPending}
-                                className={`w-full text-sm font-bold p-2.5 rounded-xl cursor-pointer border focus:outline-none focus:ring-2 focus:ring-zinc-900 shadow-xs uppercase tracking-wider ${
-                                    task?.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-200' :
+                                className={`w-full text-sm font-bold p-2.5 rounded-xl cursor-pointer border focus:outline-none focus:ring-2 focus:ring-zinc-900 shadow-xs uppercase tracking-wider ${task?.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-200' :
                                     task?.priority === 'high' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                    task?.priority === 'medium' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                    'bg-zinc-100 text-zinc-700 border-zinc-200'
-                                }`}
+                                        task?.priority === 'medium' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                            'bg-zinc-100 text-zinc-700 border-zinc-200'
+                                    }`}
                             >
                                 <option value="low">Low</option>
                                 <option value="medium">Medium</option>

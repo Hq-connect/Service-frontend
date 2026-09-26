@@ -440,7 +440,7 @@ export const BoardView = () => {
                 projectName={activeBoard.name}
             />
 
-            <TaskDetailsSlideOver />
+            <TaskDetailsSlideOver boardColumns={columns} />
         </div>
     );
 };
