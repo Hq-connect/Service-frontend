@@ -101,6 +101,22 @@ export const useMeetings = () => {
         }
     };
 
+    const updateMeeting = async (meetingId, updateData) => {
+        try {
+            dispatch(setLoading(true));
+            const response = await meetingService.updateMeeting(meetingId, updateData);
+            toast.success("Meeting updated successfully!");
+            await fetchMeetings();
+            return response?.data;
+        } catch (err) {
+            const msg = err.response?.data?.message || "Failed to update meeting";
+            toast.error(msg);
+            throw err;
+        } finally {
+            dispatch(setLoading(false));
+        }
+    };
+
     const toggleCreateDialog = (open) => {
         dispatch(setCreateDialogOpen(open));
     };
@@ -112,6 +128,7 @@ export const useMeetings = () => {
         createDialogOpen,
         fetchMeetings,
         createMeeting,
+        updateMeeting,
         cancelMeeting,
         endMeeting,
         joinByCode,
