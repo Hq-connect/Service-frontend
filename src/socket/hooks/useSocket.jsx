@@ -21,6 +21,7 @@ import { showTeamsNotificationToast } from "@/features/notifications/components/
 import { router } from "@/app/router/Router";
 import { store } from "@/app/store/store";
 import chatService from "@/features/chats/services/chat.service";
+import { documentKeys } from "@/features/editor/queries/document.keys";
 
 const extractUserId = (userObj) => {
     if (!userObj) return null;
@@ -476,6 +477,28 @@ export const useSocketSetup = (enabled) => {
             });
         };
 
+        // Real-time document & folder tree changes
+        const handleDocumentTreeRefresh = (event) => {
+            console.log("[useSocket] document:tree:refresh event:", event);
+            queryClient.invalidateQueries({
+                queryKey: documentKeys.tree(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: documentKeys.all,
+            });
+        };
+
+        // Collaborator permission / access changes
+        const handleDocumentAccessChanged = (event) => {
+            console.log("[useSocket] document:access:changed event:", event);
+            queryClient.invalidateQueries({
+                queryKey: documentKeys.tree(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: documentKeys.all,
+            });
+        };
+
         // REGISTER EVENTS
         socket.on("connect", handleConnect);
         socket.on("disconnect", handleDisconnect);
@@ -494,6 +517,8 @@ export const useSocketSetup = (enabled) => {
         socket.on("message:reaction", handleMessageReaction);
         socket.on("notification:receive", handleNotificationReceive);
         socket.on("chat:read", handleChatRead);
+        socket.on("document:tree:refresh", handleDocumentTreeRefresh);
+        socket.on("document:access:changed", handleDocumentAccessChanged);
 
         // CLEANUP
         return () => {
@@ -514,6 +539,8 @@ export const useSocketSetup = (enabled) => {
             socket.off("message:reaction", handleMessageReaction);
             socket.off("notification:receive", handleNotificationReceive);
             socket.off("chat:read", handleChatRead);
+            socket.off("document:tree:refresh", handleDocumentTreeRefresh);
+            socket.off("document:access:changed", handleDocumentAccessChanged);
 
             disconnectSocket();
         };
