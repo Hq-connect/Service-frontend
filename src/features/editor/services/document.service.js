@@ -16,7 +16,14 @@ const documentService = {
    */
   getDocumentById: async (id) => {
     const response = await api.get(`/documents/${id}`);
-    return response.data.data;
+    const data = response.data.data;
+    if (data?.document) {
+      return {
+        ...data.document,
+        userRole: data.userRole,
+      };
+    }
+    return data;
   },
 
   /**
@@ -34,8 +41,16 @@ const documentService = {
    * @param {object} updates
    */
   updateDocument: async (id, updates) => {
-    const response = await api.put(`/documents/${id}`, updates);
-    return response.data.data;
+    try {
+      const response = await api.patch(`/documents/${id}`, updates);
+      return response.data.data;
+    } catch (err) {
+      if (err.response?.status === 405 || err.response?.status === 404) {
+        const fallback = await api.put(`/documents/${id}`, updates);
+        return fallback.data.data;
+      }
+      throw err;
+    }
   },
 
   /**
@@ -43,7 +58,7 @@ const documentService = {
    * @param {string} id
    */
   archiveDocument: async (id) => {
-    const response = await api.patch(`/documents/${id}/archive`);
+    const response = await api.post(`/documents/${id}/archive`);
     return response.data.data;
   },
 
@@ -52,7 +67,7 @@ const documentService = {
    * @param {string} id
    */
   restoreDocument: async (id) => {
-    const response = await api.patch(`/documents/${id}/restore`);
+    const response = await api.post(`/documents/${id}/restore`);
     return response.data.data;
   },
 
