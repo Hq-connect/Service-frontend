@@ -327,7 +327,7 @@ export default function DocumentPage() {
       {/* Main Document Canvas Column */}
       <div className="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar relative">
         {/* Top Floating Action Bar */}
-        <header className="sticky top-0 z-20 flex items-center justify-between h-14 px-6 bg-background/85 backdrop-blur-md border-b border-border">
+        <header className="sticky top-0 z-999 flex items-center justify-between h-14 px-6 bg-background/85 backdrop-blur-md border-b border-border">
           <div className="flex items-center gap-3">
             <Button
               type="button"
