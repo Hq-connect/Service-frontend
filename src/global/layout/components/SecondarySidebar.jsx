@@ -1,9 +1,11 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import DocsSidebarTree from "@/features/editor/components/sidebar/DocsSidebarTree";
 
 function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelectedSpaceIdx }) {
   const location = useLocation();
+  const isDocsRoute = location.pathname.startsWith("/docs");
 
   const renderSecondaryItems = () => {
     return (
@@ -78,23 +80,29 @@ function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelec
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-[240px] bg-[#f8f9fa] border-r border-[#eef0f2] shrink-0 z-20 animate-in fade-in slide-in-from-left-4 duration-150">
+    <aside className="hidden md:flex flex-col w-[240px] bg-sidebar border-r border-sidebar-border shrink-0 z-20 animate-in fade-in slide-in-from-left-4 duration-150">
       {/* Tenant Name Selector */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-[#eef0f2] gap-2">
-        <span className="text-sm font-bold text-foreground truncate select-none">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border gap-2">
+        <span className="text-sm font-heading font-bold text-sidebar-foreground truncate select-none">
           {tenantName || "Hq"}
         </span>
       </div>
 
-      {/* Dynamic Nav list */}
-      <div className="flex-1 overflow-y-auto py-2">
-        {/* Header */}
-        <div className="px-4 py-2 flex items-center gap-2">
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            {secondaryNav.title}
-          </span>
-        </div>
-        {renderSecondaryItems()}
+      {/* Dynamic Nav list or Docs File Tree */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {isDocsRoute ? (
+          <DocsSidebarTree />
+        ) : (
+          <div className="flex-1 overflow-y-auto py-2">
+            {/* Header */}
+            <div className="px-4 py-2 flex items-center gap-2">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                {secondaryNav.title}
+              </span>
+            </div>
+            {renderSecondaryItems()}
+          </div>
+        )}
       </div>
     </aside>
   );

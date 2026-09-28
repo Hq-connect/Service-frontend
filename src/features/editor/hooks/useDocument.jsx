@@ -10,7 +10,7 @@ export const useDocument = (documentId) => {
   const queryClient = useQueryClient();
 
   const {
-    data: document,
+    data: rawData,
     isLoading,
     isError,
     error,
@@ -22,10 +22,21 @@ export const useDocument = (documentId) => {
     staleTime: 1000 * 60,
   });
 
+  const document = rawData?.document
+    ? { ...rawData.document, userRole: rawData.userRole }
+    : rawData;
+
   const updateMetadataMutation = useMutation({
     mutationFn: (updates) => documentService.updateDocument(documentId, updates),
     onSuccess: (updatedDoc) => {
-      queryClient.setQueryData(documentKeys.detail(documentId), updatedDoc);
+      const docObj = updatedDoc?.document
+        ? { ...updatedDoc.document, userRole: updatedDoc.userRole }
+        : updatedDoc;
+      queryClient.setQueryData(documentKeys.detail(documentId), (prev) => ({
+        ...(prev || {}),
+        ...docObj,
+        userRole: docObj?.userRole || prev?.userRole,
+      }));
       queryClient.invalidateQueries({ queryKey: documentKeys.tree() });
     },
   });
