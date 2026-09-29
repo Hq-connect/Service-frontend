@@ -3,6 +3,7 @@ import { Plus, Video, Calendar, ArrowRight, Search, RefreshCw, PlayCircle, Loade
 import useMeetings from "../hooks/useMeetings";
 import MeetingCard from "../components/MeetingCard";
 import CreateMeetingDialog from "../components/CreateMeetingDialog";
+import EditMeetingDialog from "../components/EditMeetingDialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import meetingService from "../services/meeting.service";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ export const MeetsPage = () => {
         createDialogOpen,
         fetchMeetings,
         createMeeting,
+        updateMeeting,
         cancelMeeting,
         endMeeting,
         joinByCode,
@@ -29,6 +31,7 @@ export const MeetsPage = () => {
     const [activeTab, setActiveTab] = useState("upcoming"); // "upcoming" | "past" | "cancelled"
     const [joinInputCode, setJoinInputCode] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
+    const [editingMeeting, setEditingMeeting] = useState(null);
 
     useEffect(() => {
         fetchMeetings();
@@ -270,6 +273,7 @@ export const MeetsPage = () => {
                             onJoin={handleCardJoin}
                             onCancel={cancelMeeting}
                             onEnd={endMeeting}
+                            onEdit={setEditingMeeting}
                         />
                     ))}
                 </div>
@@ -303,6 +307,15 @@ export const MeetsPage = () => {
                 isOpen={createDialogOpen}
                 onClose={() => toggleCreateDialog(false)}
                 onSubmit={handleCreateMeeting}
+                loading={loading}
+            />
+
+            {/* Edit / Reschedule Dialog Modal */}
+            <EditMeetingDialog
+                isOpen={Boolean(editingMeeting)}
+                onClose={() => setEditingMeeting(null)}
+                meeting={editingMeeting}
+                onUpdate={updateMeeting}
                 loading={loading}
             />
         </div>
