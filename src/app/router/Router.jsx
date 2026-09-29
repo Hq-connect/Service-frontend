@@ -10,6 +10,8 @@ import MeetsPage from "@/features/meets/pages/MeetsPage"
 import RecordedSessionsPage from "@/features/meets/pages/RecordedSessionsPage"
 import MeetingRoomContainer from "@/features/meets/containers/MeetingRoomContainer"
 import { ProjectsDashboard, BoardView } from "@/features/productivity"
+import DocsDashboard from "@/features/editor/pages/DocsDashboard"
+import DocumentPage from "@/features/editor/pages/DocumentPage"
 
 export const router = createBrowserRouter([
   {
@@ -33,7 +35,8 @@ export const router = createBrowserRouter([
       { path: "home",   element: <UnderConstruction /> },
       { path: "tasks",  element: <ProjectsDashboard /> },
       { path: "tasks/projects/:projectId", element: <BoardView /> },
-      { path: "docs",   element: <UnderConstruction /> },
+      { path: "docs",   element: <DocsDashboard /> },
+      { path: "docs/:documentId", element: <DocumentPage /> },
       { path: "files",  element: <UnderConstruction /> },
       { path: "meets",  element: <MeetsPage /> },
       { path: "meets/recordings", element: <RecordedSessionsPage /> },

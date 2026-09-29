@@ -80,8 +80,9 @@ function AppLayout() {
     return baseSecondaryNav;
   }, [baseSecondaryNav, navLookupPath, chatUnread, location.pathname, taskCounts]);
 
-  // Chat routes need full-height with no padding/scroll so ChatLayout can manage its own layout
+  // Chat & Docs routes need full-height with no padding/scroll so they can manage their own layouts
   const isChatsRoute = currentPath.startsWith("/chats");
+  const isDocsRoute = currentPath.startsWith("/docs");
 
   // Helper to extract the actual user object if it is nested or wrapped in API response
   const extractUser = (u) => {
@@ -175,7 +176,7 @@ function AppLayout() {
 
         {/* Dynamic Nested Viewport */}
         <main className={`flex-1 min-w-0 mt-14 md:mt-0 mb-16 md:mb-0 ${
-          isChatsRoute
+          isChatsRoute || isDocsRoute
             ? "flex flex-col overflow-hidden"
             : "bg-background overflow-y-auto px-4 md:px-8 py-6"
         }`}>

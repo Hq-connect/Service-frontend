@@ -1,0 +1,302 @@
+/* Scoped Notion Typography Styles for Domternal Editor */
+/* Overrides Tailwind preflight resets so headings, lists, quotes, and code blocks render correctly */
+
+.dm-editor {
+  --dm-bg: var(--background);
+  --dm-text: var(--foreground);
+  --dm-muted: var(--muted-foreground);
+  --dm-surface: var(--muted);
+  --dm-border-color: var(--border);
+  --dm-accent: var(--primary);
+  --dm-focus-color: var(--ring);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.dm-editor .ProseMirror {
+  outline: none !important;
+  min-height: 400px;
+  line-height: 1.65;
+  color: var(--foreground);
+}
+
+/* Headings */
+.dm-editor .ProseMirror h1 {
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.025em !important;
+  margin-top: 1.75rem !important;
+  margin-bottom: 0.5rem !important;
+  color: var(--foreground) !important;
+}
+
+.dm-editor .ProseMirror h2 {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.02em !important;
+  margin-top: 1.4rem !important;
+  margin-bottom: 0.35rem !important;
+  color: var(--foreground) !important;
+}
+
+.dm-editor .ProseMirror h3 {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  letter-spacing: -0.015em !important;
+  margin-top: 1.15rem !important;
+  margin-bottom: 0.25rem !important;
+  color: var(--foreground) !important;
+}
+
+.dm-editor .ProseMirror h4,
+.dm-editor .ProseMirror h5,
+.dm-editor .ProseMirror h6 {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  line-height: 1.45 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.25rem !important;
+  color: var(--foreground) !important;
+}
+
+/* Paragraphs */
+.dm-editor .ProseMirror p {
+  font-size: 1rem !important;
+  line-height: 1.65 !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  color: var(--foreground) !important;
+}
+
+/* Standard Lists */
+.dm-editor .ProseMirror ul:not([data-type="taskList"]) {
+  list-style-type: disc !important;
+  padding-left: 1.65rem !important;
+  margin-top: 0.4rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+.dm-editor .ProseMirror ol {
+  list-style-type: decimal !important;
+  padding-left: 1.65rem !important;
+  margin-top: 0.4rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+.dm-editor .ProseMirror li {
+  margin-top: 0.15rem !important;
+  margin-bottom: 0.15rem !important;
+}
+
+.dm-editor .ProseMirror li p {
+  margin: 0 !important;
+  display: inline;
+}
+
+/* Task / Checklist */
+.dm-editor .ProseMirror ul[data-type="taskList"] {
+  list-style: none !important;
+  padding-left: 0 !important;
+  margin-top: 0.4rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+.dm-editor .ProseMirror li[data-type="taskItem"] {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 0.5rem !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.dm-editor .ProseMirror li[data-type="taskItem"] > label {
+  user-select: none !important;
+  margin-top: 0.2rem !important;
+  cursor: pointer !important;
+}
+
+.dm-editor .ProseMirror li[data-type="taskItem"] > label input[type="checkbox"] {
+  cursor: pointer !important;
+  accent-color: var(--primary);
+  width: 15px;
+  height: 15px;
+}
+
+.dm-editor .ProseMirror li[data-type="taskItem"] > div {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.dm-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div {
+  text-decoration: line-through !important;
+  color: var(--muted-foreground) !important;
+}
+
+/* Blockquotes */
+.dm-editor .ProseMirror blockquote {
+  border-left: 3px solid var(--primary) !important;
+  padding-left: 1rem !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.75rem !important;
+  font-style: italic !important;
+  color: var(--muted-foreground) !important;
+}
+
+.dm-editor .ProseMirror blockquote p {
+  color: var(--muted-foreground) !important;
+}
+
+/* Code Blocks */
+.dm-editor .ProseMirror pre {
+  background: var(--muted) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 0.85rem 1.1rem !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 0.875rem !important;
+  overflow-x: auto !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.dm-editor .ProseMirror pre code {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+}
+
+/* Inline Code */
+.dm-editor .ProseMirror code:not(pre code) {
+  background: var(--muted) !important;
+  color: var(--foreground) !important;
+  padding: 0.15rem 0.35rem !important;
+  border-radius: 4px !important;
+  font-size: 0.875em !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* Horizontal Rule / Divider */
+.dm-editor .ProseMirror hr {
+  border: none !important;
+  border-top: 1px solid var(--border) !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+/* Links */
+.dm-editor .ProseMirror a {
+  color: var(--primary) !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+  cursor: pointer !important;
+}
+
+/* Drag handle spacing in Notion mode */
+.dm-notion-mode {
+  padding-left: 2.75rem;
+}
+
+@media (max-width: 640px) {
+  .dm-notion-mode {
+    padding-left: 1rem;
+  }
+}
+
+/* ==========================================================================
+   Yjs Native Collaborative Cursors & Selection (Notion Grade)
+   ========================================================================== */
+
+.ProseMirror .ProseMirror-yjs-cursor {
+  position: relative;
+  display: inline-block;
+  width: 0;
+  height: 1.2em;
+  vertical-align: text-bottom;
+  border-left: 2px solid;
+  border-color: inherit;
+  margin-left: -1px;
+  margin-right: -1px;
+  word-break: normal;
+  pointer-events: none;
+  user-select: none;
+  z-index: 30;
+}
+
+/* Badge is hidden by default; JS adds --visible when cursor moves */
+.ProseMirror .ProseMirror-yjs-cursor .yjs-cursor-badge {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: -2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.3;
+  color: #ffffff;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  z-index: 40;
+  letter-spacing: 0.03em;
+  opacity: 0;
+  transform: translateY(3px) scale(0.96);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.ProseMirror .ProseMirror-yjs-cursor .yjs-cursor-badge.yjs-cursor-badge--visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Show badge when cursor line itself is hovered */
+.ProseMirror:hover .ProseMirror-yjs-cursor .yjs-cursor-badge {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.ProseMirror .ProseMirror-yjs-cursor .yjs-cursor-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.9);
+  animation: yjs-dot-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  flex-shrink: 0;
+}
+
+.ProseMirror .ProseMirror-yjs-cursor .yjs-cursor-arrow {
+  position: absolute;
+  top: 100%;
+  left: 1px;
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 3px solid;
+}
+
+/* Collaborative Selection Highlight — more vivid */
+.ProseMirror .ProseMirror-yjs-selection {
+  opacity: 0.25;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+@keyframes yjs-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+
