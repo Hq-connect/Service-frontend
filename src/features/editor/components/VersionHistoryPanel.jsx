@@ -275,7 +275,7 @@ export default function VersionHistoryPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-background/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-150"
+      className="fixed inset-0 z-999 bg-background/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div

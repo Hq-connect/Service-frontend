@@ -82,7 +82,7 @@ export default function ShareModal({ isOpen, onClose, documentId }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs animate-in fade-in duration-150 p-4">
+    <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/50 backdrop-blur-xs animate-in fade-in duration-150 p-4">
       <div
         className="w-full max-w-lg p-6 bg-card text-card-foreground rounded-xl shadow-2xl border border-border transition-all scale-100 flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
