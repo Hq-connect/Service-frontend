@@ -4,24 +4,13 @@ import useAuth from "@/features/auth/hooks/useAuth";
 import { getUserProfile } from "../utils/userProfile";
 import { SocketAwarenessProvider } from "../services/yjsManager";
 
-/**
- * Hook to manage real-time collaborative editing session for a document
- * @param {string} documentId
- * @param {object} options
- * @param {Function} [options.onRemoteUpdate] - Called when another collaborator emits changes
- */
-export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
+export const useDocumentSync = (documentId) => {
   const { user } = useAuth();
   const [activePeers, setActivePeers] = useState([]);
   const [awareness, setAwareness] = useState(null);
+  const [yjsXmlFragment, setYjsXmlFragment] = useState(null);
   const providerRef = useRef(null);
-  const onRemoteUpdateRef = useRef(onRemoteUpdate);
 
-  useEffect(() => {
-    onRemoteUpdateRef.current = onRemoteUpdate;
-  }, [onRemoteUpdate]);
-
-  // Initialize Yjs Socket Awareness Provider
   useEffect(() => {
     if (!documentId || !socket) return;
     const profile = getUserProfile(user);
@@ -29,6 +18,7 @@ export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
     const provider = new SocketAwarenessProvider(documentId, socket, profile);
     providerRef.current = provider;
     setAwareness(provider.awareness);
+    setYjsXmlFragment(provider.yXmlFragment);
 
     const handleAwarenessChange = () => {
       const peers = [];
@@ -53,10 +43,10 @@ export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
       provider.destroy();
       providerRef.current = null;
       setAwareness(null);
+      setYjsXmlFragment(null);
     };
   }, [documentId]);
 
-  // Clean up awareness immediately if tab closes/reloads
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (providerRef.current) {
@@ -69,7 +59,6 @@ export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
     };
   }, []);
 
-  // Keep local user profile updated in awareness
   useEffect(() => {
     if (providerRef.current && user) {
       providerRef.current.setUserProfile(getUserProfile(user));
@@ -82,13 +71,11 @@ export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
     const profile = getUserProfile(user);
     const currentUserId = profile._id;
 
-    // Join the document collaboration room with user identity
     socket.emit("doc:join", {
       documentId,
       user: profile,
     });
 
-    // Handle existing active peers list sent upon joining
     const handlePeersList = ({ peers }) => {
       providerRef.current?.broadcastLocalState();
       if (Array.isArray(peers)) {
@@ -109,7 +96,6 @@ export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
       }
     };
 
-    // Handle incoming peer joined
     const handlePeerJoined = (peer) => {
       providerRef.current?.broadcastLocalState();
       const key = peer.user?._id || peer.userId || peer.socketId;
@@ -125,7 +111,6 @@ export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
       });
     };
 
-    // Handle peer left
     const handlePeerLeft = ({ socketId, userId: leftUserId }) => {
       setActivePeers((prev) =>
         prev.filter((p) => {
@@ -136,14 +121,6 @@ export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
       );
     };
 
-    // Handle incoming peer updates (ProseMirror / Domternal / CRDT update)
-    const handleRemoteUpdate = (payload) => {
-      if (onRemoteUpdateRef.current) {
-        onRemoteUpdateRef.current(payload);
-      }
-    };
-
-    // Handle collaborator cursor / awareness
     const handleAwareness = (awarenessData) => {
       if (awarenessData.socketId === socket.id || awarenessData.userId === currentUserId) return;
       setActivePeers((prev) => {
@@ -163,7 +140,6 @@ export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
     socket.on("doc:peers", handlePeersList);
     socket.on("doc:peer:joined", handlePeerJoined);
     socket.on("doc:peer:left", handlePeerLeft);
-    socket.on("doc:update", handleRemoteUpdate);
     socket.on("doc:awareness", handleAwareness);
 
     return () => {
@@ -171,29 +147,11 @@ export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
       socket.off("doc:peers", handlePeersList);
       socket.off("doc:peer:joined", handlePeerJoined);
       socket.off("doc:peer:left", handlePeerLeft);
-      socket.off("doc:update", handleRemoteUpdate);
       socket.off("doc:awareness", handleAwareness);
       setActivePeers([]);
     };
   }, [documentId, user]);
 
-  // Broadcast editor content change
-  const sendUpdate = useCallback(
-    (content, update = null) => {
-      if (!documentId || !socket) return;
-      // Encode the full Yjs doc state so the backend can persist a real yjsSnapshot
-      const snapshot = providerRef.current?.getSnapshot();
-      socket.emit("doc:update", {
-        documentId,
-        content,
-        update,
-        yjsSnapshot: snapshot ? Array.from(snapshot) : null,
-      });
-    },
-    [documentId]
-  );
-
-  // Broadcast cursor and selection presence
   const sendAwareness = useCallback(
     (cursor) => {
       if (!documentId || !socket) return;
@@ -207,14 +165,22 @@ export const useDocumentSync = (documentId, { onRemoteUpdate } = {}) => {
     [documentId, user]
   );
 
+  const applyServerSnapshot = useCallback((snapshotArray) => {
+    providerRef.current?.applyServerSnapshot(snapshotArray);
+  }, []);
+
+  const getSnapshot = useCallback(() => {
+    return providerRef.current?.getSnapshot() ?? null;
+  }, []);
+
   return {
     activePeers,
     awareness,
     currentUserId: getUserProfile(user)._id,
-    sendUpdate,
     sendAwareness,
-    /** Get the current Yjs snapshot as a Uint8Array for manual version creation */
-    getSnapshot: () => providerRef.current?.getSnapshot() ?? null,
+    yjsXmlFragment,
+    applyServerSnapshot,
+    getSnapshot,
   };
 };
 

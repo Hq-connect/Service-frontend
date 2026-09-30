@@ -6,23 +6,19 @@ import {
   removeAwarenessStates,
 } from "y-protocols/awareness";
 
-/**
- * Socket.IO Awareness Provider for Yjs collaborative cursors
- */
 export class SocketAwarenessProvider {
   constructor(documentId, socket, userProfile) {
     this.documentId = documentId;
     this.socket = socket;
     this.doc = new Y.Doc();
+    this.yXmlFragment = this.doc.getXmlFragment("prosemirror");
     this.awareness = new Awareness(this.doc);
     this.isDestroyed = false;
 
-    // 1. Broadcast local awareness changes to socket room
     this.handleLocalAwarenessUpdate = ({ added, updated, removed }, origin) => {
       if (origin === "socket" || this.isDestroyed) return;
       const changedClients = added.concat(updated).concat(removed);
       if (changedClients.length === 0) return;
-
       const update = encodeAwarenessUpdate(this.awareness, changedClients);
       this.socket.emit("doc:yjs:awareness", {
         documentId: this.documentId,
@@ -30,7 +26,6 @@ export class SocketAwarenessProvider {
       });
     };
 
-    // 2. Receive remote awareness updates from socket room
     this.handleRemoteAwarenessUpdate = ({ update }) => {
       if (!update || this.isDestroyed) return;
       try {
@@ -41,7 +36,6 @@ export class SocketAwarenessProvider {
       }
     };
 
-    // 3. Immediately clean up awareness states when a peer leaves
     this.handlePeerLeft = ({ userId, socketId }) => {
       if (this.isDestroyed) return;
       const states = this.awareness.getStates();
@@ -61,14 +55,42 @@ export class SocketAwarenessProvider {
       }
     };
 
-    // Register listeners first before setting any state
+    this.handleDocUpdate = (update, origin) => {
+      if (origin === "socket" || origin === "server" || this.isDestroyed) return;
+      const fullSnapshot = Y.encodeStateAsUpdate(this.doc);
+      this.socket.emit("doc:yjs:update", {
+        documentId: this.documentId,
+        update: Array.from(update),
+        yjsSnapshot: Array.from(fullSnapshot),
+      });
+    };
+
+    this.handleRemoteDocUpdate = ({ update }) => {
+      if (!update || this.isDestroyed) return;
+      try {
+        Y.applyUpdate(this.doc, new Uint8Array(update), "socket");
+      } catch (err) {
+        console.error("Error applying remote Yjs update:", err);
+      }
+    };
+
     this.awareness.on("update", this.handleLocalAwarenessUpdate);
     this.socket.on("doc:yjs:awareness", this.handleRemoteAwarenessUpdate);
     this.socket.on("doc:peer:left", this.handlePeerLeft);
+    this.doc.on("update", this.handleDocUpdate);
+    this.socket.on("doc:yjs:update", this.handleRemoteDocUpdate);
 
-    // Set initial local user state
     if (userProfile) {
       this.setUserProfile(userProfile);
+    }
+  }
+
+  applyServerSnapshot(snapshotArray) {
+    if (this.isDestroyed || !snapshotArray || snapshotArray.length === 0) return;
+    try {
+      Y.applyUpdate(this.doc, new Uint8Array(snapshotArray), "server");
+    } catch (err) {
+      console.warn("Failed to apply server snapshot:", err);
     }
   }
 
@@ -98,11 +120,6 @@ export class SocketAwarenessProvider {
     this.awareness.setLocalStateField("socketId", this.socket.id);
   }
 
-  /**
-   * Encode the current full Yjs document state as a Uint8Array.
-   * This is persisted to MongoDB as the yjsSnapshot field so collaborative
-   * editing state can be restored when users re-open the document.
-   */
   getSnapshot() {
     if (this.isDestroyed) return null;
     try {
@@ -112,16 +129,12 @@ export class SocketAwarenessProvider {
     }
   }
 
-  /**
-   * Apply a remote Yjs update into the local doc so the snapshot stays current.
-   * Call this when receiving remote content updates from the socket.
-   */
   applyUpdate(updateUint8Array) {
     if (this.isDestroyed || !updateUint8Array) return;
     try {
       Y.applyUpdate(this.doc, updateUint8Array);
     } catch {
-      // ignore invalid/empty updates
+      // ignore
     }
   }
 
@@ -130,6 +143,8 @@ export class SocketAwarenessProvider {
     this.awareness.off("update", this.handleLocalAwarenessUpdate);
     this.socket.off("doc:yjs:awareness", this.handleRemoteAwarenessUpdate);
     this.socket.off("doc:peer:left", this.handlePeerLeft);
+    this.doc.off("update", this.handleDocUpdate);
+    this.socket.off("doc:yjs:update", this.handleRemoteDocUpdate);
     this.awareness.destroy();
     this.doc.destroy();
   }

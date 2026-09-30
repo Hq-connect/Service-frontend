@@ -90,10 +90,11 @@ export default function DocumentPage() {
   const [iconSearch, setIconSearch] = useState("");
   const [showCoverPicker, setShowCoverPicker] = useState(false);
   const [currentSelection, setCurrentSelection] = useState(null);
+  const [isCollabReady, setIsCollabReady] = useState(false);
+  const snapshotAppliedRef = useRef(false);
 
   const canEdit = doc?.userRole ? doc.userRole === "owner" || doc.userRole === "editor" : true;
 
-  // Reset local overrides when navigating to a different document
   useEffect(() => {
     setCustomTitle(null);
     setCustomIcon(null);
@@ -101,11 +102,12 @@ export default function DocumentPage() {
     setShowIconPicker(false);
     setShowCoverPicker(false);
     setIconSearch("");
-    setEditorContent(null);
     setCurrentSelection(null);
     if (titleTimerRef.current) clearTimeout(titleTimerRef.current);
     if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
     setSaveStatus("saved");
+    setIsCollabReady(false);
+    snapshotAppliedRef.current = false;
   }, [documentId]);
 
   // Real-time title and metadata synchronization across tabs/collaborators
@@ -156,19 +158,32 @@ export default function DocumentPage() {
     return "<p></p>";
   }, [doc?.content]);
 
-  const [editorContent, setEditorContent] = useState(null);
-  const currentContent = editorContent ?? resolvedContent;
+  const currentContent = resolvedContent;
 
-  // Real-time collaborative sync
-  const { activePeers, sendUpdate, sendAwareness, awareness, currentUserId: syncUserId } = useDocumentSync(documentId, {
-    onRemoteUpdate: ({ content: remoteContent }) => {
-      if (remoteContent) {
-        setEditorContent(remoteContent);
-      }
-    },
-  });
+  const {
+    activePeers,
+    sendAwareness,
+    awareness,
+    currentUserId: syncUserId,
+    yjsXmlFragment,
+    applyServerSnapshot,
+    getSnapshot,
+  } = useDocumentSync(documentId);
   const currentUserId = authUserId || syncUserId || "";
   const effectiveUserId = currentUserId;
+
+  useEffect(() => {
+    if (!yjsXmlFragment || !doc || snapshotAppliedRef.current) return;
+    if (doc.yjsSnapshot) {
+      const raw = doc.yjsSnapshot;
+      const snapshotArray = raw?.data ?? (Array.isArray(raw) ? raw : null);
+      if (snapshotArray) {
+        applyServerSnapshot(snapshotArray);
+      }
+    }
+    snapshotAppliedRef.current = true;
+    setIsCollabReady(true);
+  }, [yjsXmlFragment, doc, applyServerSnapshot]);
 
   const currentProfile = useMemo(() => {
     return getUserProfile(authUser || currentUser || { name: currentUserName, _id: currentUserId });
@@ -238,18 +253,14 @@ export default function DocumentPage() {
 
   const saveStatusTimerRef = useRef(null);
   const handleEditorChange = useCallback(
-    (html, json) => {
-      setEditorContent(html);
-      sendUpdate(html, json);
-      if (saveStatus !== "saving") {
-        setSaveStatus("saving");
-      }
+    () => {
+      if (saveStatus !== "saving") setSaveStatus("saving");
       if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
       saveStatusTimerRef.current = setTimeout(() => {
         setSaveStatus("saved");
       }, 1500);
     },
-    [sendUpdate, saveStatus]
+    [saveStatus]
   );
 
   const handleSelectIcon = async (newIcon) => {
@@ -610,23 +621,31 @@ export default function DocumentPage() {
         </div>
 
         {/* Domternal Notion Editor Canvas */}
-        <NotionEditor
-          key={documentId}
-          readOnly={!canEdit}
-          content={currentContent}
-          onChange={handleEditorChange}
-          onSelectionUpdate={setCurrentSelection}
-          awareness={awareness}
-          currentUserId={currentUserId}
-          currentUserName={currentUserName}
-          currentUserProfile={currentProfile}
-          onCreateComment={createComment}
-          comments={comments}
-          onResolveComment={resolveComment}
-          onReopenComment={reopenComment}
-          onAddReply={addReply}
-          onDeleteComment={deleteComment}
-        />
+        {isCollabReady ? (
+          <NotionEditor
+            key={documentId}
+            readOnly={!canEdit}
+            content=""
+            onChange={handleEditorChange}
+            onSelectionUpdate={setCurrentSelection}
+            awareness={awareness}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName}
+            currentUserProfile={currentProfile}
+            yjsXmlFragment={yjsXmlFragment}
+            onCreateComment={createComment}
+            comments={comments}
+            onResolveComment={resolveComment}
+            onReopenComment={reopenComment}
+            onAddReply={addReply}
+            onDeleteComment={deleteComment}
+          />
+        ) : (
+          <div className="flex items-center justify-center py-24 text-muted-foreground gap-2">
+            <Loader2 className="size-4 animate-spin text-primary" />
+            <span className="text-sm">Connecting…</span>
+          </div>
+        )}
       </div>
 
 
