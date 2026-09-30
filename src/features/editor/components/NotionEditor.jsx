@@ -16,6 +16,7 @@ import {
   BlockColor,
   NotionColorPicker,
   ListIndent,
+  Extension,
 } from "@domternal/core";
 import {
   BlockHandle,
@@ -25,13 +26,25 @@ import {
   KeyboardReorder,
 } from "@domternal/extension-block-controls";
 import { TableOfContents, FloatingTocOutline } from "@domternal/extension-toc";
+import { ySyncPlugin, ySyncPluginKey } from "y-prosemirror";
 import CustomFormatting from "../extensions/customFormatting";
 import CollaborationCursor, {
   yCursorPluginKey,
 } from "../extensions/collaborationCursor";
-import InlineCommentPins, { getUserColor, getInitials } from "./InlineCommentPins";
+import InlineCommentPins from "./InlineCommentPins";
 import "@domternal/theme";
 import "../styles/editor.css";
+
+function createYSyncExtension(getFragment) {
+  return Extension.create({
+    name: "yjsSync",
+    addProseMirrorPlugins() {
+      const fragment = getFragment();
+      if (!fragment) return [];
+      return [ySyncPlugin(fragment)];
+    },
+  });
+}
 
 export default function NotionEditor({
   content = "",
@@ -42,36 +55,33 @@ export default function NotionEditor({
   currentUserId = null,
   currentUserName = null,
   currentUserProfile = null,
+  yjsXmlFragment = null,
   onOpenComment,
   onCreateComment,
-  // Inline comments
   comments = [],
   onResolveComment,
   onReopenComment,
   onAddReply,
   onDeleteComment,
 }) {
-  const isUpdatingFromExternal = useRef(false);
   const updateTimerRef = useRef(null);
-  const lastEmittedHtml = useRef("");
   const containerRef = useRef(null);
   const [hoveredBlock, setHoveredBlock] = useState(null);
   const [selectionBox, setSelectionBox] = useState(null);
 
-  // Inline comment compose state (rendered inside containerRef for pixel-perfect coordinates)
   const [activeComposer, setActiveComposer] = useState(null);
   const [composerText, setComposerText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const composerInputRef = useRef(null);
   const composerRef = useRef(null);
 
-  // Keep awareness and user identity refs always current for the cursor plugin
   const awarenessRef = useRef(awareness);
   awarenessRef.current = awareness;
   const currentUserIdRef = useRef(currentUserId);
   currentUserIdRef.current = currentUserId;
+  const yjsFragmentRef = useRef(yjsXmlFragment);
+  yjsFragmentRef.current = yjsXmlFragment;
 
-  // Configure extension suite with native collaborative cursor plugin
   const editorExtensions = useMemo(
     () => [
       StarterKit.configure({
@@ -102,6 +112,7 @@ export default function NotionEditor({
       CustomFormatting,
       TableOfContents,
       FloatingTocOutline.configure({ anchor: "viewport" }),
+      createYSyncExtension(() => yjsFragmentRef.current),
       CollaborationCursor.configure({
         getAwareness: () => awarenessRef.current,
         getUserId: () => currentUserIdRef.current,
@@ -110,17 +121,13 @@ export default function NotionEditor({
     []
   );
 
-  // Use initial content reference so internal useEditor effects do not reset caret on external updates
-  const initialContentRef = useRef(content);
-
   const { editor, editorRef } = useEditor({
     extensions: editorExtensions,
-    content: initialContentRef.current || "<p></p>",
+    content: "",
     editable: !readOnly,
-    onUpdate: ({ editor: currentEditor }) => {
-      if (isUpdatingFromExternal.current) return;
+    onUpdate: ({ editor: currentEditor, transaction }) => {
+      if (transaction?.getMeta(ySyncPluginKey)) return;
       const html = currentEditor.getHTML();
-      lastEmittedHtml.current = html;
       if (onChange) {
         onChange(html, currentEditor.getJSON());
       }
@@ -132,7 +139,6 @@ export default function NotionEditor({
         onSelectionUpdate({ from, to, empty, text });
       }
 
-      // Update floating selection comment pill coordinates relative to containerRef
       if (!empty && containerRef.current) {
         try {
           const startCoords = currentEditor.view.coordsAtPos(from);
@@ -155,51 +161,12 @@ export default function NotionEditor({
     },
   });
 
-  // Sync external content changes while preserving local focus and caret position
-  useEffect(() => {
-    if (!editor || !content) return;
-    // Don't overwrite if content matches what we just typed and emitted
-    if (content === lastEmittedHtml.current) return;
-    const currentHtml = editor.getHTML();
-    if (content === currentHtml) return;
-
-    const isFocused = editor.isFocused;
-    const { from, to } = editor.state.selection;
-    isUpdatingFromExternal.current = true;
-    editor.commands.setContent(content, false);
-    if (isFocused) {
-      try {
-        const maxPos = editor.state.doc.content.size;
-        editor.commands.setTextSelection({
-          from: Math.min(Math.max(1, from), maxPos),
-          to: Math.min(Math.max(1, to), maxPos),
-        });
-      } catch {
-        // ignore selection restoration errors
-      }
-    }
-    isUpdatingFromExternal.current = false;
-
-    // After a full content replacement, the tr.mapping would shift peer cursors
-    // to the end of the document. Dispatch a meta to force a rebuild from
-    // live awareness so peer cursors land at their actual reported positions.
-    try {
-      editor.view.dispatch(
-        editor.view.state.tr.setMeta(yCursorPluginKey, true)
-      );
-    } catch {
-      // ignore if view is in a dispatch cycle
-    }
-  }, [content, editor]);
-
-  // Sync read-only mode if permissions change
   useEffect(() => {
     if (editor) {
       editor.setEditable(!readOnly);
     }
   }, [readOnly, editor]);
 
-  // Dismiss floating selection box on scroll
   useEffect(() => {
     const handleScroll = () => {
       if (selectionBox) {
@@ -210,7 +177,6 @@ export default function NotionEditor({
     return () => window.removeEventListener("scroll", handleScroll, true);
   }, [selectionBox]);
 
-  // Track hovered block for Notion block-level comment button
   const handleMouseMove = useCallback(
     (e) => {
       if (readOnly || !editorRef.current || !containerRef.current) return;
@@ -239,14 +205,12 @@ export default function NotionEditor({
     setHoveredBlock(null);
   }, []);
 
-  // Auto-focus composer input when opened
   useEffect(() => {
     if (activeComposer) {
       setTimeout(() => composerInputRef.current?.focus(), 80);
     }
   }, [activeComposer]);
 
-  // Dismiss composer on outside click
   useEffect(() => {
     if (!activeComposer) return;
     const handleDown = (e) => {
@@ -280,7 +244,6 @@ export default function NotionEditor({
     }
   };
 
-  // Standard Notion shortcut: Ctrl+Shift+M / Cmd+Shift+M for Comment
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "m") {
@@ -338,7 +301,6 @@ export default function NotionEditor({
       >
         <div ref={editorRef} className="relative" />
 
-        {/* Block-Level Hover Comment Button (Notion style) */}
         {hoveredBlock && !readOnly && !selectionBox && !activeComposer && (
           <button
             type="button"
@@ -381,7 +343,6 @@ export default function NotionEditor({
           </button>
         )}
 
-        {/* Floating Selection Comment Pill */}
         {selectionBox && !readOnly && !activeComposer && (
           <button
             type="button"
@@ -417,7 +378,6 @@ export default function NotionEditor({
           </button>
         )}
 
-        {/* Floating Inline Comment Compose Popup (anchored right at the target line) */}
         {activeComposer && (
           <div
             ref={composerRef}
@@ -487,16 +447,10 @@ export default function NotionEditor({
 
         {editor && (
           <>
-            {/* Inline selection bubble menu */}
             <DomternalBubbleMenu editor={editor} />
-
-            {/* Notion-style "+" button popup menu */}
             <DomternalFloatingMenu editor={editor} requireExplicitTrigger />
-
-            {/* Notion 9-color palette picker */}
             <DomternalNotionColorPicker editor={editor} />
 
-            {/* Inline comment pins rendered in the editor margin */}
             {comments.length > 0 && (
               <InlineCommentPins
                 editor={editor}

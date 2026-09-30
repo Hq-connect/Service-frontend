@@ -15,7 +15,9 @@ const documentService = {
    * @param {string} id
    */
   getDocumentById: async (id) => {
-    const response = await api.get(`/documents/${id}`);
+    const response = await api.get(`/documents/${id}`, {
+      params: { includeSnapshot: true },
+    });
     const data = response.data.data;
     if (data?.document) {
       return {
