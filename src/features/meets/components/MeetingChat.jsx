@@ -3,6 +3,7 @@ import { Send, MessageSquare, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getInitials } from "@/global/utils/user";
 
 export const MeetingChat = ({
     messages = [],
@@ -44,15 +45,6 @@ export const MeetingChat = ({
         if (!dateString) return "";
         const d = new Date(dateString);
         return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    };
-
-    const getInitials = (name = "User") => {
-        return name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
     };
 
     return (

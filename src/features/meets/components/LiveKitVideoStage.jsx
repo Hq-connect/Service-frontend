@@ -12,16 +12,7 @@ import { Track, RoomEvent } from "livekit-client";
 import { Mic, MicOff, Video, VideoOff, MonitorUp, Radio, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-const getInitials = (name) => {
-    if (!name) return "U";
-    return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-};
+import { getInitials } from "@/global/utils/user";
 
 // -------------------------------------------------------------
 // Participant Tile Component
