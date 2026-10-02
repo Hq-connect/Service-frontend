@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { socket } from "@/socket/config/socket.config";
 import useAuth from "@/features/auth/hooks/useAuth";
 import { getUserProfile } from "../utils/userProfile";
 import { SocketAwarenessProvider } from "../collaboration/SocketAwarenessProvider";
 
-export const useDocumentSync = (documentId) => {
+export const useDocumentSync = (documentId, canEdit = false) => {
   const { user } = useAuth();
   const [activePeers, setActivePeers] = useState([]);
   const [awareness, setAwareness] = useState(null);
@@ -15,7 +16,7 @@ export const useDocumentSync = (documentId) => {
     if (!documentId || !socket) return;
     const profile = getUserProfile(user);
 
-    const provider = new SocketAwarenessProvider(documentId, socket, profile);
+    const provider = new SocketAwarenessProvider(documentId, socket, profile, !canEdit);
     providerRef.current = provider;
     setAwareness(provider.awareness);
     setYjsXmlFragment(provider.yXmlFragment);
@@ -48,6 +49,12 @@ export const useDocumentSync = (documentId) => {
   }, [documentId]);
 
   useEffect(() => {
+    if (providerRef.current) {
+      providerRef.current.setReadOnly(!canEdit);
+    }
+  }, [canEdit]);
+
+  useEffect(() => {
     const handleBeforeUnload = () => {
       if (providerRef.current) {
         providerRef.current.destroy();
@@ -74,6 +81,7 @@ export const useDocumentSync = (documentId) => {
     socket.emit("doc:join", {
       documentId,
       user: profile,
+      role: canEdit ? "editor" : "viewer",
     });
 
     const handlePeersList = ({ peers }) => {
@@ -137,10 +145,15 @@ export const useDocumentSync = (documentId) => {
       });
     };
 
+    const handleDocError = ({ message }) => {
+      toast.error(message || "You do not have permission to edit this document.");
+    };
+
     socket.on("doc:peers", handlePeersList);
     socket.on("doc:peer:joined", handlePeerJoined);
     socket.on("doc:peer:left", handlePeerLeft);
     socket.on("doc:awareness", handleAwareness);
+    socket.on("doc:error", handleDocError);
 
     return () => {
       socket.emit("doc:leave", { documentId });
@@ -148,9 +161,10 @@ export const useDocumentSync = (documentId) => {
       socket.off("doc:peer:joined", handlePeerJoined);
       socket.off("doc:peer:left", handlePeerLeft);
       socket.off("doc:awareness", handleAwareness);
+      socket.off("doc:error", handleDocError);
       setActivePeers([]);
     };
-  }, [documentId, user]);
+  }, [documentId, user, canEdit]);
 
   const sendAwareness = useCallback(
     (cursor) => {

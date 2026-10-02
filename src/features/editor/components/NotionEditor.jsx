@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { toast } from "sonner";
 import { MessageSquare } from "lucide-react";
 import {
   useEditor,
@@ -32,8 +33,80 @@ import CollaborationCursor, {
   yCursorPluginKey,
 } from "../extensions/collaborationCursor";
 import InlineCommentPins from "./InlineCommentPins";
+import { Plugin, PluginKey } from "prosemirror-state";
 import "@domternal/theme";
 import "../styles/editor.css";
+
+const readOnlyPluginKey = new PluginKey("readOnlyGuard");
+
+function createReadOnlyGuardExtension(getReadOnly, onAttemptEdit) {
+  return Extension.create({
+    name: "readOnlyGuard",
+    addProseMirrorPlugins() {
+      return [
+        new Plugin({
+          key: readOnlyPluginKey,
+          filterTransaction(tr) {
+            if (getReadOnly() && tr.docChanged && !tr.getMeta(ySyncPluginKey)) {
+              onAttemptEdit();
+              return false;
+            }
+            return true;
+          },
+          props: {
+            handleDOMEvents: {
+              beforeinput(view, event) {
+                if (getReadOnly()) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onAttemptEdit();
+                  return true;
+                }
+                return false;
+              },
+              keydown(view, event) {
+                if (getReadOnly()) {
+                  const isCopyOrSelectAll =
+                    (event.ctrlKey || event.metaKey) && ["c", "a"].includes(event.key?.toLowerCase());
+                  const isModifierKeyOnly = ["Shift", "Control", "Alt", "Meta", "CapsLock"].includes(event.key);
+                  const isNavKey =
+                    event.key?.startsWith("Arrow") ||
+                    ["Home", "End", "PageUp", "PageDown", "Tab", "Escape"].includes(event.key);
+
+                  if (!isCopyOrSelectAll && !isModifierKeyOnly && !isNavKey) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onAttemptEdit();
+                    return true;
+                  }
+                }
+                return false;
+              },
+              paste(view, event) {
+                if (getReadOnly()) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onAttemptEdit();
+                  return true;
+                }
+                return false;
+              },
+              drop(view, event) {
+                if (getReadOnly()) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onAttemptEdit();
+                  return true;
+                }
+                return false;
+              },
+            },
+          },
+        }),
+      ];
+    },
+  });
+}
 
 function createYSyncExtension(getFragment) {
   return Extension.create({
@@ -75,12 +148,24 @@ export default function NotionEditor({
   const composerInputRef = useRef(null);
   const composerRef = useRef(null);
 
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
+
   const awarenessRef = useRef(awareness);
   awarenessRef.current = awareness;
   const currentUserIdRef = useRef(currentUserId);
   currentUserIdRef.current = currentUserId;
   const yjsFragmentRef = useRef(yjsXmlFragment);
   yjsFragmentRef.current = yjsXmlFragment;
+
+  const lastReadOnlyToastRef = useRef(0);
+  const notifyReadOnly = useCallback(() => {
+    const now = Date.now();
+    if (now - lastReadOnlyToastRef.current > 1200) {
+      lastReadOnlyToastRef.current = now;
+      toast.error("You have view-only access. You cannot edit this document.");
+    }
+  }, []);
 
   const editorExtensions = useMemo(
     () => [
@@ -113,60 +198,144 @@ export default function NotionEditor({
       TableOfContents,
       FloatingTocOutline.configure({ anchor: "viewport" }),
       createYSyncExtension(() => yjsFragmentRef.current),
+      createReadOnlyGuardExtension(() => readOnlyRef.current, notifyReadOnly),
       CollaborationCursor.configure({
         getAwareness: () => awarenessRef.current,
         getUserId: () => currentUserIdRef.current,
       }),
     ],
-    []
+    [notifyReadOnly]
   );
 
-  const { editor, editorRef } = useEditor({
-    extensions: editorExtensions,
-    content: content || "",
-    history: false,
-    editable: !readOnly,
-    onUpdate: ({ editor: currentEditor, transaction }) => {
-      if (transaction?.getMeta(ySyncPluginKey)) return;
-      const html = currentEditor.getHTML();
-      if (onChange) {
-        onChange(html, currentEditor.getJSON());
-      }
-    },
-    onSelectionUpdate: ({ editor: currentEditor }) => {
-      const { from, to, empty } = currentEditor.state.selection;
-      const text = empty ? "" : currentEditor.state.doc.textBetween(from, to, " ");
-      if (onSelectionUpdate) {
-        onSelectionUpdate({ from, to, empty, text });
-      }
+  const { editor, editorRef } = useEditor(
+    {
+      extensions: editorExtensions,
+      content: content || "",
+      history: false,
+      editable: !readOnly,
+      onUpdate: ({ editor: currentEditor, transaction }) => {
+        if (readOnlyRef.current) return;
+        if (transaction?.getMeta(ySyncPluginKey)) return;
+        const html = currentEditor.getHTML();
+        if (onChange) {
+          onChange(html, currentEditor.getJSON());
+        }
+      },
+      onSelectionUpdate: ({ editor: currentEditor }) => {
+        const { from, to, empty } = currentEditor.state.selection;
+        const text = empty ? "" : currentEditor.state.doc.textBetween(from, to, " ");
+        if (onSelectionUpdate) {
+          onSelectionUpdate({ from, to, empty, text });
+        }
 
-      if (!empty && containerRef.current) {
-        try {
-          const startCoords = currentEditor.view.coordsAtPos(from);
-          const containerRect = containerRef.current.getBoundingClientRect();
-          if (startCoords && containerRect) {
-            setSelectionBox({
-              x: Math.max(10, startCoords.left - containerRect.left),
-              y: Math.max(0, startCoords.top - containerRect.top - 34),
-              text,
-              from,
-              to,
-            });
+        if (!empty && containerRef.current && !readOnly) {
+          try {
+            const startCoords = currentEditor.view.coordsAtPos(from);
+            const containerRect = containerRef.current.getBoundingClientRect();
+            if (startCoords && containerRect) {
+              setSelectionBox({
+                x: Math.max(10, startCoords.left - containerRect.left),
+                y: Math.max(0, startCoords.top - containerRect.top - 34),
+                text,
+                from,
+                to,
+              });
+            }
+          } catch {
+            setSelectionBox(null);
           }
-        } catch {
+        } else {
           setSelectionBox(null);
         }
-      } else {
-        setSelectionBox(null);
-      }
+      },
     },
-  });
+    [readOnly]
+  );
 
+  // Synchronize editable state and enforce contenteditable attribute
   useEffect(() => {
-    if (editor) {
-      editor.setEditable(!readOnly);
+    if (!editor) return;
+
+    editor.options.editable = !readOnly;
+    if (editor.view) {
+      editor.view.setProps({
+        editable: () => !readOnly,
+      });
+      if (editor.view.dom) {
+        editor.view.dom.contentEditable = !readOnly ? "true" : "false";
+        editor.view.dom.setAttribute("contenteditable", !readOnly ? "true" : "false");
+        editor.view.dom.setAttribute("aria-readonly", readOnly ? "true" : "false");
+        if (readOnly) {
+          editor.view.dom.classList.add("dm-readonly-mode");
+        } else {
+          editor.view.dom.classList.remove("dm-readonly-mode");
+        }
+      }
     }
   }, [readOnly, editor]);
+
+  // Intercept all keystrokes, input events, paste, and drop in read-only mode to prevent any characters from being entered
+  useEffect(() => {
+    if (!editor?.view?.dom || !readOnly) return;
+
+    const dom = editor.view.dom;
+
+    const handleBeforeInput = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      notifyReadOnly();
+      return false;
+    };
+
+    const handleKeyDown = (e) => {
+      // Allow navigation and copy
+      const isAllowedKey =
+        e.key === "ArrowUp" ||
+        e.key === "ArrowDown" ||
+        e.key === "ArrowLeft" ||
+        e.key === "ArrowRight" ||
+        e.key === "PageUp" ||
+        e.key === "PageDown" ||
+        e.key === "Home" ||
+        e.key === "End" ||
+        e.key === "Tab" ||
+        e.key === "Escape" ||
+        ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "a"));
+
+      if (!isAllowedKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        notifyReadOnly();
+        return false;
+      }
+    };
+
+    const handlePaste = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      notifyReadOnly();
+      return false;
+    };
+
+    const handleDrop = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      notifyReadOnly();
+      return false;
+    };
+
+    dom.addEventListener("beforeinput", handleBeforeInput, true);
+    dom.addEventListener("keydown", handleKeyDown, true);
+    dom.addEventListener("paste", handlePaste, true);
+    dom.addEventListener("drop", handleDrop, true);
+
+    return () => {
+      dom.removeEventListener("beforeinput", handleBeforeInput, true);
+      dom.removeEventListener("keydown", handleKeyDown, true);
+      dom.removeEventListener("paste", handlePaste, true);
+      dom.removeEventListener("drop", handleDrop, true);
+    };
+  }, [editor, readOnly, notifyReadOnly]);
 
   // Hydrate content whenever editor is empty but document content exists in database
   useEffect(() => {
@@ -274,7 +443,7 @@ export default function NotionEditor({
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "m") {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key?.toLowerCase() === "m") {
         e.preventDefault();
         if (editor) {
           const { from, to, empty } = editor.state.selection;
@@ -311,17 +480,44 @@ export default function NotionEditor({
             to: blockTo,
           });
         }
+      } else if (readOnlyRef.current) {
+        // If active element is an input or textarea inside comment composer, allow typing
+        if (
+          document.activeElement &&
+          (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") &&
+          composerRef.current?.contains(document.activeElement)
+        ) {
+          return;
+        }
+
+        const isCopyOrSelectAll =
+          (e.ctrlKey || e.metaKey) && ["c", "a"].includes(e.key?.toLowerCase());
+        const isModifierKeyOnly = ["Shift", "Control", "Alt", "Meta", "CapsLock"].includes(e.key);
+        const isNavKey =
+          e.key?.startsWith("Arrow") ||
+          ["Home", "End", "PageUp", "PageDown", "Tab", "Escape"].includes(e.key);
+
+        if (!isCopyOrSelectAll && !isModifierKeyOnly && !isNavKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          notifyReadOnly();
+        }
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editor]);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [editor, notifyReadOnly]);
 
   return (
     <div
       className="relative w-full min-h-[calc(100vh-140px)] px-4 sm:px-8 md:px-12 lg:px-20 py-6"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onClick={() => {
+        if (readOnly) {
+          notifyReadOnly();
+        }
+      }}
     >
       <div
         ref={containerRef}
@@ -475,9 +671,13 @@ export default function NotionEditor({
 
         {editor && (
           <>
-            <DomternalBubbleMenu editor={editor} />
-            <DomternalFloatingMenu editor={editor} requireExplicitTrigger />
-            <DomternalNotionColorPicker editor={editor} />
+            {!readOnly && (
+              <>
+                <DomternalBubbleMenu editor={editor} />
+                <DomternalFloatingMenu editor={editor} requireExplicitTrigger />
+                <DomternalNotionColorPicker editor={editor} />
+              </>
+            )}
 
             {comments.length > 0 && (
               <InlineCommentPins

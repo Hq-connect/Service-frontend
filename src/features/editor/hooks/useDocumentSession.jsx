@@ -1,5 +1,6 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { toast } from "sonner";
 import { useDocument } from "./useDocument";
 import { useDocumentSync } from "./useDocumentSync";
 import { useDocumentComments } from "./useDocumentComments";
@@ -26,7 +27,7 @@ export function useDocumentSession(documentId) {
     document: doc,
     isLoading,
     isError,
-    updateMetadata,
+    updateMetadata: rawUpdateMetadata,
   } = useDocument(documentId);
 
   const commentsData = useDocumentComments(documentId);
@@ -38,6 +39,8 @@ export function useDocumentSession(documentId) {
 
   const appliedDocIdRef = useRef(null);
 
+  const canEdit = Boolean(doc?.userRole === "owner" || doc?.userRole === "editor");
+
   const {
     activePeers,
     awareness,
@@ -45,9 +48,20 @@ export function useDocumentSession(documentId) {
     yjsXmlFragment,
     applyServerSnapshot,
     getSnapshot,
-  } = useDocumentSync(documentId);
+  } = useDocumentSync(documentId, canEdit);
 
   const currentUserId = authUserId || syncUserId || "";
+
+  const updateMetadata = useCallback(
+    async (updates) => {
+      if (!canEdit) {
+        toast.error("You have view-only access. You cannot edit this document.");
+        return;
+      }
+      return await rawUpdateMetadata(updates);
+    },
+    [canEdit, rawUpdateMetadata]
+  );
 
   // Manage active document id lifecycle in Redux store
   useEffect(() => {
@@ -109,8 +123,6 @@ export function useDocumentSession(documentId) {
     if (doc.content?.type === "doc" && doc.content?.content?.length > 0) return doc.content;
     return "<p></p>";
   }, [doc?.content]);
-
-  const canEdit = doc?.userRole ? doc.userRole === "owner" || doc.userRole === "editor" : true;
 
   const isDocReady = Boolean(
     activeDocumentId &&

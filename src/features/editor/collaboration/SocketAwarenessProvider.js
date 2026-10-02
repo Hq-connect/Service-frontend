@@ -49,9 +49,10 @@ export const toUint8Array = (val) => {
  * and active user presence (Awareness) via WebSockets.
  */
 export class SocketAwarenessProvider {
-  constructor(documentId, socket, userProfile) {
+  constructor(documentId, socket, userProfile, readOnly = false) {
     this.documentId = String(documentId);
     this.socket = socket;
+    this.readOnly = Boolean(readOnly);
     this.doc = new Y.Doc();
     this.yXmlFragment = this.doc.getXmlFragment("prosemirror");
     this.awareness = new Awareness(this.doc);
@@ -101,7 +102,8 @@ export class SocketAwarenessProvider {
     };
 
     this.handleDocUpdate = (update, origin) => {
-      if (origin === "socket" || origin === "server" || this.isDestroyed) return;
+      // In read-only mode or remote origin, never emit outbound updates
+      if (this.readOnly || origin === "socket" || origin === "server" || this.isDestroyed) return;
       const fullSnapshot = Y.encodeStateAsUpdate(this.doc);
       this.socket.emit("doc:yjs:update", {
         documentId: this.documentId,
@@ -132,6 +134,10 @@ export class SocketAwarenessProvider {
     if (userProfile) {
       this.setUserProfile(userProfile);
     }
+  }
+
+  setReadOnly(readOnly) {
+    this.readOnly = Boolean(readOnly);
   }
 
   applyServerSnapshot(snapshotRaw) {

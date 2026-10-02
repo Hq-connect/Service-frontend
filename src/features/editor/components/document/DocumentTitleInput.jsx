@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useDispatch } from "react-redux";
+import { toast } from "sonner";
 import { socket } from "@/socket/config/socket.config";
 import { setSaveStatus } from "../../states/document.slice";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,15 @@ export default function DocumentTitleInput({
   const dispatch = useDispatch();
   const [customTitle, setCustomTitle] = useState(null);
   const titleTimerRef = useRef(null);
+  const lastReadOnlyToastRef = useRef(0);
+
+  const notifyReadOnly = useCallback(() => {
+    const now = Date.now();
+    if (now - lastReadOnlyToastRef.current > 1200) {
+      lastReadOnlyToastRef.current = now;
+      toast.error("You have view-only access. You cannot edit this document.");
+    }
+  }, []);
 
   // Synchronize when documentId changes
   useEffect(() => {
@@ -39,7 +49,10 @@ export default function DocumentTitleInput({
   const displayTitle = customTitle ?? (initialTitle || "Untitled");
 
   const handleTitleChange = (e) => {
-    if (!canEdit) return;
+    if (!canEdit) {
+      notifyReadOnly();
+      return;
+    }
     const newTitle = e.target.value;
     setCustomTitle(newTitle);
     dispatch(setSaveStatus("saving"));
@@ -83,6 +96,18 @@ export default function DocumentTitleInput({
   };
 
   const handleTitleKeyDown = (e) => {
+    if (!canEdit) {
+      const isCopyOrSelectAll =
+        (e.ctrlKey || e.metaKey) && ["c", "a"].includes(e.key?.toLowerCase());
+      const isNavOrModifier =
+        ["Tab", "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "Shift", "Control", "Alt", "Meta"].includes(e.key);
+
+      if (!isCopyOrSelectAll && !isNavOrModifier) {
+        e.preventDefault();
+        notifyReadOnly();
+      }
+      return;
+    }
     if (e.key === "Enter") {
       e.preventDefault();
       const editorEl = document.querySelector(".dm-editor .ProseMirror");
@@ -92,6 +117,22 @@ export default function DocumentTitleInput({
     }
   };
 
+  if (!canEdit) {
+    return (
+      <h1
+        onClick={notifyReadOnly}
+        tabIndex={0}
+        onKeyDown={handleTitleKeyDown}
+        title="You have view-only access to this document"
+        className={cn(
+          "relative z-10 w-full text-4xl sm:text-5xl font-heading font-extrabold text-foreground bg-transparent border-none focus:outline-none tracking-tight cursor-default select-text py-1"
+        )}
+      >
+        {displayTitle || "Untitled"}
+      </h1>
+    );
+  }
+
   return (
     <input
       type="text"
@@ -100,16 +141,13 @@ export default function DocumentTitleInput({
       onBlur={handleTitleBlur}
       onKeyDown={handleTitleKeyDown}
       onFocus={(e) => {
-        if (canEdit && displayTitle === "Untitled") {
+        if (displayTitle === "Untitled") {
           e.target.select();
         }
       }}
-      readOnly={!canEdit}
-      title={!canEdit ? "You have view-only access to this document" : ""}
       placeholder="Untitled"
       className={cn(
-        "relative z-10 w-full text-4xl sm:text-5xl font-heading font-extrabold text-foreground bg-transparent border-none focus:outline-none placeholder:text-muted-foreground/30 tracking-tight",
-        !canEdit && "cursor-default select-text opacity-90"
+        "relative z-10 w-full text-4xl sm:text-5xl font-heading font-extrabold text-foreground bg-transparent border-none focus:outline-none placeholder:text-muted-foreground/30 tracking-tight"
       )}
     />
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { socket } from "@/socket/config/socket.config";
 import { PRESET_COVERS } from "../../constants/coversAndEmojis";
@@ -36,7 +37,10 @@ export default function DocumentCover({
   const displayCover = customCover !== undefined ? customCover : initialCover;
 
   const handleSelectCover = async (cover) => {
-    if (!canEdit) return;
+    if (!canEdit) {
+      toast.error("You have view-only access. You cannot edit this document.");
+      return;
+    }
     setCustomCover(cover);
     if (setShowCoverPicker) setShowCoverPicker(false);
 
@@ -57,7 +61,10 @@ export default function DocumentCover({
   };
 
   const handleRemoveCover = async () => {
-    if (!canEdit) return;
+    if (!canEdit) {
+      toast.error("You have view-only access. You cannot edit this document.");
+      return;
+    }
     setCustomCover(null);
     if (setShowCoverPicker) setShowCoverPicker(false);
 

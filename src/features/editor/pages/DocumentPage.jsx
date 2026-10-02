@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { Loader2 } from "lucide-react";
 import NotionEditor from "../components/NotionEditor";
+import DocumentReadOnlyViewer from "../components/DocumentReadOnlyViewer";
 import DocumentHeader from "../components/document/DocumentHeader";
 import DocumentCover from "../components/document/DocumentCover";
 import DocumentIconPicker from "../components/document/DocumentIconPicker";
@@ -90,6 +91,7 @@ export default function DocumentPage() {
           title={doc?.title}
           icon={doc?.icon}
           canEdit={canEdit}
+          userRole={doc?.userRole}
           activePeers={activePeers}
           currentContent={effectiveContent}
           getSnapshot={getSnapshot}

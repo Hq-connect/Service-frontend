@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Image, Smile } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { socket } from "@/socket/config/socket.config";
 import { EMOJI_CATEGORIES } from "../../constants/coversAndEmojis";
@@ -41,7 +42,10 @@ export default function DocumentIconPicker({
   const displayIcon = customIcon ?? (initialIcon || "📄");
 
   const handleSelectIcon = async (newIcon) => {
-    if (!canEdit) return;
+    if (!canEdit) {
+      toast.error("You have view-only access. You cannot edit this document.");
+      return;
+    }
     setCustomIcon(newIcon);
     setShowIconPicker(false);
     setIconSearch("");
@@ -92,12 +96,17 @@ export default function DocumentIconPicker({
       <div className="relative inline-block mb-3">
         <button
           type="button"
-          disabled={!canEdit}
-          onClick={() => canEdit && setShowIconPicker((prev) => !prev)}
+          onClick={() => {
+            if (canEdit) {
+              setShowIconPicker((prev) => !prev);
+            } else {
+              toast.error("You have view-only access. You cannot edit this document.");
+            }
+          }}
           className={`text-5xl transition-transform ${
             canEdit ? "hover:scale-105 active:scale-95 cursor-pointer" : "cursor-default"
           }`}
-          title={canEdit ? "Click to change icon" : ""}
+          title={canEdit ? "Click to change icon" : "You have view-only access"}
         >
           {displayIcon}
         </button>

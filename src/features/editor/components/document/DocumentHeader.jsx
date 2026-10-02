@@ -12,6 +12,7 @@ export default function DocumentHeader({
   title,
   icon,
   canEdit = true,
+  userRole = "viewer",
   activePeers = [],
   currentContent = "",
   getSnapshot = null,
@@ -144,6 +145,7 @@ export default function DocumentHeader({
         isOpen={isShareOpen}
         onClose={() => setIsShareOpen(false)}
         documentId={documentId}
+        userRole={userRole}
       />
     </>
   );
