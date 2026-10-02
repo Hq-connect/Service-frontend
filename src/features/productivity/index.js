@@ -1,6 +1,10 @@
 export { ProjectsDashboard } from './pages/ProjectsDashboard';
 export { CreateProjectModal } from './components/CreateProjectModal';
 export { BoardView } from './pages/BoardView';
+export { ProductivitySidebar } from './components/ProductivitySidebar';
+export { BoardHeader } from './components/BoardHeader';
+export { TaskListView } from './components/TaskListView';
+export { ProjectInsightsView } from './components/ProjectInsightsView';
 export { TaskCard } from './components/TaskCard';
 export { CreateTaskModal } from './components/CreateTaskModal';
 export { ProjectMembersModal } from './components/ProjectMembersModal';

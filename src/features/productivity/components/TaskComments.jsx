@@ -3,6 +3,7 @@ import { useTaskComments, useCreateTaskComment, useDeleteTaskComment } from '../
 import { formatDistanceToNow } from 'date-fns';
 import { Trash2, Send, MessageCircle } from 'lucide-react';
 import { useSelector } from 'react-redux';
+import { extractUser, getInitials, getAvatarStyle } from '@/global/utils/user';
 
 const TaskComments = ({ projectId, taskId }) => {
     const { data: commentsResponse, isLoading } = useTaskComments(projectId, taskId);
@@ -10,7 +11,8 @@ const TaskComments = ({ projectId, taskId }) => {
     const { mutate: deleteComment, isPending: isDeleting } = useDeleteTaskComment();
     
     const [content, setContent] = useState('');
-    const currentUser = useSelector((state) => state.auth?.user);
+    const rawUser = useSelector((state) => state.auth?.user);
+    const currentUser = extractUser(rawUser);
 
     const comments = commentsResponse?.data?.comments || [];
 
@@ -46,11 +48,15 @@ const TaskComments = ({ projectId, taskId }) => {
                     comments.map((comment) => {
                         const authorName = comment.userSnapshot?.name || comment.authorSnapshot?.name || 'Unknown User';
                         const authorAvatar = comment.userSnapshot?.avatar || comment.authorSnapshot?.avatar;
+                        const authorId = comment.userId || comment.authorId || authorName;
                         const isAuthor = currentUser && (
                             comment.userId === currentUser._id || 
                             comment.userId === currentUser.id || 
                             comment.authorId === currentUser._id
                         );
+
+                        const initials = getInitials(authorName);
+                        const avatarStyle = getAvatarStyle(authorId);
 
                         return (
                             <div key={comment._id} className="flex gap-4 group">
@@ -60,11 +66,14 @@ const TaskComments = ({ projectId, taskId }) => {
                                         <img 
                                             src={authorAvatar} 
                                             alt={authorName} 
-                                            className="w-8 h-8 rounded-full border border-zinc-200 object-cover"
+                                            className="w-8 h-8 rounded-full border border-border object-cover"
                                         />
                                     ) : (
-                                        <div className="w-8 h-8 rounded-full bg-zinc-800 text-white flex items-center justify-center text-xs font-medium">
-                                            {authorName.charAt(0).toUpperCase()}
+                                        <div 
+                                            style={avatarStyle}
+                                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold select-none shadow-2xs border border-border/40"
+                                        >
+                                            {initials}
                                         </div>
                                     )}
                                 </div>
@@ -109,11 +118,14 @@ const TaskComments = ({ projectId, taskId }) => {
                         <img 
                             src={currentUser.avatar} 
                             alt="You" 
-                            className="w-8 h-8 rounded-full border border-zinc-200"
+                            className="w-8 h-8 rounded-full border border-border object-cover"
                         />
                     ) : (
-                        <div className="w-8 h-8 rounded-full bg-zinc-800 text-white flex items-center justify-center text-xs font-medium">
-                            {currentUser?.firstName?.charAt(0) || currentUser?.email?.charAt(0) || 'Y'}
+                        <div 
+                            style={getAvatarStyle(currentUser || 'You')}
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold select-none shadow-2xs border border-border/40"
+                        >
+                            {getInitials(currentUser || 'You')}
                         </div>
                     )}
                 </div>

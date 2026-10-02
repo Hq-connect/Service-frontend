@@ -1,8 +1,11 @@
 import api from '@/api/api';
 import { getHeaders } from './headers';
 
-export const getProjects = async () => {
-    const response = await api.get('/projects', { headers: getHeaders() });
+export const getProjects = async (params = {}) => {
+    const response = await api.get('/projects', { 
+        headers: getHeaders(),
+        params,
+    });
     return response.data;
 };
 

@@ -2,10 +2,12 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import DocsSidebarTree from "@/features/editor/components/sidebar/DocsSidebarTree";
+import { ProductivitySidebar } from "@/features/productivity/components/ProductivitySidebar";
 
 function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelectedSpaceIdx }) {
   const location = useLocation();
   const isDocsRoute = location.pathname.startsWith("/docs");
+  const isTasksRoute = location.pathname.startsWith("/tasks");
 
   const renderSecondaryItems = () => {
     return (
@@ -92,6 +94,8 @@ function SecondarySidebar({ tenantName, secondaryNav, selectedSpaceIdx, setSelec
       <div className="flex-1 overflow-hidden flex flex-col">
         {isDocsRoute ? (
           <DocsSidebarTree />
+        ) : isTasksRoute ? (
+          <ProductivitySidebar />
         ) : (
           <div className="flex-1 overflow-y-auto py-2">
             {/* Header */}

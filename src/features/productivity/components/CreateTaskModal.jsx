@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { createPortal } from 'react-dom';
 import { useCreateTask } from '../queries/task.queries';
-import { X, Loader2 } from 'lucide-react';
-// Assuming you have an action in your slice or you manage this via local state in BoardView.
-// For now we'll accept props: isOpen, onClose, projectId, defaultColumnId
+import { X, Loader2, AlertCircle, ChevronDown, Check } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 
 export const CreateTaskModal = ({ isOpen, onClose, projectId, boardId, defaultColumnId }) => {
     const createTaskMutation = useCreateTask();
@@ -11,45 +15,71 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId, boardId, defaultCo
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        priority: 'medium', // Note: task.validation expects low, medium, high, urgent
+        priority: 'medium',
     });
+    const [errorMessage, setErrorMessage] = useState('');
 
     if (!isOpen) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        setErrorMessage('');
+
+        if (!formData.title.trim()) {
+            setErrorMessage('Task title is required');
+            return;
+        }
+
         createTaskMutation.mutate({
             projectId,
             data: { 
-                ...formData, 
+                title: formData.title.trim(),
+                description: formData.description.trim() || undefined,
+                priority: formData.priority,
+                status: 'todo',
                 boardId,
-                columnId: defaultColumnId 
+                columnId: defaultColumnId,
             }
         }, {
             onSuccess: () => {
                 onClose();
                 setFormData({ title: '', description: '', priority: 'medium' });
+                setErrorMessage('');
+            },
+            onError: (err) => {
+                const msg = err.response?.data?.message?.[0]?.msg || 
+                            err.response?.data?.message || 
+                            err.message || 
+                            'Failed to create task';
+                setErrorMessage(typeof msg === 'string' ? msg : 'Failed to create task');
             },
         });
     };
 
-    return (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in-0">
-            <div className="bg-card text-card-foreground rounded-xl border shadow-lg w-full max-w-md overflow-hidden animate-in zoom-in-95">
-                <div className="flex justify-between items-center p-6 border-b">
-                    <h2 className="text-lg font-semibold tracking-tight">Create New Task</h2>
+    return createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in-0 duration-150">
+            <div className="bg-card text-card-foreground rounded-lg border border-border shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                <div className="flex justify-between items-center p-4 border-b border-border bg-muted/20">
+                    <h2 className="text-sm font-bold text-foreground">Create New Task</h2>
                     <button 
                         onClick={onClose}
-                        className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                     >
                         <X className="h-4 w-4" />
                     </button>
                 </div>
                 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div className="space-y-2">
-                        <label htmlFor="title" className="text-sm font-medium leading-none">
-                            Task Title
+                <form onSubmit={handleSubmit} className="p-4 space-y-3.5">
+                    {errorMessage && (
+                        <div className="flex items-center gap-2 p-2.5 bg-destructive/10 text-destructive text-xs rounded-md border border-destructive/20">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{errorMessage}</span>
+                        </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                        <label htmlFor="title" className="text-xs font-semibold text-foreground">
+                            Task Title <span className="text-destructive">*</span>
                         </label>
                         <input 
                             id="title"
@@ -58,72 +88,77 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId, boardId, defaultCo
                             autoFocus
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-xs shadow-2xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                             placeholder="e.g. Design Landing Page"
                         />
                     </div>
                     
-                    <div className="space-y-2">
-                        <label htmlFor="description" className="text-sm font-medium leading-none">
-                            Description
+                    <div className="space-y-1.5">
+                        <label htmlFor="description" className="text-xs font-semibold text-foreground">
+                            Description <span className="text-muted-foreground font-normal">(optional)</span>
                         </label>
                         <textarea 
                             id="description"
+                            rows={3}
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            placeholder="Add more details..."
+                            className="flex w-full rounded-md border border-input bg-background p-2.5 text-xs shadow-2xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                            placeholder="Add more context or acceptance criteria..."
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label htmlFor="priority" className="text-sm font-medium leading-none">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">
                             Priority
                         </label>
-                        <select 
-                            id="priority"
-                            value={formData.priority}
-                            onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                        </select>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-xs shadow-2xs hover:bg-muted/50 capitalize cursor-pointer focus:outline-hidden">
+                                <span>{formData.priority}</span>
+                                <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-[calc(100%-2rem)] min-w-[200px] p-1 text-xs">
+                                {['low', 'medium', 'high', 'urgent'].map((p) => (
+                                    <DropdownMenuItem
+                                        key={p}
+                                        onClick={() => setFormData({ ...formData, priority: p })}
+                                        className="capitalize flex items-center justify-between cursor-pointer py-1.5"
+                                    >
+                                        <span>{p}</span>
+                                        {formData.priority === p && <Check className="w-3.5 h-3.5 text-primary" />}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
 
-                    {createTaskMutation.isError && (
-                        <div className="text-sm font-medium text-destructive">
-                            Failed to create task. Please try again.
-                        </div>
-                    )}
-
-                    <div className="flex justify-end space-x-2 pt-4">
+                    <div className="flex justify-end gap-2 pt-2 border-t border-border">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
+                            className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={createTaskMutation.isPending || !formData.title.trim()}
-                            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 rounded-md transition-colors shadow-2xs"
                         >
                             {createTaskMutation.isPending ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Creating...
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Creating...</span>
                                 </>
                             ) : (
-                                'Create Task'
+                                <span>Create Task</span>
                             )}
                         </button>
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
+
+export default CreateTaskModal;
