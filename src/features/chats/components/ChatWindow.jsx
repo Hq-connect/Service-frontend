@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useGroupMembers } from "../hooks/useGroupMembers";
 import { useChatSocket } from "../hooks/useChatSocket";
 import { useMarkChatRead } from "../hooks/useMarkChatRead";
+import { extractUser } from "@/global/utils/user";
 
 /**
  * Right panel of the chat layout - header, messages, input.
@@ -69,12 +70,6 @@ function ChatWindow({ chatId, chatType, chat }) {
   }, [chatId, chat?.lastMessage?._id, markChatRead]);
 
   // Extract current user id
-  const extractUser = (u) => {
-    if (!u) return null;
-    if (u.user && typeof u.user === "object") return u.user;
-    if (u.data && typeof u.data === "object") return u.data;
-    return u;
-  };
   const currentUser = extractUser(user);
   const currentUserId = currentUser?._id ?? currentUser?.id;
 

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { socket } from "@/socket/config/socket.config";
 import useAuth from "@/features/auth/hooks/useAuth";
 import { getUserProfile } from "../utils/userProfile";
-import { SocketAwarenessProvider } from "../services/yjsManager";
+import { SocketAwarenessProvider } from "../collaboration/SocketAwarenessProvider";
 
 export const useDocumentSync = (documentId) => {
   const { user } = useAuth();
