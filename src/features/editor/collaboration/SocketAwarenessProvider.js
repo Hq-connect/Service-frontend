@@ -7,6 +7,44 @@ import {
 } from "y-protocols/awareness";
 
 /**
+ * Robust helper to convert various binary/buffer representations (Node.js Buffer,
+ * Array of numbers, Base64 string, Uint8Array, BSON binary) into a clean Uint8Array for Yjs.
+ */
+export const toUint8Array = (val) => {
+  if (!val) return null;
+  if (val instanceof Uint8Array) return val;
+  if (Array.isArray(val)) return new Uint8Array(val);
+  if (val?.data && Array.isArray(val.data)) return new Uint8Array(val.data);
+  if (typeof val === "string") {
+    try {
+      const binStr = atob(val);
+      const len = binStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binStr.charCodeAt(i);
+      }
+      return bytes;
+    } catch {
+      return null;
+    }
+  }
+  if (val?.$binary?.base64) {
+    try {
+      const binStr = atob(val.$binary.base64);
+      const len = binStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binStr.charCodeAt(i);
+      }
+      return bytes;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+/**
  * SocketAwarenessProvider manages real-time document CRDT synchronization (Yjs Doc)
  * and active user presence (Awareness) via WebSockets.
  */
@@ -34,8 +72,10 @@ export class SocketAwarenessProvider {
       if (!update || this.isDestroyed) return;
       if (remoteDocId && String(remoteDocId) !== this.documentId) return;
       try {
-        const u8 = new Uint8Array(update);
-        applyAwarenessUpdate(this.awareness, u8, "socket");
+        const u8 = toUint8Array(update);
+        if (u8) {
+          applyAwarenessUpdate(this.awareness, u8, "socket");
+        }
       } catch (err) {
         console.error("Error applying remote awareness update:", err);
       }
@@ -74,7 +114,10 @@ export class SocketAwarenessProvider {
       if (!update || this.isDestroyed) return;
       if (remoteDocId && String(remoteDocId) !== this.documentId) return;
       try {
-        Y.applyUpdate(this.doc, new Uint8Array(update), "socket");
+        const u8 = toUint8Array(update);
+        if (u8) {
+          Y.applyUpdate(this.doc, u8, "socket");
+        }
       } catch (err) {
         console.error("Error applying remote Yjs update:", err);
       }
@@ -91,10 +134,13 @@ export class SocketAwarenessProvider {
     }
   }
 
-  applyServerSnapshot(snapshotArray) {
-    if (this.isDestroyed || !snapshotArray || snapshotArray.length === 0) return;
+  applyServerSnapshot(snapshotRaw) {
+    if (this.isDestroyed || !snapshotRaw) return;
     try {
-      Y.applyUpdate(this.doc, new Uint8Array(snapshotArray), "server");
+      const u8 = toUint8Array(snapshotRaw);
+      if (u8 && u8.length > 0) {
+        Y.applyUpdate(this.doc, u8, "server");
+      }
     } catch (err) {
       console.warn("Failed to apply server snapshot:", err);
     }
@@ -138,7 +184,10 @@ export class SocketAwarenessProvider {
   applyUpdate(updateUint8Array) {
     if (this.isDestroyed || !updateUint8Array) return;
     try {
-      Y.applyUpdate(this.doc, updateUint8Array);
+      const u8 = toUint8Array(updateUint8Array);
+      if (u8) {
+        Y.applyUpdate(this.doc, u8);
+      }
     } catch {
       // ignore
     }

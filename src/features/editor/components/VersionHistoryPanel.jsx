@@ -118,6 +118,7 @@ export default function VersionHistoryPanel({
   onClose,
   documentId,
   currentContent,
+  getSnapshot = null,
   documentTitle = "Document",
 }) {
   const {
@@ -243,10 +244,16 @@ export default function VersionHistoryPanel({
   const handleConfirmCreateSnapshot = async () => {
     const finalSummary = snapshotMessage.trim() || `Manual snapshot (${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`;
     try {
-      const res = await createVersion({
+      const latestSnapshotBytes = typeof getSnapshot === "function" ? getSnapshot() : null;
+      const payload = {
         changeSummary: finalSummary,
         content: currentContent,
-      });
+      };
+      if (latestSnapshotBytes && (latestSnapshotBytes instanceof Uint8Array || Array.isArray(latestSnapshotBytes))) {
+        payload.yjsSnapshot = Array.from(latestSnapshotBytes);
+      }
+
+      const res = await createVersion(payload);
       await refetch();
       if (res?._id) {
         setSelectedVersionId(res._id);

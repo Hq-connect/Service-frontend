@@ -14,6 +14,7 @@ export default function DocumentHeader({
   canEdit = true,
   activePeers = [],
   currentContent = "",
+  getSnapshot = null,
   onNavigateBack,
 }) {
   const saveStatus = useSelector((state) => state.document?.saveStatus) || "saved";
@@ -134,6 +135,7 @@ export default function DocumentHeader({
         onClose={() => setIsVersionsOpen(false)}
         documentId={documentId}
         currentContent={currentContent}
+        getSnapshot={getSnapshot}
         documentTitle={title}
       />
 

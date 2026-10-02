@@ -44,6 +44,7 @@ export function useDocumentSession(documentId) {
     currentUserId: syncUserId,
     yjsXmlFragment,
     applyServerSnapshot,
+    getSnapshot,
   } = useDocumentSync(documentId);
 
   const currentUserId = authUserId || syncUserId || "";
@@ -82,11 +83,7 @@ export function useDocumentSession(documentId) {
     }
 
     if (doc.yjsSnapshot) {
-      const raw = doc.yjsSnapshot;
-      const snapshotArray = raw?.data ?? (Array.isArray(raw) ? raw : null);
-      if (snapshotArray && snapshotArray.length > 0) {
-        applyServerSnapshot(snapshotArray);
-      }
+      applyServerSnapshot(doc.yjsSnapshot);
     }
 
     appliedDocIdRef.current = documentId;
@@ -140,6 +137,7 @@ export function useDocumentSession(documentId) {
     currentProfile,
     yjsXmlFragment,
     currentContent: resolvedContent,
+    getSnapshot,
   };
 }
 

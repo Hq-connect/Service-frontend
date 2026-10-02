@@ -123,7 +123,8 @@ export default function NotionEditor({
 
   const { editor, editorRef } = useEditor({
     extensions: editorExtensions,
-    content: "",
+    content: content || "",
+    history: false,
     editable: !readOnly,
     onUpdate: ({ editor: currentEditor, transaction }) => {
       if (transaction?.getMeta(ySyncPluginKey)) return;
@@ -166,6 +167,33 @@ export default function NotionEditor({
       editor.setEditable(!readOnly);
     }
   }, [readOnly, editor]);
+
+  // Hydrate content whenever editor is empty but document content exists in database
+  useEffect(() => {
+    if (!editor) return;
+
+    const isEditorEmpty = editor.isEmpty || editor.state.doc.textContent.trim() === "";
+    const hasSubstantialContent = Boolean(
+      content &&
+      content !== "<p></p>" &&
+      content !== "<p><br></p>" &&
+      content !== "" &&
+      (typeof content === "object"
+        ? Boolean(content.content?.length > 0)
+        : content.replace(/<[^>]*>/g, "").trim().length > 0 ||
+          content.includes("<h") ||
+          content.includes("<img") ||
+          content.includes("<ul") ||
+          content.includes("<ol") ||
+          content.includes("<blockquote") ||
+          content.includes("<table") ||
+          content.includes("<pre"))
+    );
+
+    if (isEditorEmpty && hasSubstantialContent) {
+      editor.commands.setContent(content);
+    }
+  }, [editor, content]);
 
   useEffect(() => {
     const handleScroll = () => {

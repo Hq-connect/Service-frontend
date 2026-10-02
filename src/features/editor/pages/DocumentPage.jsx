@@ -15,6 +15,7 @@ export default function DocumentPage() {
   const { documentId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [liveContent, setLiveContent] = useState(null);
   const [showCoverPicker, setShowCoverPicker] = useState(false);
   const saveStatusTimerRef = useRef(null);
 
@@ -34,9 +35,20 @@ export default function DocumentPage() {
     currentProfile,
     yjsXmlFragment,
     currentContent,
+    getSnapshot,
   } = useDocumentSession(documentId);
 
-  const handleEditorChange = useCallback(() => {
+  // Reset live content buffer when document switches
+  React.useEffect(() => {
+    setLiveContent(null);
+  }, [documentId]);
+
+  const effectiveContent = liveContent ?? currentContent;
+
+  const handleEditorChange = useCallback((html) => {
+    if (html) {
+      setLiveContent(html);
+    }
     dispatch(setSaveStatus("saving"));
     if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
     saveStatusTimerRef.current = setTimeout(() => {
@@ -79,7 +91,8 @@ export default function DocumentPage() {
           icon={doc?.icon}
           canEdit={canEdit}
           activePeers={activePeers}
-          currentContent={currentContent}
+          currentContent={effectiveContent}
+          getSnapshot={getSnapshot}
           onNavigateBack={() => navigate("/docs")}
         />
 
@@ -117,7 +130,7 @@ export default function DocumentPage() {
           <NotionEditor
             key={documentId}
             readOnly={!canEdit}
-            content=""
+            content={currentContent}
             onChange={handleEditorChange}
             awareness={awareness}
             currentUserId={currentUserId}
