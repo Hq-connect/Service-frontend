@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Video, Calendar, ArrowRight, Search, RefreshCw, PlayCircle, Loader2 } from "lucide-react";
+import { Plus, Video, Calendar, ArrowRight, Search, RefreshCw, PlayCircle, Loader2, Repeat } from "lucide-react";
 import useMeetings from "../hooks/useMeetings";
 import MeetingCard from "../components/MeetingCard";
 import CreateMeetingDialog from "../components/CreateMeetingDialog";
@@ -118,6 +118,13 @@ export const MeetsPage = () => {
         if (activeTab === "upcoming") {
             return m.status === "scheduled" || m.status === "ongoing";
         }
+        if (activeTab === "recurring") {
+            return (
+                (m.status === "scheduled" || m.status === "ongoing") &&
+                m.recurrenceType &&
+                m.recurrenceType !== "NONE"
+            );
+        }
         if (activeTab === "past") {
             return m.status === "completed";
         }
@@ -223,6 +230,10 @@ export const MeetsPage = () => {
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsList>
                             <TabsTrigger value="upcoming">Upcoming & Live</TabsTrigger>
+                            <TabsTrigger value="recurring" className="gap-1.5">
+                                <Repeat className="size-3 text-primary" />
+                                Recurring
+                            </TabsTrigger>
                             <TabsTrigger value="past">Past</TabsTrigger>
                             <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
                         </TabsList>
@@ -287,16 +298,18 @@ export const MeetsPage = () => {
                     <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
                         {activeTab === "upcoming"
                             ? "You don't have any upcoming meetings scheduled right now."
+                            : activeTab === "recurring"
+                            ? "You don't have any recurring or periodic meeting series set up."
                             : `There are no ${activeTab} meetings in your history.`}
                     </p>
-                    {activeTab === "upcoming" && (
+                    {(activeTab === "upcoming" || activeTab === "recurring") && (
                         <Button
                             onClick={() => toggleCreateDialog(true)}
                             size="sm"
                             className="gap-2"
                         >
                             <Plus className="size-3.5" />
-                            Schedule your first meeting
+                            {activeTab === "recurring" ? "Schedule a recurring meeting" : "Schedule your first meeting"}
                         </Button>
                     )}
                 </div>
