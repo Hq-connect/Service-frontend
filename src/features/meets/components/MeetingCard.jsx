@@ -1,10 +1,22 @@
 import React, { useState } from "react";
-import { Calendar, Clock, Copy, Check, Video, XCircle, Users, Edit3, Play } from "lucide-react";
+import {
+    Calendar,
+    Clock,
+    Copy,
+    Check,
+    Video,
+    XCircle,
+    Users,
+    Edit3,
+    Play,
+    Repeat,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import useAuth from "@/features/auth/hooks/useAuth";
+import { formatRecurrenceBadge } from "../utils/recurrenceUtils";
 
 export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
     const [copied, setCopied] = useState(false);
@@ -12,6 +24,7 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
     const currentUser = user?.user || user?.data || user;
     const currentUserId = currentUser?._id || currentUser?.id;
     const isHost = String(meeting?.hostId || meeting?.createdBy) === String(currentUserId);
+    const isRecurring = Boolean(meeting?.recurrenceType && meeting.recurrenceType !== "NONE");
 
     const handleCopy = (e) => {
         e.stopPropagation();
@@ -33,7 +46,10 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
         switch (status) {
             case "ongoing":
                 return (
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1.5 animate-pulse">
+                    <Badge
+                        variant="outline"
+                        className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1.5 animate-pulse"
+                    >
                         <span className="size-1.5 rounded-full bg-emerald-500" />
                         Live Now
                     </Badge>
@@ -41,7 +57,10 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
             case "scheduled":
                 if (isStartingSoon()) {
                     return (
-                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1.5 animate-bounce">
+                        <Badge
+                            variant="outline"
+                            className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1.5 animate-bounce"
+                        >
                             <span className="size-1.5 rounded-full bg-amber-500" />
                             Starts in &lt;15m
                         </Badge>
@@ -60,11 +79,7 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                     </Badge>
                 );
             case "cancelled":
-                return (
-                    <Badge variant="destructive">
-                        Cancelled
-                    </Badge>
-                );
+                return <Badge variant="destructive">Cancelled</Badge>;
             default:
                 return null;
         }
@@ -86,13 +101,21 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
         <Card className="group relative flex flex-col justify-between border-border bg-card text-card-foreground hover:shadow-md transition-all duration-200">
             <div>
                 <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2 space-y-0">
-                    <CardTitle className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                        {meeting.title}
-                    </CardTitle>
+                    <div className="space-y-1 pr-2">
+                        <CardTitle className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                            {meeting.title}
+                        </CardTitle>
+                        {isRecurring && (
+                            <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-medium bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
+                                <Repeat className="size-3 shrink-0" />
+                                <span>{formatRecurrenceBadge(meeting)}</span>
+                            </div>
+                        )}
+                    </div>
                     {getStatusBadge(meeting.status)}
                 </CardHeader>
 
-                <CardContent className="space-y-4 pt-1">
+                <CardContent className="space-y-3 pt-1">
                     {meeting.description && (
                         <p className="text-xs text-muted-foreground line-clamp-2">
                             {meeting.description}
@@ -102,7 +125,10 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                     <div className="space-y-2 text-xs text-muted-foreground">
                         <div className="flex items-center gap-2">
                             <Calendar className="size-3.5 text-muted-foreground/70" />
-                            <span>{formatDate(meeting.scheduledAt)}</span>
+                            <span>
+                                {isRecurring ? "Next: " : ""}
+                                {formatDate(meeting.scheduledAt)}
+                            </span>
                         </div>
 
                         {meeting.duration && (
@@ -175,10 +201,10 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                         variant="outline"
                         size="sm"
                         className="gap-1.5"
-                        title="Reschedule / Edit Meeting"
+                        title={isRecurring ? "Reschedule / Edit Periodic Series" : "Reschedule / Edit Meeting"}
                     >
                         <Edit3 className="size-3.5" />
-                        <span>Edit</span>
+                        <span>{isRecurring ? "Edit Series" : "Edit"}</span>
                     </Button>
                 )}
 
@@ -201,10 +227,10 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                         variant="ghost"
                         size="sm"
                         className="text-muted-foreground hover:text-destructive gap-1.5"
-                        title="Cancel Meeting"
+                        title={isRecurring ? "Cancel Periodic Series" : "Cancel Meeting"}
                     >
                         <XCircle className="size-3.5" />
-                        <span>Cancel</span>
+                        <span>{isRecurring ? "Cancel Series" : "Cancel"}</span>
                     </Button>
                 )}
             </CardFooter>

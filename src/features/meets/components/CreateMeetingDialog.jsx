@@ -1,5 +1,17 @@
 import React, { useState } from "react";
-import { Calendar, Video, Loader2, Users, Search, X, Check, Clock, Globe } from "lucide-react";
+import {
+    Calendar,
+    Video,
+    Loader2,
+    Users,
+    Search,
+    X,
+    Check,
+    Clock,
+    Globe,
+    Repeat,
+    RefreshCw,
+} from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -14,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUsers } from "@/global/hooks/useUsers";
 import useAuth from "@/features/auth/hooks/useAuth";
+import { DAYS_OF_WEEK, getRecurrenceSummaryText } from "../utils/recurrenceUtils";
 import { getUserInitials, getUserDisplayName } from "@/global/utils/user";
 
 export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
@@ -29,6 +42,14 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
     const [timezone, setTimezone] = useState(
         Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
     );
+
+    // Periodic / Recurrence state
+    const [isRecurring, setIsRecurring] = useState(false);
+    const [recurrenceType, setRecurrenceType] = useState("WEEKLY"); // "DAILY" | "WEEKLY" | "MONTHLY"
+    const [recurrenceInterval, setRecurrenceInterval] = useState(1);
+    const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState([new Date().getDay()]);
+    const [recurrenceEndType, setRecurrenceEndType] = useState("never"); // "never" | "until"
+    const [recurrenceUntil, setRecurrenceUntil] = useState("");
 
     // Attendee selection state
     const [attendeeSearch, setAttendeeSearch] = useState("");
@@ -57,12 +78,43 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
         setSelectedUsers((prev) => prev.filter((u) => u._id !== userId));
     };
 
+    const handleDateChange = (val) => {
+        setScheduledAt(val);
+        if (val) {
+            const date = new Date(val);
+            if (!isNaN(date.getTime())) {
+                const day = date.getDay();
+                // If recurring and only default day was selected, align to chosen date's day
+                if (isRecurring && selectedDaysOfWeek.length <= 1) {
+                    setSelectedDaysOfWeek([day]);
+                }
+            }
+        }
+    };
+
+    const toggleDayOfWeek = (dayNumber) => {
+        setSelectedDaysOfWeek((prev) => {
+            if (prev.includes(dayNumber)) {
+                // Keep at least one day selected
+                if (prev.length === 1) return prev;
+                return prev.filter((d) => d !== dayNumber);
+            }
+            return [...prev, dayNumber].sort((a, b) => a - b);
+        });
+    };
+
     const resetForm = () => {
         setTitle("");
         setDescription("");
         setScheduledAt("");
         setType("scheduled");
         setDuration("30");
+        setIsRecurring(false);
+        setRecurrenceType("WEEKLY");
+        setRecurrenceInterval(1);
+        setSelectedDaysOfWeek([new Date().getDay()]);
+        setRecurrenceEndType("never");
+        setRecurrenceUntil("");
         setSelectedUsers([]);
         setAttendeeSearch("");
         setIsSearchOpen(false);
@@ -81,6 +133,20 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
 
         if (type === "scheduled" && scheduledAt) {
             payload.scheduledAt = new Date(scheduledAt).toISOString();
+
+            if (isRecurring) {
+                payload.recurrenceType = recurrenceType;
+                payload.recurrence = {
+                    interval: Math.max(1, parseInt(recurrenceInterval, 10) || 1),
+                    daysOfWeek: recurrenceType === "WEEKLY" ? selectedDaysOfWeek : [],
+                    until:
+                        recurrenceEndType === "until" && recurrenceUntil
+                            ? new Date(recurrenceUntil).toISOString()
+                            : null,
+                };
+            } else {
+                payload.recurrenceType = "NONE";
+            }
         }
 
         await onSubmit(payload);
@@ -106,7 +172,7 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
                         New Meeting
                     </DialogTitle>
                     <DialogDescription className="text-xs text-muted-foreground">
-                        Schedule an upcoming conference or start an instant meeting with your team.
+                        Schedule a one-off conference, set up recurring syncs, or start an instant meeting.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -176,8 +242,161 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
                                 required={type === "scheduled"}
                                 value={scheduledAt}
                                 min={new Date().toISOString().slice(0, 16)}
-                                onChange={(e) => setScheduledAt(e.target.value)}
+                                onChange={(e) => handleDateChange(e.target.value)}
                             />
+                        </div>
+                    )}
+
+                    {/* Recurrence / Periodic Meeting Section */}
+                    {type === "scheduled" && (
+                        <div className="space-y-3 p-3 bg-muted/40 rounded-xl border border-border">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1 rounded-md bg-primary/10 text-primary border border-primary/20">
+                                        <Repeat className="size-3.5" />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="recurrence-toggle" className="text-xs text-foreground font-semibold cursor-pointer">
+                                            Recurring Meeting
+                                        </Label>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Periodically repeat and send automated reminders
+                                        </p>
+                                    </div>
+                                </div>
+                                <input
+                                    id="recurrence-toggle"
+                                    type="checkbox"
+                                    checked={isRecurring}
+                                    onChange={(e) => setIsRecurring(e.target.checked)}
+                                    className="size-4 rounded border-input text-primary focus:ring-primary/20 cursor-pointer accent-primary"
+                                />
+                            </div>
+
+                            {/* Recurrence Details Options */}
+                            {isRecurring && (
+                                <div className="space-y-3 pt-2 border-t border-border/60 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    {/* Frequency Switcher */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[11px] text-muted-foreground font-medium">
+                                            Frequency
+                                        </Label>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            {["DAILY", "WEEKLY", "MONTHLY"].map((freq) => (
+                                                <Button
+                                                    key={freq}
+                                                    type="button"
+                                                    size="sm"
+                                                    variant={recurrenceType === freq ? "default" : "outline"}
+                                                    className="h-8 text-xs capitalize"
+                                                    onClick={() => setRecurrenceType(freq)}
+                                                >
+                                                    {freq.toLowerCase()}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Weekly Days of Week Picker */}
+                                    {recurrenceType === "WEEKLY" && (
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[11px] text-muted-foreground font-medium">
+                                                Repeat On
+                                            </Label>
+                                            <div className="flex items-center justify-between gap-1">
+                                                {DAYS_OF_WEEK.map((item) => {
+                                                    const isSelected = selectedDaysOfWeek.includes(item.day);
+                                                    return (
+                                                        <button
+                                                            key={item.day}
+                                                            type="button"
+                                                            title={item.name}
+                                                            onClick={() => toggleDayOfWeek(item.day)}
+                                                            className={`size-8 rounded-full text-xs font-semibold flex items-center justify-center transition-all cursor-pointer border ${
+                                                                isSelected
+                                                                    ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                                                                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                                                            }`}
+                                                        >
+                                                            {item.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Interval & Ends In */}
+                                    <div className="grid grid-cols-2 gap-2.5">
+                                        <div className="space-y-1">
+                                            <Label className="text-[11px] text-muted-foreground font-medium">
+                                                Every
+                                            </Label>
+                                            <div className="flex items-center gap-1.5">
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    max="52"
+                                                    value={recurrenceInterval}
+                                                    onChange={(e) => setRecurrenceInterval(e.target.value)}
+                                                    className="h-8 text-xs w-16 text-center"
+                                                />
+                                                <span className="text-xs text-muted-foreground">
+                                                    {recurrenceType === "DAILY"
+                                                        ? "day(s)"
+                                                        : recurrenceType === "WEEKLY"
+                                                        ? "week(s)"
+                                                        : "month(s)"}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label className="text-[11px] text-muted-foreground font-medium">
+                                                Ends
+                                            </Label>
+                                            <select
+                                                value={recurrenceEndType}
+                                                onChange={(e) => setRecurrenceEndType(e.target.value)}
+                                                className="h-8 w-full rounded-lg border border-input bg-background px-2 py-1 text-xs text-foreground outline-none"
+                                            >
+                                                <option value="never">Never (Ongoing)</option>
+                                                <option value="until">On Specific Date</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* If specific end date */}
+                                    {recurrenceEndType === "until" && (
+                                        <div className="space-y-1">
+                                            <Label className="text-[11px] text-muted-foreground font-medium">
+                                                End Date
+                                            </Label>
+                                            <Input
+                                                type="date"
+                                                value={recurrenceUntil}
+                                                min={new Date().toISOString().slice(0, 10)}
+                                                onChange={(e) => setRecurrenceUntil(e.target.value)}
+                                                className="h-8 text-xs"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Live Dynamic Recurrence Summary */}
+                                    <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary font-medium">
+                                        <RefreshCw className="size-3.5 shrink-0" />
+                                        <span className="truncate">
+                                            {getRecurrenceSummaryText({
+                                                recurrenceType,
+                                                interval: recurrenceInterval,
+                                                daysOfWeek: selectedDaysOfWeek,
+                                                scheduledAt,
+                                                until: recurrenceEndType === "until" ? recurrenceUntil : null,
+                                            })}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -250,7 +469,7 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
                                         <button
                                             type="button"
                                             onClick={() => handleRemoveUser(attendee._id)}
-                                            className="text-muted-foreground hover:text-destructive rounded-xs transition-colors p-0.5"
+                                            className="text-muted-foreground hover:text-destructive rounded-full p-0.5 transition-colors"
                                         >
                                             <X className="size-3" />
                                         </button>
@@ -259,105 +478,113 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
                             </div>
                         )}
 
-                        {/* Member Search Input */}
+                        {/* Search and Select Attendees */}
                         <div className="relative">
                             <div className="relative">
-                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                                <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
                                 <Input
-                                    type="text"
                                     value={attendeeSearch}
-                                    onFocus={() => setIsSearchOpen(true)}
                                     onChange={(e) => {
                                         setAttendeeSearch(e.target.value);
                                         setIsSearchOpen(true);
                                     }}
-                                    placeholder="Search by name or email to invite..."
+                                    onFocus={() => setIsSearchOpen(true)}
+                                    placeholder="Search colleague by name or email..."
                                     className="pl-8 text-xs h-9"
                                 />
-                                {attendeeSearch && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setAttendeeSearch("")}
-                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                    >
-                                        <X className="size-3.5" />
-                                    </button>
-                                )}
                             </div>
 
-                            {/* Dropdown Results */}
+                            {/* Dropdown list of users */}
                             {isSearchOpen && (
-                                <div className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl p-1 text-popover-foreground text-xs">
-                                    {isLoadingUsers ? (
-                                        <div className="flex items-center justify-center p-3 text-muted-foreground gap-2">
-                                            <Loader2 className="size-3.5 animate-spin text-primary" />
-                                            <span>Searching members...</span>
-                                        </div>
-                                    ) : availableUsers.length > 0 ? (
-                                        availableUsers.map((item) => (
-                                            <button
-                                                key={item._id}
-                                                type="button"
-                                                onClick={() => handleAddUser(item)}
-                                                className="w-full flex items-center justify-between p-2 rounded-md hover:bg-muted text-left transition-colors cursor-pointer group"
-                                            >
-                                                <div className="flex items-center gap-2.5 min-w-0">
-                                                    <Avatar className="size-6">
-                                                        <AvatarImage src={item.avatar} />
-                                                        <AvatarFallback className="text-[10px] bg-muted-foreground/20 text-foreground font-semibold">
-                                                            {getUserInitials(item)}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="min-w-0">
-                                                        <p className="font-medium text-foreground truncate leading-tight">
-                                                            {getUserDisplayName(item)}
-                                                        </p>
-                                                        <p className="text-[10px] text-muted-foreground truncate">
-                                                            {item.email}
-                                                        </p>
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setIsSearchOpen(false)}
+                                    />
+                                    <div className="absolute top-full left-0 right-0 mt-1 max-h-44 overflow-y-auto bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-50 py-1">
+                                        {isLoadingUsers ? (
+                                            <div className="flex items-center justify-center p-3 text-xs text-muted-foreground">
+                                                <Loader2 className="size-3.5 animate-spin mr-1.5" />
+                                                Loading members...
+                                            </div>
+                                        ) : availableUsers.length === 0 ? (
+                                            <div className="p-3 text-center text-xs text-muted-foreground">
+                                                {attendeeSearch.trim()
+                                                    ? "No matching organization members found"
+                                                    : "All members selected"}
+                                            </div>
+                                        ) : (
+                                            availableUsers.map((userItem) => (
+                                                <div
+                                                    key={userItem._id}
+                                                    onClick={() => handleAddUser(userItem)}
+                                                    className="flex items-center justify-between px-3 py-2 hover:bg-muted/80 cursor-pointer text-xs transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <Avatar className="size-5">
+                                                            <AvatarImage src={userItem.avatar} />
+                                                            <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
+                                                                {getUserInitials(userItem)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <div className="font-medium text-foreground">
+                                                                {getUserDisplayName(userItem)}
+                                                            </div>
+                                                            {userItem.email && (
+                                                                <div className="text-[10px] text-muted-foreground">
+                                                                    {userItem.email}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
+                                                    <span className="text-[10px] font-medium text-primary hover:underline">
+                                                        Add
+                                                    </span>
                                                 </div>
-                                                <span className="text-[11px] text-primary opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-                                                    + Add
-                                                </span>
-                                            </button>
-                                        ))
-                                    ) : (
-                                        <div className="p-3 text-center text-muted-foreground text-[11px]">
-                                            {attendeeSearch
-                                                ? "No members match your search."
-                                                : "No other members available in organization."}
-                                        </div>
-                                    )}
-                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>
 
-                    <DialogFooter className="pt-3 border-t border-border">
+                    <DialogFooter className="pt-2 gap-2 sm:gap-0">
                         <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => {
                                 resetForm();
                                 onClose();
                             }}
+                            disabled={loading}
                         >
                             Cancel
                         </Button>
-                        <Button
-                            type="submit"
-                            size="sm"
-                            disabled={loading}
-                            className="gap-2"
-                        >
-                            {loading && <Loader2 className="size-3.5 animate-spin" />}
-                            {loading
-                                ? "Creating..."
-                                : type === "instant"
-                                ? "Start Instant Meet"
-                                : "Schedule Meeting"}
+                        <Button type="submit" size="sm" disabled={loading} className="gap-2">
+                            {loading ? (
+                                <>
+                                    <Loader2 className="size-3.5 animate-spin" />
+                                    Creating...
+                                </>
+                            ) : type === "instant" ? (
+                                <>
+                                    <Video className="size-3.5" />
+                                    Start Now
+                                </>
+                            ) : isRecurring ? (
+                                <>
+                                    <Repeat className="size-3.5" />
+                                    Schedule Recurring
+                                </>
+                            ) : (
+                                <>
+                                    <Calendar className="size-3.5" />
+                                    Schedule Meeting
+                                </>
+                            )}
                         </Button>
                     </DialogFooter>
                 </form>
