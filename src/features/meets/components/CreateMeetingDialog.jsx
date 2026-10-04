@@ -28,23 +28,23 @@ import { useUsers } from "@/global/hooks/useUsers";
 import useAuth from "@/features/auth/hooks/useAuth";
 import { DAYS_OF_WEEK, getRecurrenceSummaryText } from "../utils/recurrenceUtils";
 import { getUserInitials, getUserDisplayName } from "@/global/utils/user";
+import { useEffect } from "react";
 
-export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
+export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading, initialType = "scheduled" }) => {
     const { user } = useAuth();
     const currentUser = user?.user || user?.data || user;
     const currentUserId = currentUser?._id || currentUser?.id;
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [type, setType] = useState("scheduled"); // "scheduled" | "instant"
+    const [type, setType] = useState(initialType); // "scheduled" | "recurring" | "instant"
     const [scheduledAt, setScheduledAt] = useState("");
     const [duration, setDuration] = useState("30");
     const [timezone, setTimezone] = useState(
         Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
     );
 
-    // Periodic / Recurrence state
-    const [isRecurring, setIsRecurring] = useState(false);
+    // Periodic / Recurrence state (active when type === "recurring")
     const [recurrenceType, setRecurrenceType] = useState("WEEKLY"); // "DAILY" | "WEEKLY" | "MONTHLY"
     const [recurrenceInterval, setRecurrenceInterval] = useState(1);
     const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState([new Date().getDay()]);
@@ -55,6 +55,12 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
     const [attendeeSearch, setAttendeeSearch] = useState("");
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            setType(initialType || "scheduled");
+        }
+    }, [isOpen, initialType]);
 
     const { data: tenantUsers = [], isLoading: isLoadingUsers } = useUsers({
         search: attendeeSearch,
@@ -84,8 +90,7 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
             const date = new Date(val);
             if (!isNaN(date.getTime())) {
                 const day = date.getDay();
-                // If recurring and only default day was selected, align to chosen date's day
-                if (isRecurring && selectedDaysOfWeek.length <= 1) {
+                if (type === "recurring" && selectedDaysOfWeek.length <= 1) {
                     setSelectedDaysOfWeek([day]);
                 }
             }
@@ -107,9 +112,8 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
         setTitle("");
         setDescription("");
         setScheduledAt("");
-        setType("scheduled");
+        setType(initialType || "scheduled");
         setDuration("30");
-        setIsRecurring(false);
         setRecurrenceType("WEEKLY");
         setRecurrenceInterval(1);
         setSelectedDaysOfWeek([new Date().getDay()]);
@@ -133,20 +137,22 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
 
         if (type === "scheduled" && scheduledAt) {
             payload.scheduledAt = new Date(scheduledAt).toISOString();
-
-            if (isRecurring) {
-                payload.recurrenceType = recurrenceType;
-                payload.recurrence = {
-                    interval: Math.max(1, parseInt(recurrenceInterval, 10) || 1),
-                    daysOfWeek: recurrenceType === "WEEKLY" ? selectedDaysOfWeek : [],
-                    until:
-                        recurrenceEndType === "until" && recurrenceUntil
-                            ? new Date(recurrenceUntil).toISOString()
-                            : null,
-                };
-            } else {
-                payload.recurrenceType = "NONE";
-            }
+            payload.scheduledStartAt = new Date(scheduledAt).toISOString();
+            payload.recurrenceType = "NONE";
+        } else if (type === "recurring" && scheduledAt) {
+            payload.scheduledAt = new Date(scheduledAt).toISOString();
+            payload.scheduledStartAt = new Date(scheduledAt).toISOString();
+            payload.recurrenceType = recurrenceType;
+            payload.recurrence = {
+                interval: Math.max(1, parseInt(recurrenceInterval, 10) || 1),
+                daysOfWeek: recurrenceType === "WEEKLY" ? selectedDaysOfWeek : [],
+                until:
+                    recurrenceEndType === "until" && recurrenceUntil
+                        ? new Date(recurrenceUntil).toISOString()
+                        : null,
+            };
+        } else if (type === "instant") {
+            payload.recurrenceType = "NONE";
         }
 
         await onSubmit(payload);
@@ -177,27 +183,37 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-                    {/* Meeting Type Selector */}
-                    <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg border border-border">
+                    {/* Meeting Type Selector: Scheduled, Recurring, Instant */}
+                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted rounded-lg border border-border">
                         <Button
                             type="button"
                             variant={type === "scheduled" ? "default" : "ghost"}
                             size="sm"
                             onClick={() => setType("scheduled")}
-                            className="gap-2"
+                            className="gap-1.5 text-xs h-8"
                         >
                             <Calendar className="size-3.5" />
                             Scheduled
                         </Button>
                         <Button
                             type="button"
+                            variant={type === "recurring" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setType("recurring")}
+                            className="gap-1.5 text-xs h-8"
+                        >
+                            <Repeat className="size-3.5" />
+                            Recurring
+                        </Button>
+                        <Button
+                            type="button"
                             variant={type === "instant" ? "default" : "ghost"}
                             size="sm"
                             onClick={() => setType("instant")}
-                            className="gap-2"
+                            className="gap-1.5 text-xs h-8"
                         >
                             <Video className="size-3.5" />
-                            Instant Meet
+                            Instant
                         </Button>
                     </div>
 
@@ -211,7 +227,13 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
                             required
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            placeholder="e.g. Weekly Product Sync"
+                            placeholder={
+                                type === "recurring"
+                                    ? "e.g. Weekly Team Sync"
+                                    : type === "scheduled"
+                                    ? "e.g. Product Review"
+                                    : "e.g. Quick Chat"
+                            }
                         />
                     </div>
 
@@ -230,7 +252,7 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
                         />
                     </div>
 
-                    {/* Scheduled Date/Time if scheduled */}
+                    {/* ONE-TIME SCHEDULED: Strictly Date & Time only, NO recurrence options */}
                     {type === "scheduled" && (
                         <div className="space-y-1.5">
                             <Label htmlFor="meeting-datetime" className="text-xs text-foreground font-medium">
@@ -247,156 +269,147 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
                         </div>
                     )}
 
-                    {/* Recurrence / Periodic Meeting Section */}
-                    {type === "scheduled" && (
-                        <div className="space-y-3 p-3 bg-muted/40 rounded-xl border border-border">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="p-1 rounded-md bg-primary/10 text-primary border border-primary/20">
-                                        <Repeat className="size-3.5" />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="recurrence-toggle" className="text-xs text-foreground font-semibold cursor-pointer">
-                                            Recurring Meeting
-                                        </Label>
-                                        <p className="text-[10px] text-muted-foreground">
-                                            Periodically repeat and send automated reminders
-                                        </p>
-                                    </div>
-                                </div>
-                                <input
-                                    id="recurrence-toggle"
-                                    type="checkbox"
-                                    checked={isRecurring}
-                                    onChange={(e) => setIsRecurring(e.target.checked)}
-                                    className="size-4 rounded border-input text-primary focus:ring-primary/20 cursor-pointer accent-primary"
+                    {/* DEDICATED RECURRING MEETING SECTION */}
+                    {type === "recurring" && (
+                        <div className="space-y-3 p-3 bg-muted/40 rounded-xl border border-border animate-in fade-in slide-in-from-top-1 duration-200">
+                            {/* First Session Date & Time */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="recurring-start-datetime" className="text-xs text-foreground font-semibold flex items-center gap-1.5">
+                                    <Calendar className="size-3.5 text-primary" />
+                                    First Session Date & Time <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                    id="recurring-start-datetime"
+                                    type="datetime-local"
+                                    required={type === "recurring"}
+                                    value={scheduledAt}
+                                    min={new Date().toISOString().slice(0, 16)}
+                                    onChange={(e) => handleDateChange(e.target.value)}
                                 />
+                                <p className="text-[10px] text-muted-foreground">
+                                    Sets the time and day for the first session. Following sessions will repeat according to this schedule.
+                                </p>
                             </div>
 
-                            {/* Recurrence Details Options */}
-                            {isRecurring && (
-                                <div className="space-y-3 pt-2 border-t border-border/60 animate-in fade-in slide-in-from-top-1 duration-200">
-                                    {/* Frequency Switcher */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[11px] text-muted-foreground font-medium">
-                                            Frequency
-                                        </Label>
-                                        <div className="grid grid-cols-3 gap-1.5">
-                                            {["DAILY", "WEEKLY", "MONTHLY"].map((freq) => (
-                                                <Button
-                                                    key={freq}
+                            {/* Frequency Switcher */}
+                            <div className="space-y-1.5 pt-1 border-t border-border/60">
+                                <Label className="text-[11px] text-muted-foreground font-medium">
+                                    Frequency
+                                </Label>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                    {["DAILY", "WEEKLY", "MONTHLY"].map((freq) => (
+                                        <Button
+                                            key={freq}
+                                            type="button"
+                                            size="sm"
+                                            variant={recurrenceType === freq ? "default" : "outline"}
+                                            className="h-8 text-xs capitalize"
+                                            onClick={() => setRecurrenceType(freq)}
+                                        >
+                                            {freq.toLowerCase()}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Weekly Days of Week Picker */}
+                            {recurrenceType === "WEEKLY" && (
+                                <div className="space-y-1.5">
+                                    <Label className="text-[11px] text-muted-foreground font-medium">
+                                        Repeat On
+                                    </Label>
+                                    <div className="flex items-center justify-between gap-1">
+                                        {DAYS_OF_WEEK.map((item) => {
+                                            const isSelected = selectedDaysOfWeek.includes(item.day);
+                                            return (
+                                                <button
+                                                    key={item.day}
                                                     type="button"
-                                                    size="sm"
-                                                    variant={recurrenceType === freq ? "default" : "outline"}
-                                                    className="h-8 text-xs capitalize"
-                                                    onClick={() => setRecurrenceType(freq)}
+                                                    title={item.name}
+                                                    onClick={() => toggleDayOfWeek(item.day)}
+                                                    className={`size-8 rounded-full text-xs font-semibold flex items-center justify-center transition-all cursor-pointer border ${
+                                                        isSelected
+                                                            ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                                                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                                                    }`}
                                                 >
-                                                    {freq.toLowerCase()}
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Weekly Days of Week Picker */}
-                                    {recurrenceType === "WEEKLY" && (
-                                        <div className="space-y-1.5">
-                                            <Label className="text-[11px] text-muted-foreground font-medium">
-                                                Repeat On
-                                            </Label>
-                                            <div className="flex items-center justify-between gap-1">
-                                                {DAYS_OF_WEEK.map((item) => {
-                                                    const isSelected = selectedDaysOfWeek.includes(item.day);
-                                                    return (
-                                                        <button
-                                                            key={item.day}
-                                                            type="button"
-                                                            title={item.name}
-                                                            onClick={() => toggleDayOfWeek(item.day)}
-                                                            className={`size-8 rounded-full text-xs font-semibold flex items-center justify-center transition-all cursor-pointer border ${
-                                                                isSelected
-                                                                    ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                                                                    : "bg-background text-muted-foreground border-border hover:bg-muted"
-                                                            }`}
-                                                        >
-                                                            {item.label}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Interval & Ends In */}
-                                    <div className="grid grid-cols-2 gap-2.5">
-                                        <div className="space-y-1">
-                                            <Label className="text-[11px] text-muted-foreground font-medium">
-                                                Every
-                                            </Label>
-                                            <div className="flex items-center gap-1.5">
-                                                <Input
-                                                    type="number"
-                                                    min="1"
-                                                    max="52"
-                                                    value={recurrenceInterval}
-                                                    onChange={(e) => setRecurrenceInterval(e.target.value)}
-                                                    className="h-8 text-xs w-16 text-center"
-                                                />
-                                                <span className="text-xs text-muted-foreground">
-                                                    {recurrenceType === "DAILY"
-                                                        ? "day(s)"
-                                                        : recurrenceType === "WEEKLY"
-                                                        ? "week(s)"
-                                                        : "month(s)"}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <Label className="text-[11px] text-muted-foreground font-medium">
-                                                Ends
-                                            </Label>
-                                            <select
-                                                value={recurrenceEndType}
-                                                onChange={(e) => setRecurrenceEndType(e.target.value)}
-                                                className="h-8 w-full rounded-lg border border-input bg-background px-2 py-1 text-xs text-foreground outline-none"
-                                            >
-                                                <option value="never">Never (Ongoing)</option>
-                                                <option value="until">On Specific Date</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {/* If specific end date */}
-                                    {recurrenceEndType === "until" && (
-                                        <div className="space-y-1">
-                                            <Label className="text-[11px] text-muted-foreground font-medium">
-                                                End Date
-                                            </Label>
-                                            <Input
-                                                type="date"
-                                                value={recurrenceUntil}
-                                                min={new Date().toISOString().slice(0, 10)}
-                                                onChange={(e) => setRecurrenceUntil(e.target.value)}
-                                                className="h-8 text-xs"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Live Dynamic Recurrence Summary */}
-                                    <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary font-medium">
-                                        <RefreshCw className="size-3.5 shrink-0" />
-                                        <span className="truncate">
-                                            {getRecurrenceSummaryText({
-                                                recurrenceType,
-                                                interval: recurrenceInterval,
-                                                daysOfWeek: selectedDaysOfWeek,
-                                                scheduledAt,
-                                                until: recurrenceEndType === "until" ? recurrenceUntil : null,
-                                            })}
-                                        </span>
+                                                    {item.label}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
+
+                            {/* Interval & Ends In */}
+                            <div className="grid grid-cols-2 gap-2.5">
+                                <div className="space-y-1">
+                                    <Label className="text-[11px] text-muted-foreground font-medium">
+                                        Every
+                                    </Label>
+                                    <div className="flex items-center gap-1.5">
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            max="52"
+                                            value={recurrenceInterval}
+                                            onChange={(e) => setRecurrenceInterval(e.target.value)}
+                                            className="h-8 text-xs w-16 text-center"
+                                        />
+                                        <span className="text-xs text-muted-foreground">
+                                            {recurrenceType === "DAILY"
+                                                ? "day(s)"
+                                                : recurrenceType === "WEEKLY"
+                                                ? "week(s)"
+                                                : "month(s)"}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <Label className="text-[11px] text-muted-foreground font-medium">
+                                        Ends
+                                    </Label>
+                                    <select
+                                        value={recurrenceEndType}
+                                        onChange={(e) => setRecurrenceEndType(e.target.value)}
+                                        className="h-8 w-full rounded-lg border border-input bg-background px-2 py-1 text-xs text-foreground outline-none"
+                                    >
+                                        <option value="never">Never (Ongoing)</option>
+                                        <option value="until">On Specific Date</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Specific end date */}
+                            {recurrenceEndType === "until" && (
+                                <div className="space-y-1">
+                                    <Label className="text-[11px] text-muted-foreground font-medium">
+                                        End Date
+                                    </Label>
+                                    <Input
+                                        type="date"
+                                        value={recurrenceUntil}
+                                        min={new Date().toISOString().slice(0, 10)}
+                                        onChange={(e) => setRecurrenceUntil(e.target.value)}
+                                        className="h-8 text-xs"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Live Dynamic Recurrence Summary */}
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary font-medium">
+                                <RefreshCw className="size-3.5 shrink-0" />
+                                <span className="truncate">
+                                    {getRecurrenceSummaryText({
+                                        recurrenceType,
+                                        interval: recurrenceInterval,
+                                        daysOfWeek: selectedDaysOfWeek,
+                                        scheduledAt,
+                                        until: recurrenceEndType === "until" ? recurrenceUntil : null,
+                                    })}
+                                </span>
+                            </div>
                         </div>
                     )}
 
@@ -574,10 +587,10 @@ export const CreateMeetingDialog = ({ isOpen, onClose, onSubmit, loading }) => {
                                     <Video className="size-3.5" />
                                     Start Now
                                 </>
-                            ) : isRecurring ? (
+                            ) : type === "recurring" ? (
                                 <>
                                     <Repeat className="size-3.5" />
-                                    Schedule Recurring
+                                    Create Recurring Meeting
                                 </>
                             ) : (
                                 <>
