@@ -12,6 +12,7 @@ import PrimarySidebar from "./components/PrimarySidebar";
 import SecondarySidebar from "./components/SecondarySidebar";
 import DesktopHeader from "./components/DesktopHeader";
 import MobileNavigation from "./components/MobileNavigation";
+import { extractUser, getUserDisplayName, getInitials, getAvatarStyle } from "@/global/utils/user";
 
 function AppLayout() {
   const { tenant } = useTenant();
@@ -80,53 +81,12 @@ function AppLayout() {
     return baseSecondaryNav;
   }, [baseSecondaryNav, navLookupPath, chatUnread, location.pathname, taskCounts]);
 
-  // Chat & Docs routes need full-height with no padding/scroll so they can manage their own layouts
+  // Chat, Docs & Tasks routes need full-height with no padding/scroll so they can manage their own layouts
   const isChatsRoute = currentPath.startsWith("/chats");
   const isDocsRoute = currentPath.startsWith("/docs");
+  const isTasksRoute = currentPath.startsWith("/tasks");
 
-  // Helper to extract the actual user object if it is nested or wrapped in API response
-  const extractUser = (u) => {
-    if (!u) return null;
-    if (u.user && typeof u.user === "object") return u.user;
-    if (u.data && typeof u.data === "object") return u.data;
-    return u;
-  };
-
-  // Helper to format full user display name
-  const getUserName = (u) => {
-    const target = extractUser(u);
-    if (!target) return "Workspace User";
-    if (target.firstName || target.lastName) {
-      return `${target.firstName || ""} ${target.lastName || ""}`.trim();
-    }
-    return target.fullName || target.name || "Workspace User";
-  };
-
-  // Helper to extract initials for user avatar fallback
-  const getInitials = (u) => {
-    const target = extractUser(u);
-    if (!target) return "U";
-    if (target.firstName || target.lastName) {
-      return `${(target.firstName || "U")[0]}${(target.lastName || "")[0] || ""}`.toUpperCase();
-    }
-    const name = target.fullName || target.name || target.email || "U";
-    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-  };
-
-  // Helper to generate a deterministic pastel theme color based on user's email
-  const getAvatarStyle = (u) => {
-    const target = extractUser(u);
-    const email = target?.email || "default@hq.com";
-    let hash = 0;
-    for (let i = 0; i < email.length; i++) {
-      hash = email.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const h = Math.abs(hash % 360);
-    return {
-      backgroundColor: `hsl(${h}, 65%, 92%)`,
-      color: `hsl(${h}, 70%, 30%)`
-    };
-  };
+  const getUserName = getUserDisplayName;
 
   return (
     <div className="flex h-screen h-[100dvh] w-screen overflow-hidden bg-background font-sans">
@@ -176,7 +136,7 @@ function AppLayout() {
 
         {/* Dynamic Nested Viewport */}
         <main className={`flex-1 min-w-0 mt-14 md:mt-0 mb-16 md:mb-0 ${
-          isChatsRoute || isDocsRoute
+          isChatsRoute || isDocsRoute || isTasksRoute
             ? "flex flex-col overflow-hidden"
             : "bg-background overflow-y-auto px-4 md:px-8 py-6"
         }`}>

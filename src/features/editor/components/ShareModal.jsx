@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { getUserProfile, getAvatarInitials, getAvatarStyle } from "../utils/userProfile";
 export { getAvatarInitials, getAvatarStyle, getUserProfile };
 
-export default function ShareModal({ isOpen, onClose, documentId }) {
+export default function ShareModal({ isOpen, onClose, documentId, userRole = "viewer" }) {
   const queryClient = useQueryClient();
   const currentUser = useSelector((state) => state.auth?.user);
   const currentUserId = currentUser?._id || currentUser?.id;
@@ -31,12 +31,17 @@ export default function ShareModal({ isOpen, onClose, documentId }) {
   const generalAccess = membersData?.generalAccess || "restricted";
   const members = membersData?.members || [];
 
+  const currentUserMember = members.find(
+    (m) => String(typeof m.userId === "object" ? m.userId?._id : m.userId) === String(currentUserId)
+  );
+  const isOwner = userRole === "owner" || currentUserMember?.role === "owner";
+
   // Tenant workspace users (reference from group chats)
   const { data: tenantUsers = [], isLoading: isLoadingUsers } = useUsers({
     search: userSearch,
     status: "active",
     limit: 50,
-    enabled: isOpen,
+    enabled: isOpen && isOwner,
   });
 
   // Filter out users who are already collaborators
@@ -50,6 +55,9 @@ export default function ShareModal({ isOpen, onClose, documentId }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentKeys.members(documentId) });
       queryClient.invalidateQueries({ queryKey: documentKeys.detail(documentId) });
+    },
+    onError: (err) => {
+      setError(err?.response?.data?.message || err.message || "Failed to update general access");
     },
   });
 
@@ -74,6 +82,7 @@ export default function ShareModal({ isOpen, onClose, documentId }) {
   if (!isOpen) return null;
 
   const handleInviteUser = (user) => {
+    if (!isOwner) return;
     const role = selectedRoles[user._id] || "editor";
     addMemberMutation.mutate({
       userId: user._id,
@@ -136,101 +145,109 @@ export default function ShareModal({ isOpen, onClose, documentId }) {
               </div>
             </div>
 
-            <select
-              value={generalAccess}
-              onChange={(e) => updateGeneralAccessMutation.mutate(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-md border border-input bg-background text-foreground focus:outline-none cursor-pointer"
-            >
-              <option value="restricted">Restricted</option>
-              <option value="workspace_view">Can view</option>
-              <option value="workspace_edit">Can edit</option>
-            </select>
+            {isOwner ? (
+              <select
+                value={generalAccess}
+                onChange={(e) => updateGeneralAccessMutation.mutate(e.target.value)}
+                className="text-xs px-2.5 py-1.5 rounded-md border border-input bg-background text-foreground focus:outline-none cursor-pointer"
+              >
+                <option value="restricted">Restricted</option>
+                <option value="workspace_view">Can view</option>
+                <option value="workspace_edit">Can edit</option>
+              </select>
+            ) : (
+              <Badge variant="outline" className="text-xs capitalize font-normal">
+                {generalAccess === "restricted" ? "Restricted" : generalAccess === "workspace_view" ? "Can view" : "Can edit"}
+              </Badge>
+            )}
           </div>
 
-          {/* Search & Invite Tenant Members */}
-          <div className="space-y-2">
-            <label className="text-xs font-heading font-semibold text-foreground">
-              Invite Team Members
-            </label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-              <Input
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Search team members by name or email..."
-                className="pl-8 h-8 text-xs bg-muted/30"
-              />
-            </div>
+          {/* Search & Invite Tenant Members (Owner only) */}
+          {isOwner ? (
+            <div className="space-y-2">
+              <label className="text-xs font-heading font-semibold text-foreground">
+                Invite Team Members
+              </label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                <Input
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search team members by name or email..."
+                  className="pl-8 h-8 text-xs bg-muted/30"
+                />
+              </div>
 
-            {/* Available Tenant Users List */}
-            <div className="border border-border rounded-lg max-h-44 overflow-y-auto divide-y divide-border/40 custom-scrollbar">
-              {isLoadingUsers ? (
-                <div className="flex items-center justify-center p-4 gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin text-primary" />
-                  <span>Loading team members...</span>
-                </div>
-              ) : availableUsers.length === 0 ? (
-                <div className="p-3 text-center text-xs text-muted-foreground italic">
-                  {userSearch ? "No matching team members found" : "All team members are already collaborators"}
-                </div>
-              ) : (
-                availableUsers.map((u) => {
-                  const displayName = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name || u.email;
-                  const currentRole = selectedRoles[u._id] || "editor";
+              {/* Available Tenant Users List */}
+              <div className="border border-border rounded-lg max-h-44 overflow-y-auto divide-y divide-border/40 custom-scrollbar">
+                {isLoadingUsers ? (
+                  <div className="flex items-center justify-center p-4 gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin text-primary" />
+                    <span>Loading team members...</span>
+                  </div>
+                ) : availableUsers.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-muted-foreground italic">
+                    {userSearch ? "No matching team members found" : "All team members are already collaborators"}
+                  </div>
+                ) : (
+                  availableUsers.map((u) => {
+                    const displayName = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name || u.email;
+                    const currentRole = selectedRoles[u._id] || "editor";
 
-                  return (
-                    <div
-                      key={u._id}
-                      className="flex items-center justify-between p-2.5 hover:bg-muted/40 transition-colors text-xs"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                        <Avatar className="size-7 shrink-0">
-                          {u.avatar && <AvatarImage src={u.avatar} />}
-                          <AvatarFallback style={getAvatarStyle(u._id)} className="text-[10px] font-bold font-heading">
-                            {getAvatarInitials(u)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="truncate min-w-0">
-                          <p className="font-medium text-foreground truncate">
-                            {displayName}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground truncate">
-                            {u.email}
-                          </p>
+                    return (
+                      <div
+                        key={u._id}
+                        className="flex items-center justify-between p-2.5 hover:bg-muted/40 transition-colors text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                          <Avatar className="size-7 shrink-0">
+                            {u.avatar && <AvatarImage src={u.avatar} />}
+                            <AvatarFallback style={getAvatarStyle(u._id)} className="text-[10px] font-bold font-heading">
+                              {getAvatarInitials(u)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="truncate min-w-0">
+                            <p className="font-medium text-foreground truncate">
+                              {displayName}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground truncate">
+                              {u.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <select
+                            value={currentRole}
+                            onChange={(e) =>
+                              setSelectedRoles((prev) => ({
+                                ...prev,
+                                [u._id]: e.target.value,
+                              }))
+                            }
+                            className="text-[11px] px-2 py-1 rounded border border-input bg-background text-foreground focus:outline-none"
+                          >
+                            <option value="editor">Editor</option>
+                            <option value="viewer">Viewer</option>
+                          </select>
+                          <Button
+                            type="button"
+                            size="xs"
+                            onClick={() => handleInviteUser(u)}
+                            disabled={addMemberMutation.isPending}
+                            className="gap-1 shadow-xs"
+                          >
+                            <UserPlus className="size-3" />
+                            <span>Invite</span>
+                          </Button>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <select
-                          value={currentRole}
-                          onChange={(e) =>
-                            setSelectedRoles((prev) => ({
-                              ...prev,
-                              [u._id]: e.target.value,
-                            }))
-                          }
-                          className="text-[11px] px-2 py-1 rounded border border-input bg-background text-foreground focus:outline-none"
-                        >
-                          <option value="editor">Editor</option>
-                          <option value="viewer">Viewer</option>
-                        </select>
-                        <Button
-                          type="button"
-                          size="xs"
-                          onClick={() => handleInviteUser(u)}
-                          disabled={addMemberMutation.isPending}
-                          className="gap-1 shadow-xs"
-                        >
-                          <UserPlus className="size-3" />
-                          <span>Invite</span>
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Current Collaborators on Document */}
           <div className="space-y-2 pt-2 border-t border-border">
@@ -248,18 +265,18 @@ export default function ShareModal({ isOpen, onClose, documentId }) {
                   No explicit collaborators added
                 </p>
               ) : (
-              members.map((member) => {
+                members.map((member) => {
                   const memberId = typeof member.userId === "object" ? member.userId._id : member.userId;
                   const snapshot = member.userSnapshot || {};
                   const populatedUser = typeof member.userId === "object" ? member.userId : null;
-                  const matchedTenantUser = tenantUsers.find((u) => u._id === memberId) || (currentUserId === memberId ? user : null);
+                  const matchedTenantUser = tenantUsers.find((u) => u._id === memberId) || (currentUserId === memberId ? currentUser : null);
                   const effectiveUser = populatedUser || matchedTenantUser || snapshot;
                   const profile = getUserProfile(effectiveUser);
 
                   const displayName = profile.name !== "Collaborator" ? profile.name : (snapshot.name || memberId);
                   const email = profile.email || snapshot.email || "";
                   const avatarUrl = profile.avatar || snapshot.avatar || null;
-                  const isOwner = member.role === "owner";
+                  const isMemberOwner = member.role === "owner";
 
                   return (
                     <div
@@ -286,11 +303,11 @@ export default function ShareModal({ isOpen, onClose, documentId }) {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        {isOwner ? (
+                        {isMemberOwner ? (
                           <Badge variant="secondary" className="text-[10px] capitalize">
                             Owner
                           </Badge>
-                        ) : (
+                        ) : isOwner ? (
                           <>
                             <select
                               value={member.role}
@@ -316,6 +333,10 @@ export default function ShareModal({ isOpen, onClose, documentId }) {
                               <Trash2 className="size-3.5" />
                             </Button>
                           </>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] capitalize font-normal">
+                            {member.role}
+                          </Badge>
                         )}
                       </div>
                     </div>

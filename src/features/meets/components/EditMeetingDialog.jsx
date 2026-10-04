@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUsers } from "@/global/hooks/useUsers";
 import useAuth from "@/features/auth/hooks/useAuth";
+import { getUserInitials, getUserDisplayName } from "@/global/utils/user";
 import meetingService from "../services/meeting.service";
 import { DAYS_OF_WEEK, getRecurrenceSummaryText } from "../utils/recurrenceUtils";
 
@@ -216,16 +217,7 @@ export const EditMeetingDialog = ({ isOpen, onClose, meeting, onUpdate, loading 
         onClose();
     };
 
-    const getUserInitials = (u) => {
-        const first = u.firstName ? u.firstName[0] : "";
-        const last = u.lastName ? u.lastName[0] : "";
-        return (first + last).toUpperCase() || (u.email ? u.email[0].toUpperCase() : "U");
-    };
-
-    const getUserDisplayName = (u) => {
-        const full = `${u.firstName || ""} ${u.lastName || ""}`.trim();
-        return full || u.name || u.email || "Member";
-    };
+    if (!isOpen || !meeting) return null;
 
     return (
         <Dialog

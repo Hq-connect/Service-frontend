@@ -28,6 +28,7 @@ import MeetingChat from "../components/MeetingChat";
 import ScreenShareIndicator from "../components/ScreenShareIndicator";
 import LiveKitVideoStage from "../components/LiveKitVideoStage";
 import { Button } from "@/components/ui/button";
+import { getInitials } from "@/global/utils/user";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -96,16 +97,6 @@ export const MeetingRoomPage = ({
     });
 
     const totalParticipants = remoteParticipants.length + 1;
-
-    // Helper for initials
-    const getInitials = (name = "User") => {
-        return name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
-    };
 
     const handleCopyCode = () => {
         copyJoinCode();

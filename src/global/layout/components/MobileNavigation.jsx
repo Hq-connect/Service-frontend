@@ -15,6 +15,7 @@ import {
 import { PRIMARY_NAV_ITEMS } from "./navigation";
 import Logo from "@/components/ui/Logo";
 import NotificationBell from "@/features/notifications/components/NotificationBell";
+import { ProductivitySidebar } from "@/features/productivity/components/ProductivitySidebar";
 
 function MobileNavigation({ 
   tenant, user, logout, secondaryNav, selectedSpaceIdx, setSelectedSpaceIdx, 
@@ -125,13 +126,19 @@ function MobileNavigation({
                   Sub-navigation for the selected dashboard view.
                 </SheetDescription>
               </SheetHeader>
-              <div className="flex-1 overflow-y-auto py-4">
-                <div className="px-4 mb-2">
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {secondaryNav.title} Options
-                  </h3>
-                </div>
-                {renderSecondaryItems()}
+              <div className="flex-1 overflow-y-auto py-2">
+                {currentPath.startsWith("/tasks") ? (
+                  <ProductivitySidebar />
+                ) : (
+                  <>
+                    <div className="px-4 mb-2">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {secondaryNav.title} Options
+                      </h3>
+                    </div>
+                    {renderSecondaryItems()}
+                  </>
+                )}
               </div>
             </SheetContent>
           </Sheet>
