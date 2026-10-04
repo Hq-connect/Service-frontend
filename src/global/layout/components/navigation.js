@@ -2,7 +2,8 @@ import {
   Home, CheckSquare, FileText, Folder, Video, Sparkles, MessageSquare, Phone,
   LayoutGrid, Inbox, UserCheck, ClipboardList, CheckCircle, Archive,
   Clock, FileSignature, Users, Layers, Share2, UploadCloud, Trash,
-  Calendar, PlayCircle, RefreshCw, Cpu, AlignLeft, BookOpen, MessageCircle, Hash, BellOff
+  Calendar, PlayCircle, RefreshCw, Cpu, AlignLeft, BookOpen, MessageCircle, Hash, BellOff,
+  Repeat
 } from "lucide-react";
 
 export const PRIMARY_NAV_ITEMS = [
@@ -64,6 +65,7 @@ export const SECONDARY_NAV_DATA = {
     items: [
       { label: "All Meetings", icon: Video, path: "/meets" },
       { label: "Schedule Meet", icon: Calendar, path: "/meets?action=schedule" },
+      { label: "Recurring Meetings", icon: Repeat, path: "/meets?tab=recurring" },
       { label: "Instant Meeting", icon: Video, path: "/meets?action=instant" },
       { label: "Recorded Sessions", icon: PlayCircle, path: "/meets/recordings" },
       { label: "Calendar Sync", icon: RefreshCw }
