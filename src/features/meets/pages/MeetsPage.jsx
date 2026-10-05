@@ -28,19 +28,31 @@ export const MeetsPage = () => {
         toggleCreateDialog,
     } = useMeetings();
 
-    const [activeTab, setActiveTab] = useState("upcoming"); // "upcoming" | "past" | "cancelled"
+    const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "upcoming"); // "upcoming" | "recurring" | "past" | "cancelled"
     const [joinInputCode, setJoinInputCode] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
     const [editingMeeting, setEditingMeeting] = useState(null);
+    const [createDialogInitialType, setCreateDialogInitialType] = useState("scheduled");
 
     useEffect(() => {
         fetchMeetings();
     }, [fetchMeetings]);
 
-    // Handle action parameters from sidebar links (?action=schedule | ?action=instant)
+    // Handle action and tab parameters from sidebar links (?action=schedule | ?action=recurring | ?action=instant | ?tab=recurring)
     useEffect(() => {
         const action = searchParams.get("action");
+        const tab = searchParams.get("tab");
+
+        if (tab) {
+            setActiveTab(tab);
+        }
+
         if (action === "schedule") {
+            setCreateDialogInitialType("scheduled");
+            toggleCreateDialog(true);
+            setSearchParams({}, { replace: true });
+        } else if (action === "recurring") {
+            setCreateDialogInitialType("recurring");
             toggleCreateDialog(true);
             setSearchParams({}, { replace: true });
         } else if (action === "instant") {
@@ -121,8 +133,7 @@ export const MeetsPage = () => {
         if (activeTab === "recurring") {
             return (
                 (m.status === "scheduled" || m.status === "ongoing") &&
-                m.recurrenceType &&
-                m.recurrenceType !== "NONE"
+                (m.type === "recurring" || (m.recurrenceType && m.recurrenceType !== "NONE"))
             );
         }
         if (activeTab === "past") {
@@ -182,7 +193,10 @@ export const MeetsPage = () => {
                     </Button>
 
                     <Button
-                        onClick={() => toggleCreateDialog(true)}
+                        onClick={() => {
+                            setCreateDialogInitialType(activeTab === "recurring" ? "recurring" : "scheduled");
+                            toggleCreateDialog(true);
+                        }}
                         className="gap-2"
                     >
                         <Plus className="size-4" />
@@ -304,7 +318,10 @@ export const MeetsPage = () => {
                     </p>
                     {(activeTab === "upcoming" || activeTab === "recurring") && (
                         <Button
-                            onClick={() => toggleCreateDialog(true)}
+                            onClick={() => {
+                                setCreateDialogInitialType(activeTab === "recurring" ? "recurring" : "scheduled");
+                                toggleCreateDialog(true);
+                            }}
                             size="sm"
                             className="gap-2"
                         >
@@ -321,6 +338,7 @@ export const MeetsPage = () => {
                 onClose={() => toggleCreateDialog(false)}
                 onSubmit={handleCreateMeeting}
                 loading={loading}
+                initialType={createDialogInitialType}
             />
 
             {/* Edit / Reschedule Dialog Modal */}
