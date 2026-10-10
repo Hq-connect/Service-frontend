@@ -64,6 +64,7 @@ export const SECONDARY_NAV_DATA = {
     title: "Meets",
     items: [
       { label: "All Meetings", icon: Video, path: "/meets" },
+      { label: "Calendar", icon: Calendar, path: "/meets/calendar" },
       { label: "Schedule Meet", icon: Calendar, path: "/meets?action=schedule" },
       { label: "Recurring Meetings", icon: Repeat, path: "/meets?tab=recurring" },
       { label: "Instant Meeting", icon: Video, path: "/meets?action=instant" },

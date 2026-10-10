@@ -174,6 +174,16 @@ export const MeetsPage = () => {
 
                     <Button
                         variant="outline"
+                        onClick={() => navigate("/meets/calendar")}
+                        className="gap-2"
+                        title="Open Calendar Experience"
+                    >
+                        <Calendar className="size-4 text-primary" />
+                        <span className="hidden sm:inline">Calendar</span>
+                    </Button>
+
+                    <Button
+                        variant="outline"
                         onClick={() => navigate("/meets/recordings")}
                         className="gap-2"
                         title="View Recorded Sessions"
