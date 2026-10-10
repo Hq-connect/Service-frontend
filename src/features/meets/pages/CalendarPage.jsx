@@ -143,8 +143,11 @@ export const CalendarPage = () => {
                 </div>
             ) : (
                 <div className="flex-1 flex flex-col lg:flex-row gap-5 items-start">
-                    {/* Active View Grid */}
-                    <div className="flex-1 w-full flex flex-col min-h-0">
+                    {/* Active View Grid with smooth entrance animation */}
+                    <div 
+                        key={`${viewMode}-${currentDate.toISOString().slice(0, 7)}`}
+                        className="flex-1 w-full flex flex-col min-h-0 animate-in fade-in-50 zoom-in-[0.99] duration-200 ease-out"
+                    >
                         {viewMode === "month" && (
                             <MonthView
                                 currentDate={currentDate}

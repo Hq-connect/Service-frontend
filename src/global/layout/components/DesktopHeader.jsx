@@ -1,4 +1,4 @@
-import React from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   LayoutGrid, Search, Smartphone, Calendar, Bell, User, Settings, LogOut 
 } from "lucide-react";
@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle }) {
+  const navigate = useNavigate();
+
   return (
     <header className="hidden md:flex items-center justify-between h-16 border-b border-[#eef0f2] px-6 select-none bg-white shrink-0">
       {/* Left: View title */}
@@ -33,10 +35,14 @@ function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle 
 
       {/* Right: Quick actions and user avatar */}
       <div className="flex items-center gap-4">
-        <button className="text-gray-500 hover:text-gray-800 cursor-pointer">
+        <button className="text-gray-500 hover:text-gray-800 cursor-pointer" title="Mobile App">
           <Smartphone className="size-5" />
         </button>
-        <button className="text-gray-500 hover:text-gray-800 cursor-pointer">
+        <button 
+          onClick={() => navigate("/calendar")} 
+          className="text-gray-500 hover:text-gray-800 hover:text-primary transition-colors cursor-pointer"
+          title="Calendar"
+        >
           <Calendar className="size-5" />
         </button>
         <NotificationBell />

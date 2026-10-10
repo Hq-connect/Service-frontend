@@ -167,7 +167,7 @@ export const MonthView = ({
                                                     e.stopPropagation();
                                                     onSelectMeeting(item);
                                                 }}
-                                                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 transition-colors truncate cursor-pointer"
+                                                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 hover:scale-[1.02] hover:shadow-xs active:scale-[0.98] transition-all duration-150 truncate cursor-pointer"
                                                 title={`${item.time} - ${item.title}`}
                                             >
                                                 <Video className="size-2.5 shrink-0" />
@@ -185,10 +185,10 @@ export const MonthView = ({
                                                     e.stopPropagation();
                                                     onSelectMeeting(item);
                                                 }}
-                                                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors truncate cursor-pointer"
+                                                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 hover:scale-[1.02] hover:shadow-xs active:scale-[0.98] transition-all duration-150 truncate cursor-pointer"
                                                 title={`${item.time} - ${item.title} (Recurring)`}
                                             >
-                                                <Repeat className="size-2.5 shrink-0 text-purple-400" />
+                                                <Repeat className="size-2.5 shrink-0 text-purple-500" />
                                                 <span className="shrink-0 text-[10px] opacity-75">{item.time}</span>
                                                 <span className="truncate">{item.title}</span>
                                             </div>
@@ -203,7 +203,7 @@ export const MonthView = ({
                                                 e.stopPropagation();
                                                 onSelectEvent(item);
                                             }}
-                                            className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-colors truncate cursor-pointer"
+                                            className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 hover:scale-[1.02] hover:shadow-xs active:scale-[0.98] transition-all duration-150 truncate cursor-pointer"
                                             title={`${item.time} - ${item.title}`}
                                         >
                                             <Star className="size-2.5 shrink-0 text-amber-500" />
