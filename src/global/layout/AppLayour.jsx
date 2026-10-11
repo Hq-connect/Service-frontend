@@ -85,6 +85,7 @@ function AppLayout() {
   const isChatsRoute = currentPath.startsWith("/chats");
   const isDocsRoute = currentPath.startsWith("/docs");
   const isTasksRoute = currentPath.startsWith("/tasks");
+  const isCalendarRoute = currentPath.startsWith("/meets/calendar") || currentPath === "/calendar";
 
   const getUserName = getUserDisplayName;
 
@@ -99,7 +100,7 @@ function AppLayout() {
       />
 
       {/* 2. Desktop Middle Secondary Sidebar (Light Theme) */}
-      {isSecondarySidebarOpen && (
+      {isSecondarySidebarOpen && !isCalendarRoute && (
         <SecondarySidebar 
           tenantName={tenant?.name}
           secondaryNav={secondaryNav}

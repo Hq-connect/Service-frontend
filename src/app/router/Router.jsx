@@ -8,6 +8,7 @@ import UnderConstruction from "@/components/ui/UnderConstruction"
 import ChatPage from "@/features/chats/pages/ChatPage"
 import MeetsPage from "@/features/meets/pages/MeetsPage"
 import RecordedSessionsPage from "@/features/meets/pages/RecordedSessionsPage"
+import CalendarPage from "@/features/meets/pages/CalendarPage"
 import MeetingRoomContainer from "@/features/meets/containers/MeetingRoomContainer"
 import { ProjectsDashboard, BoardView } from "@/features/productivity"
 import DocsDashboard from "@/features/editor/pages/DocsDashboard"
@@ -39,6 +40,8 @@ export const router = createBrowserRouter([
       { path: "docs/:documentId", element: <DocumentPage /> },
       { path: "files",  element: <UnderConstruction /> },
       { path: "meets",  element: <MeetsPage /> },
+      { path: "meets/calendar", element: <CalendarPage /> },
+      { path: "calendar", element: <Navigate to="/meets/calendar" replace /> },
       { path: "meets/recordings", element: <RecordedSessionsPage /> },
       { path: "ask-ai", element: <UnderConstruction /> },
 
