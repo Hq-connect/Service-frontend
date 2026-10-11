@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import useTenant from "@/global/hooks/useTenant"
+import Logo from "@/components/ui/Logo"
 
 const WORKSPACE_FEATURES = [
   { icon: MessageSquare, label: "Messaging",         desc: "Channels, DMs & threads" },
@@ -26,28 +27,6 @@ const WORKSPACE_FEATURES = [
   { icon: BarChart2,    label: "Analytics",           desc: "Team performance insights" },
   { icon: Users,        label: "People & Org",        desc: "Roles, teams & permissions" },
 ]
-
-/* Animated 3-bar mark adapted from Logo.jsx */
-function BarMark({ className }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 44" aria-hidden="true" className={className}>
-      <g transform="translate(4, 2)">
-        <rect x="0" y="8" width="10" height="28" rx="5" fill="currentColor" opacity="0.45">
-          <animate attributeName="height" values="28;15;36;20;28" dur="2.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1" />
-          <animate attributeName="y" values="8;20;0;16;8" dur="2.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1" />
-        </rect>
-        <rect x="16" y="0" width="10" height="40" rx="5" fill="currentColor">
-          <animate attributeName="height" values="40;20;44;28;40" dur="2.2s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1" />
-          <animate attributeName="y" values="0;20;-4;12;0" dur="2.2s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1" />
-        </rect>
-        <rect x="32" y="12" width="10" height="24" rx="5" fill="currentColor" opacity="0.65">
-          <animate attributeName="height" values="24;36;13;30;24" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1" />
-          <animate attributeName="y" values="12;0;23;6;12" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1" />
-        </rect>
-      </g>
-    </svg>
-  )
-}
 
 function AuthLayout() {
   const { tenant } = useTenant();
@@ -70,11 +49,7 @@ function AuthLayout() {
         <div className="relative z-10 flex flex-col h-full px-10 py-12">
           {/* HQ mark + label */}
           <div className="flex items-center gap-3 mb-2">
-            <BarMark className="size-8" />
-            <div className="leading-none">
-              <span className="text-xl font-bold tracking-tight">hq</span>
-              <span className="ml-1.5 text-[10px] font-semibold tracking-[0.2em] opacity-40 uppercase">Connect</span>
-            </div>
+            <Logo isDark={true} className="h-8 w-auto" />
           </div>
 
           {/* Tenant identity */}
@@ -117,7 +92,7 @@ function AuthLayout() {
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-12 overflow-y-auto">
         {/* Mobile mark */}
         <div className="flex lg:hidden items-center gap-2 mb-10">
-          <BarMark className="size-6" />
+          <Logo iconOnly={true} className="size-6 text-foreground" />
           <span className="text-base font-bold tracking-tight">{displayName}</span>
         </div>
 

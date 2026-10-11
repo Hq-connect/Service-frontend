@@ -118,7 +118,7 @@ function MobileNavigation({
               <SheetHeader className="p-4 border-b border-border">
                 <SheetTitle className="text-left font-heading text-lg font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {tenant?.logo ? <img src={tenant?.logo} alt="Logo" className="w-7 h-7" /> : <Logo iconOnly={true} className="w-2 h-2" />}
+                    {tenant?.logo ? <img src={tenant?.logo} alt="Logo" className="w-7 h-7" /> : <Logo iconOnly={true} className="w-7 h-7 text-foreground" />}
                     <span className="whitespace-nowrap">{tenant?.name || "Hq"}</span>
                   </div>
                 </SheetTitle>

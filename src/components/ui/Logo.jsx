@@ -1,53 +1,31 @@
-/* eslint-disable react/no-unknown-property */
-import React from "react";
-
-const Logo = ({ iconOnly = false, isDark = false, className = "" }) => {
-  // Determine fill colors based on isDark prop
-  const bar1Color = "#A1A1AA";
-  const bar2Color = isDark ? "#FFFFFF" : "#09090B";
-  const bar3Color = isDark ? "#D4D4D8" : "#3F3F46";
-  const textColor = isDark ? "#FFFFFF" : "#09090B";
-  const subTextColor = isDark ? "#A1A1AA" : "#71717A";
+export default function Logo({
+  className = "w-auto h-full max-h-8",
+  iconOnly = false,
+  isDark = false,
+}) {
+  const primaryColor = isDark ? "#FFFFFF" : "currentColor";
+  const subtitleColor = isDark ? "#A1A1AA" : "#71717A";
 
   if (iconOnly) {
     return (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        viewBox="25 20 60 50"
-        className={`w-auto h-full max-h-9 overflow-visible ${className}`}
+        viewBox="0 0 32 32"
+        fill="none"
+        className={className}
+        aria-label="HQ icon"
       >
-        {/* Equalizer Audio Frequency Static Bars */}
-        <g transform="translate(30, 25)">
-          {/* Bar 1 (Left) */}
-          <rect
-            x="0"
-            y="10"
-            width="12"
-            height="30"
-            rx="6"
-            fill={bar1Color}
-          />
-
-          {/* Bar 2 (Center) */}
-          <rect
-            x="18"
-            y="0"
-            width="12"
-            height="40"
-            rx="6"
-            fill={bar2Color}
-          />
-
-          {/* Bar 3 (Right) */}
-          <rect
-            x="36"
-            y="15"
-            width="12"
-            height="25"
-            rx="6"
-            fill={bar3Color}
-          />
-        </g>
+        {/* Left Pillar */}
+        <rect x="0" y="0" width="7.5" height="32" fill={primaryColor} />
+        {/* Crossbeam */}
+        <rect x="7.5" y="11" width="11" height="7" fill={primaryColor} />
+        {/* Right Pillar (Upper) */}
+        <rect x="18.5" y="0" width="7.5" height="20" fill={primaryColor} />
+        {/* Q Foundation Diagonal Spur */}
+        <polygon
+          points="18.5,20 26,20 32,26 32,32 26,32 18.5,24.5"
+          fill={primaryColor}
+        />
       </svg>
     );
   }
@@ -55,68 +33,54 @@ const Logo = ({ iconOnly = false, isDark = false, className = "" }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="25 15 255 60"
-      className={`w-auto h-full max-h-9 overflow-visible ${className}`}
+      viewBox="0 0 196 36"
+      fill="none"
+      className={className}
+      aria-label="HQ Connect logo"
     >
-      {/* Equalizer Audio Frequency Static Bars */}
-      <g transform="translate(30, 25)">
-        {/* Bar 1 (Left) */}
-        <rect
-          x="0"
-          y="10"
-          width="12"
-          height="30"
-          rx="6"
-          fill={bar1Color}
-        />
-
-        {/* Bar 2 (Center - Primary Dark) */}
-        <rect
-          x="18"
-          y="0"
-          width="12"
-          height="40"
-          rx="6"
-          fill={bar2Color}
-        />
-
-        {/* Bar 3 (Right) */}
-        <rect
-          x="36"
-          y="15"
-          width="12"
-          height="25"
-          rx="6"
-          fill={bar3Color}
+      {/* Architectural HQ Emblem (32x32) */}
+      <g transform="translate(0, 2)">
+        {/* Left Pillar */}
+        <rect x="0" y="0" width="7.5" height="32" fill={primaryColor} />
+        {/* Architectural Crossbeam */}
+        <rect x="7.5" y="11" width="11" height="7" fill={primaryColor} />
+        {/* Right Pillar Upper */}
+        <rect x="18.5" y="0" width="7.5" height="20" fill={primaryColor} />
+        {/* Q Foundation Spur */}
+        <polygon
+          points="18.5,20 26,20 32,26 32,32 26,32 18.5,24.5"
+          fill={primaryColor}
         />
       </g>
 
-      {/* Typography */}
-      <text
-        x="90"
-        y="60"
-        fontFamily="system-ui, -apple-system, sans-serif"
-        fontSize="46"
-        fontWeight="800"
-        fill={textColor}
-        letterSpacing="-2"
-      >
-        hq
-      </text>
+      {/* Vector Wordmark: HQ */}
+      <g transform="translate(45, 4)">
+        {/* H */}
+        <path
+          d="M0 2 H5.5 V12.5 H16.5 V2 H22 V26 H16.5 V17.5 H5.5 V26 H0 V2 Z"
+          fill={primaryColor}
+        />
+        {/* Q (Precision geometry with sharp dynamic tail) */}
+        <path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d="M40 2 C33.37 2 28 7.37 28 14 C28 20.63 33.37 26 40 26 C42.2 26 44.25 25.4 46 24.38 L48.8 27.2 L52.7 23.3 L49.9 20.5 C51.22 18.66 52 16.42 52 14 C52 7.37 46.63 2 40 2 Z M40 7 C43.86 7 47 10.14 47 14 C47 17.86 43.86 21 40 21 C36.14 21 33 17.86 33 14 C33 10.14 36.14 7 40 7 Z"
+          fill={primaryColor}
+        />
+      </g>
 
+      {/* Subtitle: CONNECT */}
       <text
-        x="145"
-        y="60"
-        fontFamily="system-ui, -apple-system, sans-serif"
-        fontSize="20"
-        fontWeight="600"
-        fill={subTextColor}
-        letterSpacing="3"
+        x="112"
+        y="23"
+        fontFamily="'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        fontSize="10.5"
+        fontWeight="700"
+        letterSpacing="3.5"
+        fill={subtitleColor}
       >
         CONNECT
       </text>
     </svg>
   );
-};
-
-export default Logo;
+}
