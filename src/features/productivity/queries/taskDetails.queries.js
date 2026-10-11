@@ -76,6 +76,7 @@ export const useAddLabelsToTask = () => {
         onSuccess: (data, { projectId, taskId }) => {
             queryClient.invalidateQueries({ queryKey: taskDetailsKeys.labels(projectId, taskId) });
             queryClient.invalidateQueries({ queryKey: ['task-labels', projectId, taskId] });
+            queryClient.invalidateQueries({ queryKey: ['productivity-task', projectId, taskId] });
             queryClient.invalidateQueries({ queryKey: ['productivity-tasks', projectId] });
         },
     });
@@ -88,6 +89,7 @@ export const useRemoveLabelsFromTask = () => {
         onSuccess: (data, { projectId, taskId }) => {
             queryClient.invalidateQueries({ queryKey: taskDetailsKeys.labels(projectId, taskId) });
             queryClient.invalidateQueries({ queryKey: ['task-labels', projectId, taskId] });
+            queryClient.invalidateQueries({ queryKey: ['productivity-task', projectId, taskId] });
             queryClient.invalidateQueries({ queryKey: ['productivity-tasks', projectId] });
         },
     });
