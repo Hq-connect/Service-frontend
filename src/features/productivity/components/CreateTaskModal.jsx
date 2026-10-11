@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useCreateTask } from '../queries/task.queries';
 import { X, Loader2, AlertCircle, ChevronDown, Check } from 'lucide-react';
@@ -116,7 +116,7 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId, boardId, defaultCo
                                 <span>{formData.priority}</span>
                                 <ChevronDown className="w-3.5 h-3.5 opacity-60" />
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-[calc(100%-2rem)] min-w-[200px] p-1 text-xs">
+                            <DropdownMenuContent align="start" className="w-(--anchor-width) min-w-[200px] p-1 text-xs">
                                 {['low', 'medium', 'high', 'urgent'].map((p) => (
                                     <DropdownMenuItem
                                         key={p}

@@ -44,6 +44,7 @@ export const useDeleteTask = () => {
         mutationFn: ({ projectId, taskId }) => taskService.deleteTask(projectId, taskId),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['productivity-tasks', variables.projectId] });
+            queryClient.invalidateQueries({ queryKey: ['productivity-task', variables.projectId, variables.taskId] });
         },
     });
 };

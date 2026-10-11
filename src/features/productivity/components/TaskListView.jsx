@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { toast } from 'sonner';
 import { setSelectedTaskId } from '../states/productivity.slice';
 import { useUpdateTask, useDeleteTask, useAssignTask, useUnassignTask, useCreateTask } from '../queries/task.queries';
 import { 
@@ -9,10 +10,9 @@ import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator 
 } from '@/components/ui/dropdown-menu';
 import { 
-    Calendar, User, AlertCircle, AlertTriangle, ArrowUp, ArrowDown, Minus, ArrowUpRight, 
-    MoreHorizontal, Trash2, Plus, CheckCircle2, Clock, Check, ChevronDown
+    Calendar, User, AlertCircle, AlertTriangle, ArrowUp, ArrowDown, Minus, 
+    Trash2, Plus, Check, ChevronDown
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getInitials, getAvatarStyle } from '@/global/utils/user';
 import { getDueDateStatus } from '../utils/dueDate.utils';
@@ -26,6 +26,19 @@ export const TaskListView = ({
     members = [] 
 }) => {
     const dispatch = useDispatch();
+    const rawUser = useSelector((state) => state.auth?.user);
+    const activeProject = useSelector((state) => state.productivity?.activeProject);
+    const currentUserId = rawUser?._id || rawUser?.id || rawUser?.user?._id || rawUser?.user?.id;
+    const currentMember = members.find((m) => {
+        const mUserId = m.userId?._id ? String(m.userId._id) : String(m.userId);
+        return mUserId === String(currentUserId);
+    });
+    const isProjectAdmin = Boolean(
+        (activeProject?.owner && String(activeProject.owner) === String(currentUserId)) ||
+        (activeProject?.createdBy && String(activeProject.createdBy) === String(currentUserId)) ||
+        (currentMember && ['owner', 'admin'].includes(currentMember.role))
+    );
+
     const updateTaskMutation = useUpdateTask();
     const deleteTaskMutation = useDeleteTask();
     const assignTaskMutation = useAssignTask();
@@ -68,8 +81,15 @@ export const TaskListView = ({
 
     const handleDelete = (e, taskId) => {
         e.stopPropagation();
+        if (!isProjectAdmin) return;
         if (window.confirm('Are you sure you want to delete this issue?')) {
-            deleteTaskMutation.mutate({ projectId, taskId });
+            deleteTaskMutation.mutate(
+                { projectId, taskId },
+                {
+                    onSuccess: () => toast.success('Task deleted successfully'),
+                    onError: (err) => toast.error(err.response?.data?.message || 'Failed to delete task'),
+                }
+            );
         }
     };
 
@@ -410,13 +430,15 @@ export const TaskListView = ({
 
                                         {/* Row Actions */}
                                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                                            <button
-                                                onClick={(e) => handleDelete(e, task._id)}
-                                                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                                                title="Delete issue"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
+                                            {isProjectAdmin && (
+                                                <button
+                                                    onClick={(e) => handleDelete(e, task._id)}
+                                                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all cursor-pointer"
+                                                    title="Delete issue (Admin only)"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 );

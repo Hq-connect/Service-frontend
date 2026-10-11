@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { setSelectedTaskId } from '../states/productivity.slice';
-import { useTask, useUpdateTask, useAssignTask, useUnassignTask } from '../queries/task.queries';
+import { useTask, useUpdateTask, useAssignTask, useUnassignTask, useDeleteTask } from '../queries/task.queries';
 import { useProjectMembers } from '../queries/project.queries';
 import { 
     X, Calendar, User, AlignLeft, Tag, Paperclip, MessageSquare, 
-    Activity, Check, ChevronDown, Clock, CheckCircle2, AlertCircle, AlertTriangle,
-    ArrowUp, ArrowDown, Minus, Timer, Sparkles
+    Activity, Check, ChevronDown, CheckCircle2, AlertCircle, AlertTriangle,
+    Timer, Trash2, Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import TaskComments from './TaskComments';
 import TaskLabels from './TaskLabels';
 import TaskAttachments from './TaskAttachments';
@@ -23,8 +24,15 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
-    DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 
 const TaskDetailsSlideOver = () => {
     const dispatch = useDispatch();
@@ -41,24 +49,40 @@ const TaskDetailsSlideOver = () => {
     const { data: membersResponse } = useProjectMembers(projectId, { enabled: !!projectId });
     const members = membersResponse?.data?.members || [];
 
+    const rawUser = useSelector((state) => state.auth?.user);
+    const currentUserId = rawUser?._id || rawUser?.id || rawUser?.user?._id || rawUser?.user?.id;
+    const currentMember = members.find((m) => {
+        const mUserId = m.userId?._id ? String(m.userId._id) : String(m.userId);
+        return mUserId === String(currentUserId);
+    });
+    const isProjectAdmin = Boolean(
+        (activeProject?.owner && String(activeProject.owner) === String(currentUserId)) ||
+        (activeProject?.createdBy && String(activeProject.createdBy) === String(currentUserId)) ||
+        (currentMember && ['owner', 'admin'].includes(currentMember.role))
+    );
+
     const updateTaskMutation = useUpdateTask();
     const assignTaskMutation = useAssignTask();
     const unassignTaskMutation = useUnassignTask();
+    const deleteTaskMutation = useDeleteTask();
 
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [isAssigneeOpen, setIsAssigneeOpen] = useState(false);
     const [isEditingDesc, setIsEditingDesc] = useState(false);
-    const [descText, setDescText] = useState('');
+    const [descText, setDescText] = useState(task?.description || '');
     const [isEditingTitle, setIsEditingTitle] = useState(false);
-    const [titleText, setTitleText] = useState('');
+    const [titleText, setTitleText] = useState(task?.title || '');
     const [activeTab, setActiveTab] = useState('comments'); // 'comments' | 'activity'
 
     // Time tracking state
     const [isEditingHours, setIsEditingHours] = useState(false);
-    const [estimatedHours, setEstimatedHours] = useState('');
-    const [actualHours, setActualHours] = useState('');
+    const [estimatedHours, setEstimatedHours] = useState(task?.estimatedHours != null ? String(task.estimatedHours) : '');
+    const [actualHours, setActualHours] = useState(task?.actualHours != null ? String(task.actualHours) : '');
 
+    const prevTaskRef = useRef(task?._id);
     useEffect(() => {
-        if (task) {
+        if (task && prevTaskRef.current !== task._id) {
+            prevTaskRef.current = task._id;
             setDescText(task.description || '');
             setTitleText(task.title || '');
             setEstimatedHours(task.estimatedHours != null ? String(task.estimatedHours) : '');
@@ -66,10 +90,14 @@ const TaskDetailsSlideOver = () => {
         }
     }, [task]);
 
+    const handleClose = useCallback(() => {
+        dispatch(setSelectedTaskId(null));
+    }, [dispatch]);
+
     // Close on Escape key
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === 'Escape' && !isEditingTitle && !isEditingDesc && !isEditingHours) {
+            if (e.key === 'Escape' && !isEditingTitle && !isEditingDesc && !isEditingHours && !showDeleteDialog) {
                 handleClose();
             }
         };
@@ -77,13 +105,9 @@ const TaskDetailsSlideOver = () => {
             window.addEventListener('keydown', handleKeyDown);
             return () => window.removeEventListener('keydown', handleKeyDown);
         }
-    }, [selectedTaskId, isEditingTitle, isEditingDesc, isEditingHours]);
+    }, [selectedTaskId, isEditingTitle, isEditingDesc, isEditingHours, showDeleteDialog, handleClose]);
 
     if (!selectedTaskId) return null;
-
-    const handleClose = () => {
-        dispatch(setSelectedTaskId(null));
-    };
 
     const handleAssign = (userId) => {
         if (!userId) {
@@ -163,19 +187,22 @@ const TaskDetailsSlideOver = () => {
     const currentAssigneeName = task?.assigneeSnapshot?.name || (task?.assignedTo ? 'Assigned' : 'Unassigned');
     const currentAssigneeAvatar = task?.assigneeSnapshot?.avatar;
 
-    const getPriorityIcon = (priority) => {
-        switch (priority) {
-            case 'urgent':
-                return <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0" />;
-            case 'high':
-                return <ArrowUp className="w-3.5 h-3.5 text-destructive shrink-0" />;
-            case 'medium':
-                return <Minus className="w-3.5 h-3.5 text-amber-500 shrink-0" />;
-            case 'low':
-                return <ArrowDown className="w-3.5 h-3.5 text-emerald-500 shrink-0" />;
-            default:
-                return <Minus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
-        }
+
+    const handleDeleteTask = () => {
+        if (!projectId || !selectedTaskId) return;
+        deleteTaskMutation.mutate(
+            { projectId, taskId: selectedTaskId },
+            {
+                onSuccess: () => {
+                    toast.success('Task deleted successfully');
+                    setShowDeleteDialog(false);
+                    dispatch(setSelectedTaskId(null));
+                },
+                onError: (err) => {
+                    toast.error(err.response?.data?.message || 'Failed to delete task');
+                },
+            }
+        );
     };
 
     return (
@@ -201,13 +228,26 @@ const TaskDetailsSlideOver = () => {
                         </span>
                     </div>
 
-                    <button 
-                        onClick={handleClose}
-                        className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                        title="Close (Esc)"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                        {isProjectAdmin && (
+                            <button 
+                                type="button"
+                                onClick={() => setShowDeleteDialog(true)}
+                                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Task (Admin only)"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        )}
+                        <button 
+                            type="button"
+                            onClick={handleClose}
+                            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                            title="Close (Esc)"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* 2-Column Responsive Body */}
@@ -694,9 +734,66 @@ const TaskDetailsSlideOver = () => {
                                 </span>
                             </div>
                         </div>
+
+                        {/* Danger Zone: Admin Only */}
+                        {isProjectAdmin && (
+                            <div className="pt-3 border-t border-border">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeleteDialog(true)}
+                                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold text-destructive hover:text-destructive-foreground hover:bg-destructive border border-destructive/20 hover:border-transparent transition-all cursor-pointer shadow-2xs"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Delete Task</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <DialogContent className="sm:max-w-md bg-card border-border">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-destructive">
+                            <Trash2 className="w-5 h-5" />
+                            <span>Delete Task</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-muted-foreground text-xs leading-relaxed pt-1.5">
+                            Are you sure you want to delete <span className="font-semibold text-foreground">"{task?.title || 'this task'}"</span>? This action cannot be undone and will permanently remove all associated comments, attachments, and activity history.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0 pt-3">
+                        <button
+                            type="button"
+                            onClick={() => setShowDeleteDialog(false)}
+                            disabled={deleteTaskMutation.isPending}
+                            className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleDeleteTask}
+                            disabled={deleteTaskMutation.isPending}
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                            {deleteTaskMutation.isPending ? (
+                                <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Deleting...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Delete Task</span>
+                                </>
+                            )}
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
