@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import OnlineIndicator from "../../components/OnlineIndicator";
 import { getLastMessageInfo } from "../../utils/fileTypeConfig";
+import { getUserInitials, getAvatarStyle } from "@/global/utils/user";
 
 /**
  * List item for a Direct Message conversation.
@@ -30,12 +31,8 @@ function DMListItem({ chat }) {
     isOnline === true ? "online" : isOnline === false ? "offline" : (chat.otherUser?.presence ?? "offline");
 
   const displayName = chat.otherUser?.name || "Unknown";
-  const initials = displayName
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .slice(0, 2)
-    .join("")
-    .toUpperCase() || "U";
+  const initials = getUserInitials(chat.otherUser);
+  const avatarStyle = getAvatarStyle(chat.otherUser);
 
   const lastInfo = getLastMessageInfo(chat.lastMessage);
   const LastIcon = lastInfo.icon;
@@ -47,17 +44,6 @@ function DMListItem({ chat }) {
         minute: "2-digit",
       })
     : "";
-
-  // Deterministic avatar color from userId
-  const seed = chat.otherUser?.userId ?? chat.otherUser?.name ?? "u";
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++)
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  const h = Math.abs(hash % 360);
-  const avatarStyle = {
-    backgroundColor: `hsl(${h},55%,88%)`,
-    color: `hsl(${h},60%,30%)`,
-  };
 
   return (
     <button

@@ -25,15 +25,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUsers } from "@/global/hooks/useUsers";
-import useAuth from "@/features/auth/hooks/useAuth";
-import { getUserInitials, getUserDisplayName } from "@/global/utils/user";
+import useCurrentUser from "@/features/auth/hooks/useCurrentUser";
+import { getUserInitials, getUserDisplayName, getAvatarStyle } from "@/global/utils/user";
 import meetingService from "../services/meeting.service";
 import { DAYS_OF_WEEK, getRecurrenceSummaryText } from "../utils/recurrenceUtils";
 
 export const EditMeetingDialog = ({ isOpen, onClose, meeting, onUpdate, loading }) => {
-    const { user } = useAuth();
-    const currentUser = user?.user || user?.data || user;
-    const currentUserId = currentUser?._id || currentUser?.id;
+    const { currentUser, currentUserId } = useCurrentUser();
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -137,7 +135,7 @@ export const EditMeetingDialog = ({ isOpen, onClose, meeting, onUpdate, loading 
         search: attendeeSearch,
         status: "active",
         limit: 30,
-        enabled: isOpen,
+        enabled: isOpen && (isSearchOpen || attendeeSearch.trim().length > 0),
     });
 
     const rawUsersList = Array.isArray(tenantUsers) ? tenantUsers : (tenantUsers?.users || []);
@@ -502,7 +500,7 @@ export const EditMeetingDialog = ({ isOpen, onClose, meeting, onUpdate, loading 
                                     >
                                         <Avatar className="size-4">
                                             <AvatarImage src={attendee.avatar} />
-                                            <AvatarFallback className="text-[9px] bg-primary/20 text-primary font-semibold">
+                                            <AvatarFallback style={getAvatarStyle(attendee)} className="text-[9px] font-semibold">
                                                 {getUserInitials(attendee)}
                                             </AvatarFallback>
                                         </Avatar>
@@ -566,7 +564,7 @@ export const EditMeetingDialog = ({ isOpen, onClose, meeting, onUpdate, loading 
                                                     <div className="flex items-center gap-2">
                                                         <Avatar className="size-5">
                                                             <AvatarImage src={userItem.avatar} />
-                                                            <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
+                                                            <AvatarFallback style={getAvatarStyle(userItem)} className="text-[10px] font-semibold">
                                                                 {getUserInitials(userItem)}
                                                             </AvatarFallback>
                                                         </Avatar>

@@ -13,14 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Check, Search, Users, X, Loader2 } from "lucide-react";
 import { useUsers } from "@/global/hooks/useUsers";
-import useAuth from "@/features/auth/hooks/useAuth";
+import useCurrentUser from "@/features/auth/hooks/useCurrentUser";
 import { useCreateGroup } from "../../hooks/useCreateGroup";
+import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
 
 export default function CreateGroupDialog({ open, onOpenChange }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const currentUser = user?.user || user?.data || user;
-  const currentUserId = currentUser?._id || currentUser?.id;
+  const { currentUser, currentUserId } = useCurrentUser();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -33,6 +32,7 @@ export default function CreateGroupDialog({ open, onOpenChange }) {
     search: userSearch,
     status: "active",
     limit: 50,
+    enabled: open,
   });
 
   const availableUsers = tenantUsers.filter(
@@ -182,22 +182,9 @@ export default function CreateGroupDialog({ open, onOpenChange }) {
                 ) : (
                   availableUsers.map((u) => {
                     const isSelected = selectedUserIds.includes(u._id);
-                    const displayName =
-                      `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() ||
-                      u.name ||
-                      u.email;
-                    const initials = displayName
-                      .split(" ")
-                      .map((w) => w[0] ?? "")
-                      .slice(0, 2)
-                      .join("")
-                      .toUpperCase() || "U";
-
-                    let hash = 0;
-                    const seed = u._id ?? u.email ?? "u";
-                    for (let i = 0; i < seed.length; i++)
-                      hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-                    const h = Math.abs(hash % 360);
+                    const displayName = getUserDisplayName(u);
+                    const initials = getUserInitials(u);
+                    const avatarStyle = getAvatarStyle(u);
 
                     return (
                       <button
@@ -212,10 +199,7 @@ export default function CreateGroupDialog({ open, onOpenChange }) {
                           <Avatar className="size-7">
                             {u.avatar && <AvatarImage src={u.avatar} />}
                             <AvatarFallback
-                              style={{
-                                backgroundColor: `hsl(${h},55%,88%)`,
-                                color: `hsl(${h},60%,30%)`,
-                              }}
+                              style={avatarStyle}
                               className="text-[10px] font-semibold"
                             >
                               {initials}

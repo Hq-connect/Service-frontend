@@ -6,28 +6,15 @@ import { Search, Plus } from "lucide-react";
 import ChatList from "./ChatList";
 import { useChats } from "../hooks/useChats";
 import { useUsers } from "@/global/hooks/useUsers";
-import useAuth from "@/features/auth/hooks/useAuth";
+import useCurrentUser from "@/features/auth/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getUserDisplayName, getUserInitials, getAvatarStyle } from "@/global/utils/user";
 import CreateGroupDialog from "../variants/group/CreateGroupDialog";
 
 function NewUserListItem({ user, onClick }) {
-  const displayName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.name || user.email || "Workspace User";
-  const initials = displayName
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .slice(0, 2)
-    .join("")
-    .toUpperCase() || "U";
-
-  const seed = user._id ?? user.email ?? "u";
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++)
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  const h = Math.abs(hash % 360);
-  const avatarStyle = {
-    backgroundColor: `hsl(${h},55%,88%)`,
-    color: `hsl(${h},60%,30%)`,
-  };
+  const displayName = getUserDisplayName(user);
+  const initials = getUserInitials(user);
+  const avatarStyle = getAvatarStyle(user);
 
   return (
     <button
@@ -67,9 +54,7 @@ function ChatSidebar({ activeType = "dm" }) {
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const { data: chats = [], isLoading } = useChats(activeType);
 
-  const { user } = useAuth();
-  const currentUser = user?.user || user?.data || user;
-  const currentUserId = currentUser?._id || currentUser?.id;
+  const { currentUser, currentUserId } = useCurrentUser();
 
   // Debounce the search query to minimize API calls
   useEffect(() => {

@@ -14,7 +14,8 @@ import { CreateTaskModal } from '../components/CreateTaskModal';
 import { ProjectMembersModal } from '../components/ProjectMembersModal';
 import TaskDetailsSlideOver from '../components/TaskDetailsSlideOver';
 import { Plus, Loader2, FolderKanban } from 'lucide-react';
-import { extractUser, getUserDisplayName } from '@/global/utils/user';
+import { getUserDisplayName } from '@/global/utils/user';
+import useCurrentUser from '@/features/auth/hooks/useCurrentUser';
 
 export const BoardView = () => {
     const { projectId } = useParams();
@@ -26,9 +27,7 @@ export const BoardView = () => {
     const boardIdParam = searchParams.get('boardId');
 
     const dispatch = useDispatch();
-    const rawUser = useSelector((state) => state.auth?.user);
-    const currentUser = useMemo(() => extractUser(rawUser), [rawUser]);
-    const currentUserId = currentUser?._id || currentUser?.id || currentUser?.userId;
+    const { currentUser, currentUserId } = useCurrentUser();
     const currentUserName = currentUser ? getUserDisplayName(currentUser) : '';
     const currentUserEmail = currentUser?.email || '';
 

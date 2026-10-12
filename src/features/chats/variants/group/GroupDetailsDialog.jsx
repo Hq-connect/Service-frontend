@@ -26,15 +26,14 @@ import { useUpdateGroupDescription } from "../../hooks/useUpdateGroupDescription
 import { useAddGroupMembers } from "../../hooks/useAddGroupMembers";
 import { useLeaveGroup } from "../../hooks/useLeaveGroup";
 import { useUsers } from "@/global/hooks/useUsers";
-import useAuth from "@/features/auth/hooks/useAuth";
+import useCurrentUser from "@/features/auth/hooks/useCurrentUser";
+import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
 
 export default function GroupDetailsDialog({ open, onOpenChange, chat }) {
   const navigate = useNavigate();
   const chatId = chat?._id || chat?.chatId;
 
-  const { user } = useAuth();
-  const currentUser = user?.user || user?.data || user;
-  const currentUserId = currentUser?._id || currentUser?.id;
+  const { currentUser, currentUserId } = useCurrentUser();
 
   const { data: members = [], isLoading: isLoadingMembers } = useGroupMembers(chatId);
   const { mutateAsync: updateName, isPending: isUpdatingName } = useUpdateGroupName();
@@ -325,25 +324,10 @@ export default function GroupDetailsDialog({ open, onOpenChange, chat }) {
             ) : (
               members.map((member) => {
                 const memberUserId = member.userId || member._id || member.id;
-                const displayName =
-                  member.userSnapshot?.name ||
-                  `${member.firstName ?? ""} ${member.lastName ?? ""}`.trim() ||
-                  member.name ||
-                  member.email ||
-                  "Member";
+                const displayName = getUserDisplayName(member);
                 const avatarUrl = member.userSnapshot?.avatar || member.avatar;
-                const initials = displayName
-                  .split(" ")
-                  .map((w) => w[0] ?? "")
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase() || "M";
-
-                let hash = 0;
-                const seed = memberUserId ?? member.email ?? "m";
-                for (let i = 0; i < seed.length; i++)
-                  hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-                const h = Math.abs(hash % 360);
+                const initials = getUserInitials(member);
+                const avatarStyle = getAvatarStyle(member);
 
                 const isSelf = memberUserId === currentUserId || member._id === currentUserId;
 
@@ -356,10 +340,7 @@ export default function GroupDetailsDialog({ open, onOpenChange, chat }) {
                       <Avatar className="size-8">
                         {avatarUrl && <AvatarImage src={avatarUrl} />}
                         <AvatarFallback
-                          style={{
-                            backgroundColor: `hsl(${h},55%,88%)`,
-                            color: `hsl(${h},60%,30%)`,
-                          }}
+                          style={avatarStyle}
                           className="text-xs font-semibold"
                         >
                           {initials}

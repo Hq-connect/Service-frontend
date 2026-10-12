@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Info, MoreHorizontal, Users, ChevronLeft } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Info, MoreHorizontal, ChevronLeft } from "lucide-react";
 import GroupDetailsDialog from "./GroupDetailsDialog";
 import { useGroupMembers } from "../../hooks/useGroupMembers";
+import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
 
 /**
  * Header for a Group chat window.
- * @param {{ name, members, _id, chatId }} chat
+ * @param {{ name, members, _id, chatId, avatar }} chat
  */
 function GroupHeader({ chat }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -16,7 +18,8 @@ function GroupHeader({ chat }) {
   const { data: members = [] } = useGroupMembers(chatId);
 
   const name = chat?.name ?? "Group";
-  const memberCount = members.length > 0 ? members.length : (chat?.members?.length ?? 0);
+  const memberList = members.length > 0 ? members : (chat?.members ?? []);
+  const memberCount = memberList.length;
 
   return (
     <>
@@ -32,9 +35,50 @@ function GroupHeader({ chat }) {
           >
             <ChevronLeft className="size-5" />
           </Link>
-          <div className="flex items-center justify-center size-8 rounded-full bg-primary/10 text-primary">
-            <Users className="size-4" />
+          
+          {/* Stacked member avatars or group initials fallback */}
+          <div className="relative shrink-0">
+            {memberList.length > 0 ? (
+              <div className="flex items-center">
+                {memberList.slice(0, 3).map((member, idx) => {
+                  const displayName = getUserDisplayName(member);
+                  const avatarUrl = member.userSnapshot?.avatar || member.avatar;
+                  const initials = getUserInitials(member);
+                  const avatarStyle = getAvatarStyle(member);
+
+                  return (
+                    <Avatar
+                      key={member.userId || member._id || idx}
+                      className="size-7 border-2 border-background"
+                      style={{
+                        marginLeft: idx === 0 ? 0 : "-8px",
+                        zIndex: 3 - idx,
+                      }}
+                    >
+                      {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName} />}
+                      <AvatarFallback
+                        style={avatarStyle}
+                        className="text-[9px] font-semibold"
+                      >
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  );
+                })}
+              </div>
+            ) : (
+              <Avatar className="size-8">
+                {chat?.avatar && <AvatarImage src={chat.avatar} alt={name} />}
+                <AvatarFallback
+                  style={getAvatarStyle(chatId || name)}
+                  className="text-xs font-semibold"
+                >
+                  {getUserInitials(name)}
+                </AvatarFallback>
+              </Avatar>
+            )}
           </div>
+
           <div className="leading-tight">
             <p className="text-sm font-semibold text-foreground">{name}</p>
             <p className="text-[11px] text-muted-foreground">

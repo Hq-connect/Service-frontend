@@ -13,14 +13,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { getInitials, getAvatarStyle } from '@/global/utils/user';
+import useCurrentUser from '@/features/auth/hooks/useCurrentUser';
 
 export const ProjectsDashboard = () => {
     const dispatch = useDispatch();
     const [searchParams, setSearchParams] = useSearchParams();
     const currentView = searchParams.get('view') || 'all';
 
-    const currentUser = useSelector((state) => state.auth?.user);
-    const currentUserId = currentUser?._id || currentUser?.id;
+    const { currentUser, currentUserId } = useCurrentUser();
 
     // Sorting state
     const [sortField, setSortField] = useState('createdAt');

@@ -46,6 +46,25 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    /* ── Primary Sidebar tokens (dark strip) ── */
+    --color-primary-sidebar:             var(--primary-sidebar);
+    --color-primary-sidebar-border:      var(--primary-sidebar-border);
+    --color-primary-sidebar-text:        var(--primary-sidebar-text);
+    --color-primary-sidebar-active:      var(--primary-sidebar-active);
+    --color-primary-sidebar-active-text: var(--primary-sidebar-active-text);
+    --color-primary-sidebar-marker:      var(--primary-sidebar-marker);
+    /* ── Semantic status tokens ── */
+    --color-status-live:             var(--status-live-bg);
+    --color-status-live-foreground:  var(--status-live-fg);
+    --color-status-live-border:      var(--status-live-border);
+    --color-status-warn:             var(--status-warn-bg);
+    --color-status-warn-foreground:  var(--status-warn-fg);
+    --color-status-warn-border:      var(--status-warn-border);
+    /* ── Meet room surface tokens ── */
+    --color-meet-surface:        var(--meet-surface);
+    --color-meet-surface-border: var(--meet-surface-border);
+    --color-meet-avatar-local:   var(--meet-avatar-local);
+    --color-meet-avatar-remote:  var(--meet-avatar-remote);
 }
 
 :root {
@@ -75,12 +94,39 @@
     --radius: 0.625rem;
     --sidebar: lch(98.27% 0.01 296.81);
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(20.463% 0.00002 271.152);
+    --sidebar-primary: oklch(0.205 0 0);
     --sidebar-primary-foreground: oklch(0.985 0 0);
     --sidebar-accent: oklch(0.97 0 0);
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    /* ── Primary Sidebar (dark vertical strip) ── */
+    --primary-sidebar:             oklch(0.12 0 0);
+    --primary-sidebar-border:      oklch(0.18 0 0);
+    --primary-sidebar-text:        oklch(0.58 0 0);
+    --primary-sidebar-active:      oklch(0.21 0 0);
+    --primary-sidebar-active-text: oklch(0.96 0 0);
+    --primary-sidebar-marker:      oklch(56.811% 0.22669 28.613);
+
+    /* ── Semantic status colors (light) ── */
+    --status-live-bg:     oklch(0.95 0.08 150);
+    --status-live-fg:     oklch(0.32 0.12 150);
+    --status-live-border: oklch(0.80 0.10 150);
+    --status-warn-bg:     oklch(0.97 0.06 80);
+    --status-warn-fg:     oklch(0.42 0.12 80);
+    --status-warn-border: oklch(0.82 0.10 80);
+
+    /* ── Meet room surface (always dark regardless of app theme) ── */
+    --meet-surface:        oklch(0.13 0 0);
+    --meet-surface-border: oklch(0.20 0 0);
+    --meet-avatar-local:   oklch(0.28 0 0);
+    --meet-avatar-remote:  oklch(0.24 0 0);
+
+    /* ── Semantic shadow scale ── */
+    --shadow-card:    0 1px 3px oklch(0 0 0 / 8%), 0 1px 2px oklch(0 0 0 / 4%);
+    --shadow-popover: 0 4px 24px oklch(0 0 0 / 12%);
+    --shadow-modal:   0 8px 48px oklch(0 0 0 / 18%);
 }
 
 .dark {
@@ -90,7 +136,7 @@
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
+    --primary: oklch(0.985 0 0);
     --primary-foreground: oklch(0.205 0 0);
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
@@ -109,12 +155,25 @@
     --chart-5: oklch(0.269 0 0);
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.985 0 0);
+    --sidebar-primary-foreground: oklch(0.205 0 0);
     --sidebar-accent: oklch(0.269 0 0);
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+
+    /* ── Status colors (dark mode) ── */
+    --status-live-bg:     oklch(0.20 0.06 150);
+    --status-live-fg:     oklch(0.75 0.12 150);
+    --status-live-border: oklch(0.35 0.10 150);
+    --status-warn-bg:     oklch(0.22 0.05 80);
+    --status-warn-fg:     oklch(0.75 0.10 80);
+    --status-warn-border: oklch(0.38 0.08 80);
+
+    /* ── Meet surface (same in dark — room is always dark) ── */
+    --meet-surface:        oklch(0.13 0 0);
+    --meet-surface-border: oklch(0.20 0 0);
+    --primary-sidebar-marker: oklch(0.70 0.19 45);
 }
 
 @layer base {
@@ -127,4 +186,14 @@
   html {
     @apply font-sans;
     }
+}
+
+/* ── Accessibility: honour reduced-motion system preference ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -111,32 +111,59 @@ function MessageList({
 
               // Resolve sender info from populated senderId or fallback
               let senderInfo = {};
-              if (typeof message.senderId === "object" && message.senderId !== null) {
+              const senderIdStr = String(message.senderId?._id || message.senderId?.userId || message.senderId || "");
+
+              if (typeof message.senderId === "object" && message.senderId !== null && (message.senderId.name || message.senderId.firstName)) {
                 senderInfo = message.senderId;
-              } else if (otherUser && (message.senderId === otherUser.userId || message.senderId === otherUser.id)) {
+              } else if (otherUser && (senderIdStr === String(otherUser.userId || "") || senderIdStr === String(otherUser.id || "") || senderIdStr === String(otherUser._id || ""))) {
                 senderInfo = otherUser;
               } else if (chatType === "group" && groupMembers.length > 0) {
-                const found = groupMembers.find(
-                  (m) =>
-                    m.userId === message.senderId ||
-                    m._id === message.senderId ||
-                    m.id === message.senderId ||
-                    m.userSnapshot?._id === message.senderId
-                );
+                const found = groupMembers.find((m) => {
+                  const mUserIdStr = String(
+                    (typeof m.userId === "object" && m.userId !== null)
+                      ? (m.userId._id || m.userId.id || "")
+                      : (m.userId || "")
+                  );
+                  const mIdStr = String(m._id || m.id || "");
+                  const mSnapshotIdStr = String(m.userSnapshot?._id || m.userSnapshot?.userId || "");
+                  return (
+                    (mUserIdStr && mUserIdStr === senderIdStr) ||
+                    (mSnapshotIdStr && mSnapshotIdStr === senderIdStr) ||
+                    (mIdStr && mIdStr === senderIdStr)
+                  );
+                });
                 if (found) {
+                  const actualUserId =
+                    (typeof found.userId === "object" && found.userId !== null)
+                      ? (found.userId._id || found.userId.id)
+                      : (found.userId || found._id);
                   senderInfo = {
+                    ...found,
                     name: found.userSnapshot?.name || found.name || found.email,
                     avatar: found.userSnapshot?.avatar || found.avatar,
-                    userId: found.userId || found._id,
+                    userId: actualUserId,
+                    _id: actualUserId,
+                    id: actualUserId,
                     userSnapshot: found.userSnapshot,
-                    ...found,
+                  };
+                } else if (senderIdStr) {
+                  senderInfo = {
+                    userId: senderIdStr,
+                    _id: senderIdStr,
+                    id: senderIdStr,
                   };
                 }
+              } else if (senderIdStr) {
+                senderInfo = {
+                  userId: senderIdStr,
+                  _id: senderIdStr,
+                  id: senderIdStr,
+                };
               }
 
               return (
                 <MessageScrollerItem
-                  key={message._id || message.messageId || message.id || i}
+                  key={message._id || message.messageId || message.id || idx}
                   messageId={message._id || message.messageId || message.id}
                   scrollAnchor={false}
                 >

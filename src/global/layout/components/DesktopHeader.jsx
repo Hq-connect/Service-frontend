@@ -1,58 +1,58 @@
 import { useNavigate } from "react-router-dom";
-import { 
-  LayoutGrid, Search, Smartphone, Calendar, Bell, User, Settings, LogOut 
+import {
+  LayoutGrid, Search, Smartphone, Calendar, LogOut, User, Settings
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import NotificationBell from "@/features/notifications/components/NotificationBell";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
 function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle }) {
   const navigate = useNavigate();
 
   return (
-    <header className="hidden md:flex items-center justify-between h-16 border-b border-[#eef0f2] px-6 select-none bg-white shrink-0">
+    <header className="hidden md:flex items-center justify-between h-16 border-b border-border px-6 select-none bg-background shrink-0">
       {/* Left: View title */}
       <div className="flex items-center gap-2">
-        <LayoutGrid className="size-[18px] text-gray-500" />
-        <span className="font-semibold text-gray-800 text-sm">All spaces</span>
+        <LayoutGrid className="size-[18px] text-muted-foreground" />
+        <span className="font-semibold text-foreground text-sm">All spaces</span>
       </div>
 
       {/* Middle: Search bar */}
       <div className="relative w-96">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-        <input 
-          type="text" 
-          placeholder="Search" 
-          className="w-full pl-9 pr-4 py-1.5 text-sm bg-[#f1f3f5] text-gray-800 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#00c2ff]/30 transition-all border-none"
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search"
+          className="w-full pl-9 pr-4 py-1.5 text-sm bg-muted text-foreground rounded-lg focus:outline-none focus:ring-1 focus:ring-ring/50 transition-all border border-transparent focus:border-border"
         />
       </div>
 
       {/* Right: Quick actions and user avatar */}
-      <div className="flex items-center gap-4">
-        <button className="text-gray-500 hover:text-gray-800 cursor-pointer" title="Mobile App">
+      <div className="flex items-center gap-3">
+        <button className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer" title="Mobile App">
           <Smartphone className="size-5" />
         </button>
-        <button 
-          onClick={() => navigate("/calendar")} 
-          className="text-gray-500 hover:text-gray-800 hover:text-primary transition-colors cursor-pointer"
+        <button
+          onClick={() => navigate("/calendar")}
+          className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
           title="Calendar"
         >
           <Calendar className="size-5" />
         </button>
         <NotificationBell />
-        
+
         <DropdownMenu>
-          <DropdownMenuTrigger className="focus:outline-hidden cursor-pointer group rounded-full">
-            <Avatar className="size-8 ring-2 ring-transparent group-hover:ring-[#00c2ff]/20 transition-all duration-200">
+          <DropdownMenuTrigger className="focus:outline-none cursor-pointer group rounded-full">
+            <Avatar className="size-8 ring-2 ring-transparent group-hover:ring-primary/20 transition-all duration-200">
               {user?.avatar && <AvatarImage src={user.avatar} alt={getUserName(user)} />}
-              <AvatarFallback 
-                style={getAvatarStyle(user)} 
+              <AvatarFallback
+                style={getAvatarStyle(user)}
                 className="font-bold text-xs font-heading"
               >
                 {getInitials(user)}
@@ -72,8 +72,8 @@ function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle 
               <Settings className="size-4" /> Preferences
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={logout} 
+            <DropdownMenuItem
+              onClick={logout}
               variant="destructive"
               className="cursor-pointer flex items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
             >

@@ -15,14 +15,12 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import useAuth from "@/features/auth/hooks/useAuth";
+import useCurrentUser from "@/features/auth/hooks/useCurrentUser";
 import { formatRecurrenceBadge } from "../utils/recurrenceUtils";
 
 export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
     const [copied, setCopied] = useState(false);
-    const { user } = useAuth();
-    const currentUser = user?.user || user?.data || user;
-    const currentUserId = currentUser?._id || currentUser?.id;
+    const { currentUser, currentUserId } = useCurrentUser();
     const isHost = String(meeting?.hostId || meeting?.createdBy) === String(currentUserId);
     const isRecurring = Boolean(meeting?.recurrenceType && meeting.recurrenceType !== "NONE");
 
@@ -48,9 +46,9 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                 return (
                     <Badge
                         variant="outline"
-                        className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1.5 animate-pulse"
+                        className="bg-status-live text-status-live-foreground border-status-live-border gap-1.5"
                     >
-                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                        <span className="size-1.5 rounded-full bg-status-live-foreground animate-pulse" />
                         Live Now
                     </Badge>
                 );
@@ -59,9 +57,9 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                     return (
                         <Badge
                             variant="outline"
-                            className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1.5 animate-bounce"
+                            className="bg-status-warn text-status-warn-foreground border-status-warn-border gap-1.5"
                         >
-                            <span className="size-1.5 rounded-full bg-amber-500" />
+                            <span className="size-1.5 rounded-full bg-status-warn-foreground" />
                             Starts in &lt;15m
                         </Badge>
                     );

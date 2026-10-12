@@ -7,6 +7,35 @@ export const extractUser = (u) => {
   if (!u) return null;
   if (u.user && typeof u.user === "object") return extractUser(u.user);
   if (u.data && typeof u.data === "object") return extractUser(u.data);
+
+  // In chatParticipant documents or attendee records, u.userId is the real user ID,
+  // whereas u._id is the participant join-table / membership ID.
+  const rawUserId =
+    typeof u.userId === "object" && u.userId !== null
+      ? u.userId._id || u.userId.id
+      : u.userId || (u.userSnapshot ? u.userSnapshot._id || u.userSnapshot.userId : null);
+
+  const canonicalId = rawUserId || u._id || u.id;
+
+  if (u.userSnapshot && typeof u.userSnapshot === "object") {
+    return {
+      ...u,
+      ...u.userSnapshot,
+      _id: canonicalId,
+      id: canonicalId,
+      userId: canonicalId,
+    };
+  }
+
+  if (rawUserId && rawUserId !== u._id) {
+    return {
+      ...u,
+      _id: canonicalId,
+      id: canonicalId,
+      userId: canonicalId,
+    };
+  }
+
   return u;
 };
 
@@ -79,18 +108,19 @@ export const getUserColor = getCollaboratorColor;
 
 export const getAvatarStyle = (seedOrUser = "") => {
   const target = extractUser(seedOrUser);
-  const seed = typeof target === "object"
-    ? target?.email || target?._id || target?.id || target?.name || ""
+  const seed = (typeof target === "object" && target !== null)
+    ? String(target?.userId || target?._id || target?.id || target?.email || target?.name || target?.fullName || "")
     : String(seedOrUser || "");
 
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = seed.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const h = Math.abs(hash % 360);
+  // Disperse consecutive IDs (e.g. sequential MongoDB ObjectIds) across the 360-degree color wheel using the golden angle (~137.5 deg)
+  const h = Math.abs(Math.round(hash * 137.5)) % 360;
   return {
-    backgroundColor: `hsl(${h}, 65%, 90%)`,
-    color: `hsl(${h}, 70%, 26%)`,
+    backgroundColor: `hsl(${h}, 55%, 88%)`,
+    color: `hsl(${h}, 60%, 30%)`,
   };
 };
 

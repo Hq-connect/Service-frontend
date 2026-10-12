@@ -1,9 +1,10 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Users } from "lucide-react";
 import { getLastMessageInfo } from "../../utils/fileTypeConfig";
+import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
 
 /**
  * List item for a Group chat conversation.
@@ -42,31 +43,20 @@ function GroupListItem({ chat }) {
         {visibleMembers.length > 0 ? (
           <div className="flex">
             {visibleMembers.map((member, idx) => {
-              const displayName =
-                member.userSnapshot?.name ||
-                `${member.firstName ?? ""} ${member.lastName ?? ""}`.trim() ||
-                member.name ||
-                "User";
+              const displayName = getUserDisplayName(member);
               const avatarUrl = member.userSnapshot?.avatar || member.avatar;
-              const initials = displayName
-                .split(" ")
-                .map((w) => w[0] ?? "")
-                .slice(0, 2)
-                .join("")
-                .toUpperCase() || "U";
-              const seed = member.userId ?? member._id ?? member.email ?? `m${idx}`;
-              let hash = 0;
-              for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-              const h = Math.abs(hash % 360);
+              const initials = getUserInitials(member);
+              const avatarStyle = getAvatarStyle(member);
+
               return (
                 <Avatar
-                  key={member._id ?? idx}
+                  key={member.userId ?? member._id ?? idx}
                   className="size-6 border-2 border-background"
                   style={{ marginLeft: idx === 0 ? 0 : "-8px", zIndex: visibleMembers.length - idx }}
                 >
                   {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName} />}
                   <AvatarFallback
-                    style={{ backgroundColor: `hsl(${h},55%,88%)`, color: `hsl(${h},60%,30%)` }}
+                    style={avatarStyle}
                     className="text-[8px] font-semibold"
                   >
                     {initials}
@@ -76,9 +66,15 @@ function GroupListItem({ chat }) {
             })}
           </div>
         ) : (
-          <div className="size-9 rounded-full bg-muted flex items-center justify-center">
-            <Users className="size-4 text-muted-foreground" />
-          </div>
+          <Avatar className="size-9">
+            {chat.avatar && <AvatarImage src={chat.avatar} alt={name} />}
+            <AvatarFallback
+              style={getAvatarStyle(targetId || name)}
+              className="text-xs font-semibold"
+            >
+              {getUserInitials(name)}
+            </AvatarFallback>
+          </Avatar>
         )}
       </div>
 

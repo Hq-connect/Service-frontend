@@ -6,14 +6,14 @@ import { PRIMARY_NAV_ITEMS, EXTRA_NAV_ITEMS } from "./navigation";
 
 function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySidebarOpen, chatUnreadCount = 0 }) {
   return (
-    <aside className="hidden md:flex flex-col items-center w-[72px] bg-[#131517] border-r border-[#222528] text-white shrink-0 z-30 select-none">
+    <aside className="hidden md:flex flex-col items-center w-[72px] bg-primary-sidebar border-r border-primary-sidebar-border text-primary-sidebar-active-text shrink-0 z-30 select-none">
       {/* Logo Icon Only */}
       <div className="flex items-center justify-center h-14 w-full mt-2">
         <Logo iconOnly={true} isDark={true} className="w-8 h-8" />
       </div>
 
       {/* Divider beneath the logo */}
-      <div className="w-8 h-[1px] bg-[#222528] mx-auto mb-1" />
+      <div className="w-8 h-[1px] bg-primary-sidebar-border mx-auto mb-1" />
 
       {/* Primary Navigation Links */}
       <nav className="flex-1 flex flex-col items-center gap-1.5 py-2 w-full overflow-y-auto">
@@ -26,18 +26,19 @@ function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySid
             <Link
               key={item.path}
               to={item.path}
+              title={item.label}
               className={`relative flex flex-col items-center justify-center w-[58px] h-[52px] rounded-lg transition-all duration-150 group ${
-                isActive 
-                  ? "bg-[#222528] text-white font-semibold shadow-xs" 
-                  : "text-[#8e9297] hover:bg-[#222528]/50 hover:text-white"
+                isActive
+                  ? "bg-primary-sidebar-active text-primary-sidebar-active-text font-semibold shadow-xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3.5px] before:rounded-r-full before:bg-primary-sidebar-marker"
+                  : "text-primary-sidebar-text hover:bg-primary-sidebar-active/60 hover:text-primary-sidebar-active-text"
               }`}
             >
               <Icon className={`size-[20px] transition-transform duration-150 group-hover:scale-105 ${
-                isActive ? "text-white" : "text-[#8e9297] group-hover:text-white"
+                isActive ? "text-primary-sidebar-active-text" : "text-primary-sidebar-text group-hover:text-primary-sidebar-active-text"
               }`} />
-              <span className="text-[9px] mt-0.5 tracking-wide select-none">{item.label}</span>
+              <span className="text-[10px] mt-0.5 tracking-wide select-none opacity-70">{item.label}</span>
               {hasUnread && (
-                <span className="absolute top-1 right-2 min-w-4 h-4 px-1 rounded-full bg-[#f23c3c] text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-[#131517]">
+                <span className="absolute top-1 right-2 min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center ring-2 ring-primary-sidebar">
                   {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
                 </span>
               )}
@@ -45,18 +46,20 @@ function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySid
           );
         })}
 
-        {/* Extra Call/Video Nav Items from Reference Image */}
+        {/* Extra Nav Items */}
         {EXTRA_NAV_ITEMS.map((item, index) => {
           const Icon = item.icon;
           return (
             <button
               key={index}
-              className="relative flex flex-col items-center justify-center w-[58px] h-[52px] rounded-lg text-[#8e9297] hover:bg-[#222528]/50 hover:text-white transition-all duration-150 group cursor-pointer"
+              title={item.label}
+              onClick={item.onClick}
+              className="relative flex flex-col items-center justify-center w-[58px] h-[52px] rounded-lg text-primary-sidebar-text hover:bg-primary-sidebar-active/60 hover:text-primary-sidebar-active-text transition-all duration-150 group cursor-pointer"
             >
-              <Icon className="size-[20px] transition-transform duration-150 group-hover:scale-105 text-[#8e9297] group-hover:text-white" />
-              <span className="text-[9px] mt-0.5 tracking-wide select-none">{item.label}</span>
+              <Icon className="size-[20px] transition-transform duration-150 group-hover:scale-105 text-primary-sidebar-text group-hover:text-primary-sidebar-active-text" />
+              <span className="text-[10px] mt-0.5 tracking-wide select-none opacity-70">{item.label}</span>
               {item.badge && (
-                <span className="absolute top-1 right-2 min-w-4 h-4 px-1 rounded-full bg-[#f23c3c] text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-[#131517]">
+                <span className="absolute top-1 right-2 min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center ring-2 ring-primary-sidebar">
                   {item.badge}
                 </span>
               )}
@@ -66,16 +69,20 @@ function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySid
       </nav>
 
       {/* Profile / Bottom Controls */}
-      <div className="flex flex-col items-center gap-2 py-4 w-full border-t border-[#222528]">
+      <div className="flex flex-col items-center gap-2 py-4 w-full border-t border-primary-sidebar-border">
         {/* Invite User Button */}
-        <button className="flex items-center justify-center size-10 rounded-lg text-[#8e9297] hover:bg-[#222528] hover:text-white transition-all duration-150 cursor-pointer">
+        <button
+          title="Invite user"
+          className="flex items-center justify-center size-10 rounded-lg text-primary-sidebar-text hover:bg-primary-sidebar-active hover:text-primary-sidebar-active-text transition-all duration-150 cursor-pointer"
+        >
           <UserPlus className="size-[20px]" />
         </button>
-        
-        {/* Bottom-Most Toggle Sidebar Button */}
-        <button 
+
+        {/* Toggle Sidebar Button */}
+        <button
           onClick={() => setIsSecondarySidebarOpen(!isSecondarySidebarOpen)}
-          className="flex items-center justify-center size-10 rounded-lg text-[#8e9297] hover:bg-[#222528] hover:text-white transition-all duration-150 cursor-pointer"
+          title="Toggle sidebar"
+          className="flex items-center justify-center size-10 rounded-lg text-primary-sidebar-text hover:bg-primary-sidebar-active hover:text-primary-sidebar-active-text transition-all duration-150 cursor-pointer"
         >
           <svg viewBox="0 0 24 24" className="size-[20px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <rect width="18" height="18" x="3" y="3" rx="2" />

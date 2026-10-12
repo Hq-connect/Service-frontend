@@ -20,6 +20,7 @@ import { useMessageScroller } from "@/components/ui/message-scroller";
 import FileViewerModal from "./FileViewerModal";
 import { getFileTypeConfig } from "../utils/fileTypeConfig";
 import mediaService from "../services/media.service";
+import { getUserInitials, getAvatarStyle } from "@/global/utils/user";
 
 const ATTACHMENT_ICONS = {
   image: Image,
@@ -49,10 +50,9 @@ function MessageItem({
   onReact,
   senderInfo = {},
 }) {
-  const isOwn =
-    message.senderId === currentUserId ||
-    message.senderId?._id === currentUserId ||
-    message.senderId?.userId === currentUserId;
+  const msgSenderIdStr = String(message.senderId?._id || message.senderId?.userId || message.senderId || "");
+  const currentUserIdStr = String(currentUserId || "");
+  const isOwn = !!(msgSenderIdStr && currentUserIdStr && msgSenderIdStr === currentUserIdStr);
   const isDeleted = !!message.deletedAt;
 
   const { scrollToMessage } = useMessageScroller();
@@ -77,9 +77,37 @@ function MessageItem({
   const [showMobileToolbar, setShowMobileToolbar] = useState(false);
   const [viewerAttachment, setViewerAttachment] = useState(null);
   const [autoLinkPreview, setAutoLinkPreview] = useState(null);
+  const containerRef = useRef(null);
+  const [isInViewport, setIsInViewport] = useState(false);
 
-  // Auto-fetch link preview fallback if text contains a URL and no linkPreview is attached
+  // Viewport intersection observer to lazy-fetch link previews
   React.useEffect(() => {
+    if (message.content?.linkPreview) return;
+    const text = message.content?.text;
+    if (!text || !/(https?:\/\/[^\s]+)/i.test(text)) return;
+
+    const el = containerRef.current;
+    if (!el || !("IntersectionObserver" in window)) {
+      setIsInViewport(true);
+      return;
+    }
+
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInViewport(true);
+          obs.disconnect();
+        }
+      },
+      { rootMargin: "150px", threshold: 0.05 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [message.content?.linkPreview, message.content?.text]);
+
+  // Auto-fetch link preview fallback ONLY once visible in viewport
+  React.useEffect(() => {
+    if (!isInViewport) return;
     if (message.content?.linkPreview) return;
     const text = message.content?.text;
     if (!text) return;
@@ -102,7 +130,7 @@ function MessageItem({
     return () => {
       isMounted = false;
     };
-  }, [message.content?.linkPreview, message.content?.text]);
+  }, [isInViewport, message.content?.linkPreview, message.content?.text]);
 
   const activeLinkPreview = message.content?.linkPreview || autoLinkPreview;
 
@@ -158,21 +186,8 @@ function MessageItem({
 
   const avatarUrl = senderInfo.userSnapshot?.avatar || senderInfo.avatar;
 
-  const initials = displayName
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .slice(0, 2)
-    .join("")
-    .toUpperCase() || "U";
-
-  const seed = senderInfo.userId ?? senderInfo.email ?? senderInfo._id ?? "u";
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++)
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  const avatarStyle = {
-    backgroundColor: `hsl(${Math.abs(hash % 360)},55%,88%)`,
-    color: `hsl(${Math.abs(hash % 360)},60%,30%)`,
-  };
+  const initials = getUserInitials(senderInfo) || displayName.slice(0, 2).toUpperCase() || "U";
+  const avatarStyle = getAvatarStyle(senderInfo);
 
   const timeLabel = message.createdAt
     ? new Date(message.createdAt).toLocaleTimeString([], {
@@ -202,7 +217,7 @@ function MessageItem({
   }
 
   return (
-    <div className={cn("px-4 py-0.5", hasReactions && "pb-3")}>
+    <div ref={containerRef} className={cn("px-4 py-0.5", hasReactions && "pb-3")}>
       <Message
         align={isOwn ? "end" : "start"}
         className="items-center"
@@ -516,4 +531,4 @@ function MessageItem({
   );
 }
 
-export default MessageItem;
+export default React.memo(MessageItem);

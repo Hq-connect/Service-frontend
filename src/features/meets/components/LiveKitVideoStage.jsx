@@ -38,10 +38,10 @@ const LiveKitParticipantTile = ({
 
     return (
         <div
-            className={`relative group w-full h-full rounded-2xl overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-950 border shadow-xl flex items-center justify-center transition-all duration-200 ${
+            className={`relative group w-full h-full rounded-2xl overflow-hidden bg-meet-surface border shadow-xl flex items-center justify-center transition-all duration-200 ${
                 isSpeaking
-                    ? "border-emerald-500 ring-2 ring-emerald-500/50 shadow-emerald-500/20"
-                    : "border-zinc-800"
+                    ? "border-status-live-border ring-2 ring-status-live-border/50"
+                    : "border-meet-surface-border"
             } ${isCompact ? "min-h-[100px]" : ""}`}
         >
             {/* Live Video Feed or Fallback Tile */}
@@ -53,11 +53,10 @@ const LiveKitParticipantTile = ({
             ) : (
                 <div className="flex flex-col items-center justify-center gap-2.5 p-4 text-center">
                     <div
-                        className={`rounded-full bg-gradient-to-tr ${
-                            isLocal
-                                ? "from-indigo-600 to-violet-600 border-indigo-400/30"
-                                : "from-cyan-600 to-blue-600 border-cyan-400/30"
-                        } flex items-center justify-center text-white font-bold shadow-xl border-2 ${
+                        style={{
+                            background: `linear-gradient(135deg, var(--${isLocal ? "meet-avatar-local" : "meet-avatar-remote"}), color-mix(in oklch, var(--${isLocal ? "meet-avatar-local" : "meet-avatar-remote"}), oklch(0.6 0.2 200) 50%))`,
+                        }}
+                        className={`rounded-full flex items-center justify-center text-white font-bold shadow-xl border-2 border-white/10 ${
                             isCompact
                                 ? "w-10 h-10 text-sm"
                                 : "w-16 h-16 sm:w-20 sm:h-20 text-xl sm:text-2xl"
@@ -66,29 +65,29 @@ const LiveKitParticipantTile = ({
                         {getInitials(displayName)}
                     </div>
                     {!isCompact && (
-                        <span className="text-[11px] sm:text-xs text-zinc-400 font-medium tracking-wide">
+                        <span className="text-[11px] sm:text-xs text-white/40 font-medium tracking-wide">
                             Camera Off
                         </span>
                     )}
                 </div>
             )}
 
-            {/* Speaking Pulse Glow */}
+            {/* Speaking indicator */}
             {isSpeaking && (
-                <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-semibold flex items-center gap-1 animate-pulse">
-                    <span className="size-1.5 rounded-full bg-emerald-400" />
+                <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-status-live/30 border border-status-live-border text-status-live-foreground text-[10px] font-semibold flex items-center gap-1 animate-pulse">
+                    <span className="size-1.5 rounded-full bg-status-live-foreground" />
                     Speaking
                 </div>
             )}
 
             {/* User Info Bar at Bottom */}
             <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950/85 backdrop-blur-md border border-zinc-800/80 text-[11px] font-medium text-zinc-200 shadow-md">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-[11px] font-medium text-white/90 shadow-md">
                     <span className="truncate max-w-[120px]">
                         {displayName} {isLocal ? "(You)" : ""}
                     </span>
                     {isHost && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-semibold">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] bg-primary/20 text-primary border border-primary/30 font-semibold">
                             Host
                         </span>
                     )}
@@ -97,14 +96,14 @@ const LiveKitParticipantTile = ({
                 <div
                     className={`p-1.5 rounded-lg backdrop-blur-md shadow-md ${
                         !isMicOn
-                            ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                            : "bg-zinc-950/80 text-zinc-300 border border-zinc-800/80"
+                            ? "bg-destructive/20 text-destructive border border-destructive/30"
+                            : "bg-black/70 text-white/60 border border-white/10"
                     }`}
                 >
                     {isMicOn ? (
-                        <Mic className="w-3.5 h-3.5 text-emerald-400" />
+                        <Mic className="w-3.5 h-3.5 text-status-live-foreground" />
                     ) : (
-                        <MicOff className="w-3.5 h-3.5 text-red-400" />
+                        <MicOff className="w-3.5 h-3.5 text-destructive" />
                     )}
                 </div>
             </div>
@@ -217,6 +216,17 @@ const LiveKitStageInner = ({
         return map;
     }, [dbParticipants]);
 
+    // Build fast O(1) lookup map for camera tracks by participant identity
+    const cameraTrackMap = useMemo(() => {
+        const map = new Map();
+        for (const t of tracks) {
+            if (t.source === Track.Source.Camera && t.participant?.identity) {
+                map.set(t.participant.identity, t);
+            }
+        }
+        return map;
+    }, [tracks]);
+
     // Detect active screen share track
     const screenShareTrack = useMemo(() => {
         return tracks.find((t) => t.source === Track.Source.ScreenShare);
@@ -257,9 +267,7 @@ const LiveKitStageInner = ({
                 {/* Participant Filmstrip */}
                 <div className="shrink-0 h-24 sm:h-28 w-full flex items-center justify-center gap-3 overflow-x-auto py-1 px-2">
                     {participants.map((p) => {
-                        const camTrack = tracks.find(
-                            (t) => t.participant.identity === p.identity && t.source === Track.Source.Camera
-                        );
+                        const camTrack = cameraTrackMap.get(p.identity);
                         return (
                             <div key={p.identity} className="h-full aspect-video shrink-0">
                                 <LiveKitParticipantTile
@@ -295,9 +303,7 @@ const LiveKitStageInner = ({
                         {participants[0] && (
                             <LiveKitParticipantTile
                                 participant={participants[0]}
-                                cameraTrack={tracks.find(
-                                    (t) => t.participant.identity === participants[0].identity && t.source === Track.Source.Camera
-                                )}
+                                cameraTrack={cameraTrackMap.get(participants[0].identity)}
                                 isHost={String(participants[0].identity) === String(hostUserId)}
                                 participantNameMap={participantNameMap}
                             />
@@ -313,9 +319,7 @@ const LiveKitStageInner = ({
                         <div key={p.identity} className="flex-1 w-full h-full max-h-[38vh] md:max-h-[70vh] aspect-video">
                             <LiveKitParticipantTile
                                 participant={p}
-                                cameraTrack={tracks.find(
-                                    (t) => t.participant.identity === p.identity && t.source === Track.Source.Camera
-                                )}
+                                cameraTrack={cameraTrackMap.get(p.identity)}
                                 isHost={String(p.identity) === String(hostUserId)}
                                 participantNameMap={participantNameMap}
                             />
@@ -331,9 +335,7 @@ const LiveKitStageInner = ({
                         <div key={p.identity} className="w-full h-full max-h-[34vh] sm:max-h-[36vh] aspect-video">
                             <LiveKitParticipantTile
                                 participant={p}
-                                cameraTrack={tracks.find(
-                                    (t) => t.participant.identity === p.identity && t.source === Track.Source.Camera
-                                )}
+                                cameraTrack={cameraTrackMap.get(p.identity)}
                                 isHost={String(p.identity) === String(hostUserId)}
                                 participantNameMap={participantNameMap}
                             />
@@ -349,9 +351,7 @@ const LiveKitStageInner = ({
                         <div key={p.identity} className="w-full h-full max-h-[30vh] sm:max-h-[33vh] aspect-video">
                             <LiveKitParticipantTile
                                 participant={p}
-                                cameraTrack={tracks.find(
-                                    (t) => t.participant.identity === p.identity && t.source === Track.Source.Camera
-                                )}
+                                cameraTrack={cameraTrackMap.get(p.identity)}
                                 isHost={String(p.identity) === String(hostUserId)}
                                 participantNameMap={participantNameMap}
                             />
@@ -367,9 +367,7 @@ const LiveKitStageInner = ({
                         <div key={p.identity} className="w-full h-full min-h-[140px] max-h-[26vh] aspect-video">
                             <LiveKitParticipantTile
                                 participant={p}
-                                cameraTrack={tracks.find(
-                                    (t) => t.participant.identity === p.identity && t.source === Track.Source.Camera
-                                )}
+                                cameraTrack={cameraTrackMap.get(p.identity)}
                                 isHost={String(p.identity) === String(hostUserId)}
                                 participantNameMap={participantNameMap}
                             />

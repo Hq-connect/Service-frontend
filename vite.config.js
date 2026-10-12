@@ -20,4 +20,29 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("livekit-client") || id.includes("@livekit/components-react")) {
+              return "vendor-livekit";
+            }
+            if (
+              id.includes("yjs") ||
+              id.includes("y-prosemirror") ||
+              id.includes("y-protocols") ||
+              id.includes("@domternal")
+            ) {
+              return "vendor-editor";
+            }
+            if (id.includes("@hello-pangea/dnd")) {
+              return "vendor-dnd";
+            }
+          }
+        },
+      },
+    },
+  },
 })

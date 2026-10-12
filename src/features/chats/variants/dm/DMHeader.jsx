@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Phone, Video, Search, MoreHorizontal, ChevronLeft } from "lucide-react";
 import OnlineIndicator from "../../components/OnlineIndicator";
+import { getUserInitials, getAvatarStyle } from "@/global/utils/user";
 
 /**
  * Header for a Direct Message chat window.
@@ -14,13 +15,8 @@ import OnlineIndicator from "../../components/OnlineIndicator";
 function DMHeader({ chat }) {
   const otherUser = chat?.otherUser ?? {};
   const displayName = otherUser.name || "Unknown";
-
-  const initials = displayName
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .slice(0, 2)
-    .join("")
-    .toUpperCase() || "U";
+  const initials = getUserInitials(otherUser);
+  const avatarStyle = getAvatarStyle(otherUser);
 
   const onlineUsers = useSelector((state) => state.chat.onlineUsers);
   const rawTargetUserId = otherUser.userId || otherUser._id || otherUser.id;
@@ -32,16 +28,6 @@ function DMHeader({ chat }) {
   const presenceLabel =
     presence === "online" ? "Active now" :
     presence === "away"   ? "Away"       : "Offline";
-
-  const seed = otherUser.userId ?? otherUser.name ?? "u";
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++)
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  const h = Math.abs(hash % 360);
-  const avatarStyle = {
-    backgroundColor: `hsl(${h},55%,88%)`,
-    color: `hsl(${h},60%,30%)`,
-  };
 
   return (
     <div className="flex items-center justify-between px-4 h-14 border-b border-border bg-background shrink-0">
