@@ -125,7 +125,7 @@ export const WeekView = ({
     });
 
     return (
-        <div className="flex flex-col flex-1 bg-card rounded-xl border border-border shadow-xs overflow-hidden">
+        <div className="flex flex-col flex-1 bg-card rounded-lg border border-border shadow-2xs overflow-hidden">
             {/* Header: Days of the week */}
             <div className="flex border-b border-border bg-muted/40 divide-x divide-border">
                 {/* Time Gutter Header */}

@@ -75,7 +75,7 @@ export const RecordedSessionsPage = () => {
     };
 
     return (
-        <div className="space-y-6 max-w-7xl mx-auto w-full">
+        <div className="flex-1 overflow-y-auto bg-background p-5 sm:p-7 space-y-6 max-w-7xl mx-auto w-full">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border">
                 <div>

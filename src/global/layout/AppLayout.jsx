@@ -85,7 +85,8 @@ function AppLayout() {
   const isChatsRoute = currentPath.startsWith("/chats");
   const isDocsRoute = currentPath.startsWith("/docs");
   const isTasksRoute = currentPath.startsWith("/tasks");
-  const isCalendarRoute = currentPath.startsWith("/meets/calendar") || currentPath === "/calendar";
+  const isMeetsRoute = currentPath.startsWith("/meets") || currentPath.startsWith("/calendar") || currentPath.startsWith("/calander");
+  const isCalendarRoute = currentPath.startsWith("/calendar") || currentPath.startsWith("/calander") || currentPath.startsWith("/meets/calendar");
 
   const getUserName = getUserDisplayName;
 
@@ -100,7 +101,7 @@ function AppLayout() {
       />
 
       {/* 2. Desktop Middle Secondary Sidebar (Light Theme) */}
-      {isSecondarySidebarOpen && !isCalendarRoute && (
+      {isSecondarySidebarOpen && (
         <SecondarySidebar 
           tenantName={tenant?.name}
           secondaryNav={secondaryNav}
@@ -137,7 +138,7 @@ function AppLayout() {
 
         {/* Dynamic Nested Viewport */}
         <main className={`flex-1 min-w-0 mt-14 md:mt-0 mb-16 md:mb-0 ${
-          isChatsRoute || isDocsRoute || isTasksRoute
+          isChatsRoute || isDocsRoute || isTasksRoute || isMeetsRoute
             ? "flex flex-col overflow-hidden"
             : "bg-background overflow-y-auto px-4 md:px-8 py-6"
         }`}>

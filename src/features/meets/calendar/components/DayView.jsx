@@ -73,7 +73,7 @@ export const DayView = ({
     return (
         <div className="flex flex-col lg:flex-row gap-6 flex-1">
             {/* Left Column: Day Schedule Timeline (65%) */}
-            <div className="flex-1 bg-card rounded-xl border border-border shadow-xs p-5 flex flex-col">
+            <div className="flex-1 bg-card rounded-lg border border-border shadow-2xs p-5 flex flex-col">
                 <div className="flex items-center justify-between pb-4 border-b border-border">
                     <div>
                         <h2 className="text-lg font-bold text-foreground font-heading">
@@ -218,7 +218,7 @@ export const DayView = ({
             </div>
 
             {/* Right Column: Date Notes Scratchpad (35%) */}
-            <div className="w-full lg:w-96 bg-card rounded-xl border border-border shadow-xs p-5 flex flex-col">
+            <div className="w-full lg:w-96 bg-card rounded-lg border border-border shadow-2xs p-5 flex flex-col">
                 <div className="flex items-center justify-between pb-3 border-b border-border">
                     <div className="flex items-center gap-2">
                         <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20">

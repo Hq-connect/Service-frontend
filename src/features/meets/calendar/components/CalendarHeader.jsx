@@ -11,10 +11,11 @@ import {
     PanelRightOpen,
     Clock,
     Layers,
-    RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, startOfWeek, endOfWeek } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 export const CalendarHeader = ({
     currentDate,
@@ -31,6 +32,8 @@ export const CalendarHeader = ({
     isSidebarOpen,
     setIsSidebarOpen,
 }) => {
+    const navigate = useNavigate();
+
     // Dynamic Header Title
     const getHeaderTitle = () => {
         if (viewMode === "month") {
@@ -64,7 +67,7 @@ export const CalendarHeader = ({
             icon: Video,
             count: counts.scheduled || 0,
             dotColor: "bg-sky-500",
-            activeClass: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25 shadow-xs",
+            activeClass: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30",
             badgeClass: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
         },
         {
@@ -73,7 +76,7 @@ export const CalendarHeader = ({
             icon: Repeat,
             count: counts.recurring || 0,
             dotColor: "bg-indigo-500",
-            activeClass: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25 shadow-xs",
+            activeClass: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
             badgeClass: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400",
         },
         {
@@ -82,7 +85,7 @@ export const CalendarHeader = ({
             icon: Sparkles,
             count: counts.events || 0,
             dotColor: "bg-amber-500",
-            activeClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25 shadow-xs",
+            activeClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
             badgeClass: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
         },
         {
@@ -91,77 +94,65 @@ export const CalendarHeader = ({
             icon: FileText,
             count: counts.notes || 0,
             dotColor: "bg-rose-500",
-            activeClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25 shadow-xs",
+            activeClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30",
             badgeClass: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
         },
     ];
 
-    const allFiltersActive = Object.values(filters).every(Boolean);
-
     return (
-        <div className="flex flex-col gap-4 pb-4 border-b border-border/70 select-none">
+        <div className="flex flex-col gap-3 pb-3 border-b border-border select-none">
             {/* Top Bar: Title, Date Navigator, View Mode Switcher, Primary Actions */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 {/* Left Area: Sleek Date Navigator */}
-                <div className="flex items-center gap-3.5 flex-wrap">
-                    <div className="flex items-center gap-2.5">
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground font-heading">
-                            {getHeaderTitle()}
-                        </h1>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-muted/60 text-muted-foreground border border-border/40">
-                            <Clock className="size-3 text-muted-foreground/80" />
-                            {timezoneStr}
-                        </span>
-                    </div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                    {/* Standalone Today button */}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToToday}
+                        className="h-8 px-3 text-xs font-semibold cursor-pointer shadow-2xs"
+                    >
+                        Today
+                    </Button>
 
-                    {/* Integrated Date Navigation Segment */}
-                    <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/60 shadow-2xs">
+                    {/* Navigation Arrows Pair */}
+                    <div className="inline-flex items-center rounded-md border border-border bg-card p-0.5 shadow-2xs">
                         <Button
                             variant="ghost"
-                            size="icon"
+                            size="icon-xs"
                             onClick={goToPrev}
-                            className="size-7 rounded-md cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/80"
+                            className="size-7 rounded text-muted-foreground hover:text-foreground cursor-pointer"
                             aria-label="Previous period"
                         >
                             <ChevronLeft className="size-4" />
                         </Button>
-                        <button
-                            type="button"
-                            onClick={goToToday}
-                            className="h-7 px-2.5 text-xs font-semibold rounded-md text-foreground hover:bg-background/80 transition-all cursor-pointer"
-                        >
-                            Today
-                        </button>
                         <Button
                             variant="ghost"
-                            size="icon"
+                            size="icon-xs"
                             onClick={goToNext}
-                            className="size-7 rounded-md cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/80"
+                            className="size-7 rounded text-muted-foreground hover:text-foreground cursor-pointer"
                             aria-label="Next period"
                         >
                             <ChevronRight className="size-4" />
                         </Button>
                     </div>
+
+                    {/* Period Title */}
+                    <div className="flex items-center gap-2 ml-1">
+                        <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading">
+                            {getHeaderTitle()}
+                        </h1>
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.2 text-[10px] font-mono font-medium rounded bg-muted text-muted-foreground border border-border">
+                            <Clock className="size-2.5 text-muted-foreground" />
+                            {timezoneStr}
+                        </span>
+                    </div>
                 </div>
 
-                {/* Right Area: View Mode Switcher with Physical Shadow Slider + Actions */}
-                <div className="flex items-center flex-wrap gap-2.5">
-                    {/* Apple/Linear-style Segmented View Switcher with Physical Shadow Slider */}
-                    <div className="relative inline-flex p-1 rounded-xl bg-muted/70 border border-border/80 shadow-inner select-none">
-                        {/* Physical Sliding Shadow Pill */}
-                        <div
-                            className="absolute top-1 bottom-1 w-[58px] rounded-lg bg-background shadow-[0_2px_8px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.08)] border border-border/60 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none"
-                            style={{
-                                transform: `translateX(${
-                                    viewMode === "month"
-                                        ? "0px"
-                                        : viewMode === "week"
-                                        ? "58px"
-                                        : "116px"
-                                })`,
-                            }}
-                        />
-
+                {/* Right Area: View Mode Switcher + Actions */}
+                <div className="flex items-center flex-wrap gap-2">
+                    {/* Robust Segmented View Switcher matching ProjectsDashboard tabs */}
+                    <div className="inline-flex p-0.5 rounded-lg bg-muted/60 border border-border text-xs select-none">
                         {["month", "week", "day"].map((mode) => {
                             const isActive = viewMode === mode;
                             return (
@@ -169,11 +160,12 @@ export const CalendarHeader = ({
                                     key={mode}
                                     type="button"
                                     onClick={() => setViewMode(mode)}
-                                    className={`relative z-10 w-[58px] py-1.5 text-xs font-semibold rounded-lg capitalize transition-colors duration-200 text-center cursor-pointer ${
+                                    className={cn(
+                                        "px-2.5 py-1 rounded-md text-xs font-medium capitalize transition-all cursor-pointer",
                                         isActive
-                                            ? "text-foreground font-bold"
+                                            ? "bg-background text-foreground font-semibold shadow-2xs"
                                             : "text-muted-foreground hover:text-foreground"
-                                    }`}
+                                    )}
                                 >
                                     {mode}
                                 </button>
@@ -181,25 +173,37 @@ export const CalendarHeader = ({
                         })}
                     </div>
 
+                    {/* Action: Meets Hub Navigation */}
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate("/meets")}
+                        className="gap-1.5 cursor-pointer text-xs h-8"
+                        title="Return to Meets Hub"
+                    >
+                        <Video className="size-3.5 text-primary" />
+                        <span className="hidden sm:inline">Meets Hub</span>
+                    </Button>
+
                     {/* Action: Add Event */}
                     <Button
                         size="sm"
                         variant="outline"
                         onClick={onOpenCreateEvent}
-                        className="h-8.5 px-3 text-xs font-medium cursor-pointer rounded-lg border-border/80 hover:bg-muted/50 hover:-translate-y-0.5 hover:shadow-xs active:translate-y-0 active:scale-95 transition-all duration-200"
+                        className="gap-1.5 cursor-pointer text-xs h-8"
                     >
-                        <Sparkles className="size-3.5 text-amber-500 mr-1.5" />
-                        Add Event
+                        <Sparkles className="size-3.5 text-amber-500" />
+                        <span>Add Event</span>
                     </Button>
 
                     {/* Action: Schedule Meet */}
                     <Button
                         size="sm"
                         onClick={onOpenCreateMeeting}
-                        className="h-8.5 px-3.5 text-xs font-semibold cursor-pointer rounded-lg bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-95 transition-all duration-200"
+                        className="gap-1.5 cursor-pointer text-xs h-8 shadow-2xs"
                     >
-                        <Plus className="size-4 mr-1" />
-                        Schedule Meet
+                        <Plus className="size-3.5" />
+                        <span>Schedule Meet</span>
                     </Button>
 
                     {/* Sidebar Toggle */}
@@ -207,8 +211,8 @@ export const CalendarHeader = ({
                         variant="ghost"
                         size="icon"
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                        className="size-8.5 rounded-lg cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-90 transition-all duration-150"
-                        title={isSidebarOpen ? "Collapse details panel" : "Expand details panel"}
+                        className="size-8 cursor-pointer text-muted-foreground hover:text-foreground"
+                        title={isSidebarOpen ? "Collapse agenda sidebar" : "Expand agenda sidebar"}
                     >
                         {isSidebarOpen ? (
                             <PanelRightClose className="size-4" />
@@ -219,10 +223,10 @@ export const CalendarHeader = ({
                 </div>
             </div>
 
-            {/* Bottom Bar: Modern Filter Layers with Dot Indicators & Hover Transitions */}
-            <div className="flex items-center justify-between gap-3 pt-1 text-xs flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 mr-1 flex items-center gap-1.5">
+            {/* Bottom Bar: Modern Filter Layers with Dot Indicators matching workspace pattern */}
+            <div className="flex items-center justify-between gap-2 pt-1 text-xs flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mr-1 flex items-center gap-1">
                         <Layers className="size-3" />
                         Layers
                     </span>
@@ -236,27 +240,26 @@ export const CalendarHeader = ({
                                 key={cfg.key}
                                 type="button"
                                 onClick={() => toggleFilter(cfg.key)}
-                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-200 cursor-pointer hover:-translate-y-0.5 active:translate-y-0 active:scale-95 ${
+                                className={cn(
+                                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all cursor-pointer shadow-2xs",
                                     isActive
                                         ? cfg.activeClass
-                                        : "bg-muted/20 text-muted-foreground/60 border-border/40 hover:bg-muted/40 hover:text-muted-foreground"
-                                }`}
+                                        : "bg-muted/20 text-muted-foreground/60 border-border hover:bg-muted/40 hover:text-muted-foreground"
+                                )}
                             >
                                 <span
-                                    className={`size-2 rounded-full transition-all duration-300 ${
-                                        isActive
-                                            ? `${cfg.dotColor} ring-2 ring-current/25 shadow-xs scale-100`
-                                            : "bg-muted-foreground/40 scale-75"
-                                    }`}
+                                    className={cn(
+                                        "size-1.5 rounded-full transition-all",
+                                        isActive ? cfg.dotColor : "bg-muted-foreground/40"
+                                    )}
                                 />
-                                <Icon className={`size-3.5 transition-opacity ${isActive ? "opacity-90" : "opacity-40"}`} />
+                                <Icon className={cn("size-3", isActive ? "opacity-100" : "opacity-50")} />
                                 <span>{cfg.label}</span>
                                 <span
-                                    className={`text-[10px] font-semibold px-1.5 py-0.2 rounded-md transition-colors ${
-                                        isActive
-                                            ? cfg.badgeClass
-                                            : "bg-muted/60 text-muted-foreground/60"
-                                    }`}
+                                    className={cn(
+                                        "text-[10px] font-semibold px-1 rounded",
+                                        isActive ? cfg.badgeClass : "bg-muted text-muted-foreground"
+                                    )}
                                 >
                                     {cfg.count}
                                 </span>
@@ -264,23 +267,6 @@ export const CalendarHeader = ({
                         );
                     })}
                 </div>
-
-                {/* Subtle Reset / Status hint */}
-                {!allFiltersActive && (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (!filters.scheduled) toggleFilter("scheduled");
-                            if (!filters.recurring) toggleFilter("recurring");
-                            if (!filters.events) toggleFilter("events");
-                            if (!filters.notes) toggleFilter("notes");
-                        }}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline active:scale-95 cursor-pointer transition-all duration-150"
-                    >
-                        <RotateCcw className="size-3" />
-                        Reset all layers
-                    </button>
-                )}
             </div>
         </div>
     );

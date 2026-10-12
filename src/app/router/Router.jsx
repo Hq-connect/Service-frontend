@@ -40,8 +40,9 @@ export const router = createBrowserRouter([
       { path: "docs/:documentId", element: <DocumentPage /> },
       { path: "files", element: <UnderConstruction /> },
       { path: "meets", element: <MeetsPage /> },
-      { path: "meets/calendar", element: <CalendarPage /> },
-      { path: "calendar", element: <Navigate to="/meets/calendar" replace /> },
+      { path: "meets/calendar", element: <Navigate to="/calendar" replace /> },
+      { path: "calendar", element: <CalendarPage /> },
+      { path: "calander", element: <Navigate to="/calendar" replace /> },
       { path: "meets/recordings", element: <RecordedSessionsPage /> },
       { path: "ask-ai", element: <UnderConstruction /> },
 

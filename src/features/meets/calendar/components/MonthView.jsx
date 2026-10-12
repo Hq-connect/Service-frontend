@@ -75,7 +75,7 @@ export const MonthView = ({
     }
 
     return (
-        <div className="flex flex-col flex-1 bg-card rounded-xl border border-border shadow-xs overflow-hidden select-none">
+        <div className="flex flex-col flex-1 bg-card rounded-lg border border-border shadow-2xs overflow-hidden select-none">
             {/* Weekday Header */}
             <div className="grid grid-cols-7 border-b border-border bg-muted/40">
                 {WEEKDAYS.map((day, idx) => (
@@ -111,18 +111,23 @@ export const MonthView = ({
                                 !isCurrentMonth
                                     ? "bg-muted/15 text-muted-foreground/40"
                                     : "bg-card text-foreground hover:bg-muted/30"
-                            } ${isSelected ? "ring-2 ring-primary/40 bg-accent/15 z-10" : ""}`}
+                            } ${isSelected ? "bg-accent/35" : ""}`}
                         >
+                            {/* Inset Selection Border - Stays strictly inside cell boundaries */}
+                            {isSelected && (
+                                <div className="absolute inset-0 pointer-events-none ring-2 ring-inset ring-primary/60 bg-primary/[0.02]" />
+                            )}
+
                             {/* Day Header: Date Number + Indicators */}
-                            <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center justify-between mb-1.5 relative z-10">
                                 <span
                                     className={`inline-flex items-center justify-center size-6 rounded-full text-xs font-medium transition-all ${
                                         isCurrentDay
                                             ? "bg-primary text-primary-foreground font-bold shadow-xs"
                                             : isSelected
-                                            ? "font-semibold text-primary"
+                                            ? "bg-primary/15 text-primary font-bold ring-1 ring-primary/30"
                                             : isCurrentMonth
-                                            ? "text-foreground"
+                                            ? "text-foreground group-hover:text-primary"
                                             : "text-muted-foreground/50"
                                     }`}
                                 >

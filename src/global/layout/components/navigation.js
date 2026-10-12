@@ -12,7 +12,7 @@ export const PRIMARY_NAV_ITEMS = [
   { label: "Docs", path: "/docs", icon: FileText },
   { label: "Files", path: "/files", icon: Folder },
   { label: "Meets", path: "/meets", icon: Video },
-  { label: "Calendar", path: "/meets/calendar", icon: Calendar },
+  { label: "Calendar", path: "/calendar", icon: Calendar },
   { label: "Ask AI", path: "/ask-ai", icon: Sparkles },
   { label: "Chats", path: "/chats", icon: MessageSquare }
 ];
@@ -65,7 +65,7 @@ export const SECONDARY_NAV_DATA = {
     title: "Meets",
     items: [
       { label: "All Meetings", icon: Video, path: "/meets" },
-      { label: "Calendar", icon: Calendar, path: "/meets/calendar" },
+      { label: "Calendar", icon: Calendar, path: "/calendar" },
       { label: "Schedule Meet", icon: Calendar, path: "/meets?action=schedule" },
       { label: "Recurring Meetings", icon: Repeat, path: "/meets?tab=recurring" },
       { label: "Instant Meeting", icon: Video, path: "/meets?action=instant" },
@@ -94,13 +94,11 @@ export const SECONDARY_NAV_DATA = {
   "/calendar": {
     title: "Calendar",
     items: [
-      { label: "Calendar", icon: Calendar, path: "/meets/calendar" },
+      { label: "Month View", icon: Calendar, path: "/calendar" },
       { label: "All Meetings", icon: Video, path: "/meets" },
       { label: "Schedule Meet", icon: Calendar, path: "/meets?action=schedule" },
       { label: "Recurring Meetings", icon: Repeat, path: "/meets?tab=recurring" },
-      { label: "Instant Meeting", icon: Video, path: "/meets?action=instant" },
-      { label: "Recorded Sessions", icon: PlayCircle, path: "/meets/recordings" },
-      { label: "Calendar Sync", icon: RefreshCw }
+      { label: "Instant Meeting", icon: Video, path: "/meets?action=instant" }
     ]
   }
 };

@@ -1,31 +1,40 @@
 import React, { useState } from "react";
 import {
-    Calendar,
     Clock,
     Copy,
     Check,
     Video,
     XCircle,
-    Users,
     Edit3,
     Play,
     Repeat,
+    MoreHorizontal,
+    Calendar,
+    ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import useCurrentUser from "@/features/auth/hooks/useCurrentUser";
 import { formatRecurrenceBadge } from "../utils/recurrenceUtils";
 
 export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
     const [copied, setCopied] = useState(false);
-    const { currentUser, currentUserId } = useCurrentUser();
+    const { currentUserId } = useCurrentUser();
     const isHost = String(meeting?.hostId || meeting?.createdBy) === String(currentUserId);
     const isRecurring = Boolean(meeting?.recurrenceType && meeting.recurrenceType !== "NONE");
 
     const handleCopy = (e) => {
-        e.stopPropagation();
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         if (meeting?.joinCode) {
             navigator.clipboard.writeText(meeting.joinCode);
             setCopied(true);
@@ -46,7 +55,7 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                 return (
                     <Badge
                         variant="outline"
-                        className="bg-status-live text-status-live-foreground border-status-live-border gap-1.5"
+                        className="bg-status-live text-status-live-foreground border-status-live-border gap-1.5 px-2 py-0.5 text-[11px] font-medium"
                     >
                         <span className="size-1.5 rounded-full bg-status-live-foreground animate-pulse" />
                         Live Now
@@ -57,182 +66,213 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                     return (
                         <Badge
                             variant="outline"
-                            className="bg-status-warn text-status-warn-foreground border-status-warn-border gap-1.5"
+                            className="bg-status-warn text-status-warn-foreground border-status-warn-border gap-1.5 px-2 py-0.5 text-[11px] font-medium"
                         >
                             <span className="size-1.5 rounded-full bg-status-warn-foreground" />
-                            Starts in &lt;15m
+                            Starts &lt;15m
                         </Badge>
                     );
                 }
                 return (
-                    <Badge variant="secondary" className="gap-1.5">
+                    <Badge variant="secondary" className="gap-1.5 px-2 py-0.5 text-[11px] font-medium">
                         <span className="size-1.5 rounded-full bg-primary" />
                         Scheduled
                     </Badge>
                 );
             case "completed":
                 return (
-                    <Badge variant="outline" className="text-muted-foreground">
+                    <Badge variant="outline" className="text-muted-foreground border-border px-2 py-0.5 text-[11px]">
                         Completed
                     </Badge>
                 );
             case "cancelled":
-                return <Badge variant="destructive">Cancelled</Badge>;
+                return (
+                    <Badge variant="destructive" className="px-2 py-0.5 text-[11px]">
+                        Cancelled
+                    </Badge>
+                );
             default:
                 return null;
         }
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return "Instant Meeting";
-        const date = new Date(dateString);
-        return new Intl.DateTimeFormat("en-US", {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "numeric",
-            hour12: true,
-        }).format(date);
-    };
+    const scheduledDate = meeting.scheduledAt ? new Date(meeting.scheduledAt) : null;
+    const isValidDate = scheduledDate && !isNaN(scheduledDate.getTime());
+
+    const isToday =
+        isValidDate &&
+        new Date().toDateString() === scheduledDate.toDateString();
+
+    const formattedDate = isValidDate
+        ? isToday
+            ? `Today, ${scheduledDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+            : scheduledDate.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+              })
+        : "Instant Room";
+
+    const canJoin = meeting.status === "scheduled" || meeting.status === "ongoing";
 
     return (
-        <Card className="group relative flex flex-col justify-between border-border bg-card text-card-foreground hover:shadow-md transition-all duration-200">
-            <div>
-                <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2 space-y-0">
-                    <div className="space-y-1 pr-2">
-                        <CardTitle className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                            {meeting.title}
-                        </CardTitle>
+        <div
+            onClick={() => canJoin && onJoin(meeting.joinCode)}
+            className="group relative flex flex-col justify-between rounded-lg border border-border bg-card text-card-foreground shadow-2xs transition-all hover:shadow-sm hover:border-primary/40 overflow-hidden cursor-pointer"
+        >
+            {/* Card Body */}
+            <div className="p-4 space-y-2.5">
+                {/* Top Header: Badges & Menu */}
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        {getStatusBadge(meeting.status)}
                         {isRecurring && (
-                            <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-medium bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
-                                <Repeat className="size-3 shrink-0" />
-                                <span>{formatRecurrenceBadge(meeting)}</span>
-                            </div>
-                        )}
-                    </div>
-                    {getStatusBadge(meeting.status)}
-                </CardHeader>
-
-                <CardContent className="space-y-3 pt-1">
-                    {meeting.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                            {meeting.description}
-                        </p>
-                    )}
-
-                    <div className="space-y-2 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                            <Calendar className="size-3.5 text-muted-foreground/70" />
-                            <span>
-                                {isRecurring ? "Next: " : ""}
-                                {formatDate(meeting.scheduledAt)}
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded">
+                                <Repeat className="size-3" />
+                                {formatRecurrenceBadge(meeting)}
                             </span>
-                        </div>
-
-                        {meeting.duration && (
-                            <div className="flex items-center gap-2">
-                                <Clock className="size-3.5 text-muted-foreground/70" />
-                                <span>{meeting.duration} minutes</span>
-                            </div>
                         )}
-
-                        <div className="flex items-center justify-between gap-2 pt-1">
-                            <div className="flex items-center gap-2">
-                                <Users className="size-3.5 text-muted-foreground/70" />
-                                <span className="font-mono bg-muted px-2 py-0.5 rounded text-foreground text-xs flex items-center gap-1.5 border border-border">
-                                    {meeting.joinCode}
-                                    <button
-                                        onClick={handleCopy}
-                                        className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded cursor-pointer"
-                                        title="Copy join code"
-                                    >
-                                        {copied ? (
-                                            <Check className="size-3 text-emerald-500" />
-                                        ) : (
-                                            <Copy className="size-3" />
-                                        )}
-                                    </button>
-                                </span>
-                            </div>
-
-                            {isHost && (
-                                <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-medium">
-                                    Host
-                                </span>
-                            )}
-                        </div>
+                        {isHost && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border">
+                                Host
+                            </span>
+                        )}
                     </div>
-                </CardContent>
-            </div>
 
-            <CardFooter className="flex items-center gap-2 pt-3 border-t border-border bg-transparent flex-wrap">
-                {(meeting.status === "scheduled" || meeting.status === "ongoing") && (
-                    <Button
-                        onClick={() => onJoin(meeting.joinCode)}
-                        className="flex-1 gap-2 min-w-[110px]"
-                        size="sm"
-                    >
-                        {meeting.status === "scheduled" ? (
-                            isHost ? (
-                                <>
-                                    <Play className="size-3.5" />
-                                    Start Meeting
-                                </>
-                            ) : (
-                                <>
-                                    <Video className="size-3.5" />
-                                    Join Meeting
-                                </>
-                            )
-                        ) : (
+                    <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                                    title="Meeting Actions"
+                                >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44 text-xs p-1">
+                                <DropdownMenuItem onClick={handleCopy} className="gap-2 cursor-pointer py-1.5">
+                                    <Copy className="size-3.5" />
+                                    <span>Copy Join Code</span>
+                                </DropdownMenuItem>
+
+                                {meeting.status === "scheduled" && onEdit && (
+                                    <DropdownMenuItem
+                                        onClick={() => onEdit(meeting)}
+                                        className="gap-2 cursor-pointer py-1.5"
+                                    >
+                                        <Edit3 className="size-3.5" />
+                                        <span>{isRecurring ? "Edit Series" : "Edit Meeting"}</span>
+                                    </DropdownMenuItem>
+                                )}
+
+                                {meeting.status === "ongoing" && onEnd && isHost && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            onClick={() => onEnd(meeting._id)}
+                                            className="gap-2 cursor-pointer text-destructive focus:text-destructive py-1.5"
+                                        >
+                                            <XCircle className="size-3.5" />
+                                            <span>End Live Meeting</span>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+
+                                {meeting.status === "scheduled" && onCancel && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            onClick={() => onCancel(meeting._id)}
+                                            className="gap-2 cursor-pointer text-destructive focus:text-destructive py-1.5"
+                                        >
+                                            <XCircle className="size-3.5" />
+                                            <span>{isRecurring ? "Cancel Series" : "Cancel Meeting"}</span>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                    <h3 className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                        {meeting.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mt-1 min-h-[32px]">
+                        {meeting.description || "No description provided."}
+                    </p>
+                </div>
+
+                {/* Date & Join Code Row */}
+                <div className="flex items-center justify-between gap-2 pt-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5 truncate">
+                        <Calendar className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{formattedDate}</span>
+                        {meeting.duration && (
                             <>
-                                <Video className="size-3.5" />
-                                Join Live
+                                <span>•</span>
+                                <span>{meeting.duration}m</span>
                             </>
                         )}
-                    </Button>
-                )}
+                    </div>
 
-                {meeting.status === "scheduled" && onEdit && (
-                    <Button
-                        onClick={() => onEdit(meeting)}
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5"
-                        title={isRecurring ? "Reschedule / Edit Periodic Series" : "Reschedule / Edit Meeting"}
+                    <button
+                        type="button"
+                        onClick={handleCopy}
+                        className="inline-flex items-center gap-1 font-mono text-[11px] bg-muted/60 hover:bg-muted text-foreground border border-border px-2 py-0.5 rounded transition-colors cursor-pointer shrink-0"
+                        title="Click to copy join code"
                     >
-                        <Edit3 className="size-3.5" />
-                        <span>{isRecurring ? "Edit Series" : "Edit"}</span>
-                    </Button>
-                )}
+                        <span>{meeting.joinCode}</span>
+                        {copied ? (
+                            <Check className="size-3 text-status-live-foreground" />
+                        ) : (
+                            <Copy className="size-3 text-muted-foreground" />
+                        )}
+                    </button>
+                </div>
+            </div>
 
-                {meeting.status === "ongoing" && onEnd && (
-                    <Button
-                        onClick={() => onEnd(meeting._id)}
-                        variant="destructive"
-                        size="sm"
-                        className="gap-1.5"
-                        title="End Live Meeting"
-                    >
-                        <XCircle className="size-3.5" />
-                        <span>End</span>
-                    </Button>
-                )}
+            {/* Card Footer: Matches ProjectsDashboard */}
+            <div className="px-4 py-2.5 border-t border-border/60 bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span className="capitalize font-medium">
+                    {meeting.status === "ongoing"
+                        ? "Session in progress"
+                        : meeting.status === "scheduled"
+                        ? isHost ? "You are hosting" : "Invited"
+                        : `${meeting.status} session`}
+                </span>
 
-                {meeting.status === "scheduled" && onCancel && (
-                    <Button
-                        onClick={() => onCancel(meeting._id)}
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground hover:text-destructive gap-1.5"
-                        title={isRecurring ? "Cancel Periodic Series" : "Cancel Meeting"}
-                    >
-                        <XCircle className="size-3.5" />
-                        <span>{isRecurring ? "Cancel Series" : "Cancel"}</span>
-                    </Button>
+                {canJoin ? (
+                    <div className="flex items-center gap-1 text-primary font-semibold group-hover:translate-x-0.5 transition-transform text-xs">
+                        {meeting.status === "ongoing" ? (
+                            <>
+                                <Video className="w-3.5 h-3.5 text-status-live-foreground animate-pulse" />
+                                <span>Join Live</span>
+                            </>
+                        ) : isHost ? (
+                            <>
+                                <Play className="w-3.5 h-3.5" />
+                                <span>Start Meeting</span>
+                            </>
+                        ) : (
+                            <>
+                                <span>Join Meeting</span>
+                                <ArrowRight className="w-3.5 h-3.5" />
+                            </>
+                        )}
+                    </div>
+                ) : (
+                    <span className="font-mono text-[10px] text-muted-foreground">
+                        {meeting.joinCode}
+                    </span>
                 )}
-            </CardFooter>
-        </Card>
+            </div>
+        </div>
     );
 };
 

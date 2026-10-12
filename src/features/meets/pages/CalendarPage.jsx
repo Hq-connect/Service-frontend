@@ -109,7 +109,7 @@ export const CalendarPage = () => {
     const notesCount = notes.length;
 
     return (
-        <div className="space-y-5 max-w-7xl mx-auto w-full min-h-[calc(100vh-100px)] flex flex-col">
+        <div className="flex-1 overflow-y-auto bg-background p-4 sm:p-6 space-y-4 w-full flex flex-col">
             {/* Calendar Controls & Filter Header */}
             <CalendarHeader
                 currentDate={currentDate}
@@ -142,7 +142,7 @@ export const CalendarPage = () => {
                     <p className="text-xs text-muted-foreground">Loading calendar schedule...</p>
                 </div>
             ) : (
-                <div className="flex-1 flex flex-col lg:flex-row gap-5 items-start">
+                <div className="flex-1 flex flex-col lg:flex-row gap-4 items-stretch min-h-0">
                     {/* Active View Grid with smooth entrance animation */}
                     <div 
                         key={`${viewMode}-${currentDate.toISOString().slice(0, 7)}`}
