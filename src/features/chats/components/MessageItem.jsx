@@ -1,26 +1,14 @@
 import React, { useState, useRef, useCallback } from "react";
-import {
-  Message,
-  MessageAvatar,
-  MessageContent,
-  MessageHeader,
-  MessageFooter,
-} from "@/components/ui/message";
-import {
-  Bubble,
-  BubbleContent,
-  BubbleReactions,
-} from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Reply, FileText, Image, Film, Volume2, ExternalLink } from "lucide-react";
+import { Reply, FileText, Image, Film, Volume2, ExternalLink, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MessageActions from "./MessageActions";
 import { useMessageScroller } from "@/components/ui/message-scroller";
 import FileViewerModal from "./FileViewerModal";
 import { getFileTypeConfig } from "../utils/fileTypeConfig";
 import mediaService from "../services/media.service";
-import { getUserInitials, getAvatarStyle } from "@/global/utils/user";
+import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
 
 const ATTACHMENT_ICONS = {
   image: Image,
@@ -49,6 +37,10 @@ function MessageItem({
   onDelete,
   onReact,
   senderInfo = {},
+  clusterPosition = "single",
+  chatType = "dm",
+  otherUser,
+  groupMembers = [],
 }) {
   const msgSenderIdStr = String(message.senderId?._id || message.senderId?.userId || message.senderId || "");
   const currentUserIdStr = String(currentUserId || "");
@@ -60,15 +52,33 @@ function MessageItem({
 
   React.useEffect(() => {
     const handleHighlight = (e) => {
-      if (e.detail?.messageId === message._id) {
+      const targetId = String(e.detail?.messageId || "");
+      const myId = String(message._id || message.messageId || message.id || "");
+      if (targetId && myId && targetId === myId) {
         setIsHighlighted(true);
-        const timer = setTimeout(() => setIsHighlighted(false), 2000);
+        const timer = setTimeout(() => setIsHighlighted(false), 1600);
         return () => clearTimeout(timer);
       }
     };
     window.addEventListener("highlight-message", handleHighlight);
     return () => window.removeEventListener("highlight-message", handleHighlight);
-  }, [message._id]);
+  }, [message._id, message.messageId, message.id]);
+
+  const handleScrollToReply = useCallback((e) => {
+    e.stopPropagation();
+    const targetId = message.replyTo?._id ?? message.replyTo?.messageId ?? message.replyTo?.id;
+    if (!targetId) return;
+
+    const targetEl =
+      document.getElementById(`msg-${targetId}`) ||
+      document.querySelector(`[data-message-id="${targetId}"]`);
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      scrollToMessage(targetId);
+    }
+    window.dispatchEvent(new CustomEvent("highlight-message", { detail: { messageId: targetId } }));
+  }, [message.replyTo, scrollToMessage]);
 
   // Local editing & viewer states
   const [isEditing, setIsEditing] = useState(false);
@@ -186,6 +196,73 @@ function MessageItem({
 
   const avatarUrl = senderInfo.userSnapshot?.avatar || senderInfo.avatar;
 
+  const replyTarget = message.replyTo?.senderId || message.replyTo?.sender;
+  const replySenderIdStr = String(
+    (typeof replyTarget === "object" && replyTarget !== null)
+      ? replyTarget._id || replyTarget.userId || replyTarget.id || ""
+      : replyTarget || ""
+  );
+  const isReplyToOwn = !!(replySenderIdStr && currentUserIdStr && replySenderIdStr === currentUserIdStr);
+
+  const resolveReplyAuthor = () => {
+    if (isReplyToOwn) return "You";
+
+    // 1. If replyTarget is an object with a real name
+    if (typeof replyTarget === "object" && replyTarget !== null) {
+      const name = getUserDisplayName(replyTarget);
+      if (name && !/^[0-9a-fA-F]{24}$/.test(name) && name !== "Member") {
+        return name;
+      }
+      if (replyTarget.name && !/^[0-9a-fA-F]{24}$/.test(replyTarget.name)) {
+        return replyTarget.name;
+      }
+    }
+
+    // 2. In DMs: if reply is from the other person
+    if (chatType === "dm" && otherUser) {
+      const otherIdStr = String(otherUser._id || otherUser.userId || otherUser.id || "");
+      if (!replySenderIdStr || replySenderIdStr === otherIdStr) {
+        const name = getUserDisplayName(otherUser);
+        if (name && !/^[0-9a-fA-F]{24}$/.test(name)) return name;
+        if (otherUser.name) return otherUser.name;
+      }
+    }
+
+    // 3. In Group chats: find in groupMembers
+    if (groupMembers && groupMembers.length > 0 && replySenderIdStr) {
+      const found = groupMembers.find((m) => {
+        const mUserId = String(
+          (typeof m.userId === "object" && m.userId !== null)
+            ? m.userId._id || m.userId.id
+            : m.userId || m._id || m.id || m.userSnapshot?._id || ""
+        );
+        return mUserId === replySenderIdStr;
+      });
+      if (found) {
+        const name = getUserDisplayName(found);
+        if (name && !/^[0-9a-fA-F]{24}$/.test(name) && name !== "Member") {
+          return name;
+        }
+        if (found.name || found.userSnapshot?.name) {
+          return found.name || found.userSnapshot?.name;
+        }
+      }
+    }
+
+    // 4. Fallback in DM is otherUser name
+    if (chatType === "dm" && otherUser?.name) {
+      return otherUser.name;
+    }
+
+    return "Member";
+  };
+
+  const replyAuthorName = resolveReplyAuthor();
+
+  const replySnippet =
+    message.replyTo?.content?.text ||
+    (message.replyTo?.content?.attachments?.length ? "Attachment" : "Message");
+
   const initials = getUserInitials(senderInfo) || displayName.slice(0, 2).toUpperCase() || "U";
   const avatarStyle = getAvatarStyle(senderInfo);
 
@@ -204,99 +281,108 @@ function MessageItem({
 
   if (isDeleted) {
     return (
-      <Message align={isOwn ? "end" : "start"} className="px-4 py-1">
-        <MessageContent>
-          <Bubble variant="ghost">
-            <BubbleContent className="italic text-muted-foreground text-xs">
-              This message was deleted.
-            </BubbleContent>
-          </Bubble>
-        </MessageContent>
-      </Message>
+      <div className={cn("px-4 py-1 flex", isOwn ? "justify-end" : "justify-start")}>
+        <div className="rounded-2xl px-3 py-1.5 text-xs italic text-muted-foreground bg-muted/40 border border-border/40 select-none">
+          This message was deleted
+        </div>
+      </div>
     );
   }
 
+  const isClusterChild = clusterPosition === "middle" || clusterPosition === "end";
+
   return (
-    <div ref={containerRef} className={cn("px-4 py-0.5", hasReactions && "pb-3")}>
-      <Message
-        align={isOwn ? "end" : "start"}
-        className="items-center"
-      >
-        {/* Avatar — others only */}
-        {!isOwn && (
-          <MessageAvatar>
-            <Avatar className="size-8">
-              {avatarUrl && (
-                <AvatarImage src={avatarUrl} alt={displayName} />
-              )}
-              <AvatarFallback style={avatarStyle} className="text-xs font-semibold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          </MessageAvatar>
+    <div
+      ref={containerRef}
+      id={`msg-${message._id || message.messageId || message.id}`}
+      data-message-id={message._id || message.messageId || message.id}
+      className={cn(
+        "px-4 transition-colors group/row",
+        isClusterChild ? "py-0.5" : "pt-2 pb-0.5",
+        hasReactions && "pb-3.5"
+      )}
+    >
+      <div className={cn("flex w-full min-w-0 gap-2", isOwn ? "justify-end" : "justify-start")}>
+        {/* Avatar — group chats only, hide in clusters and replace with width spacer */}
+        {chatType === "group" && !isOwn && (
+          isClusterChild ? (
+            <div className="w-8 shrink-0 select-none" />
+          ) : (
+            <div className="shrink-0 self-end mb-0.5">
+              <Avatar className="size-8">
+                {avatarUrl && (
+                  <AvatarImage src={avatarUrl} alt={displayName} />
+                )}
+                <AvatarFallback style={avatarStyle} className="text-xs font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          )
         )}
 
-        {/* Message content — full max width limit */}
-        <MessageContent className="max-w-[70%]">
-          {/* Sender name (others only) */}
-          {!isOwn && (
-            <MessageHeader>
-              <span className="font-semibold text-foreground">{displayName}</span>
-              <span className="ml-2 text-[10px] text-muted-foreground/70">{timeLabel}</span>
-            </MessageHeader>
+        {/* Message content wrapper */}
+        <div className={cn("flex flex-col min-w-0 max-w-[85%] md:max-w-[70%]", isOwn ? "items-end" : "items-start")}>
+          {/* Group sender name — shown at head of cluster in clean foreground color */}
+          {chatType === "group" && !isOwn && !isClusterChild && (
+            <div className="text-xs font-semibold text-foreground mb-1 px-0.5 select-none">
+              {displayName}
+            </div>
           )}
 
-          {/* 
-           * Bubble Wrapper:
-           * - w-fit max-w-[85%] so it tightly wraps the bubble up to 85% of MessageContent.
-           * - relative so the toolbar positions against the bubble boundary.
-           * - group/bubble scopes the hover trigger to just the bubble area.
-           * - contains reply reference so that the reference container matches bubble alignment and width.
-           *   (preventing full-width stretching).
-           */}
-          <div 
+          {/* Bubble wrapper with hover toolbar */}
+          <div
             ref={bubbleRef}
             className={cn(
-              "relative group/bubble w-fit max-w-[85%] flex flex-col gap-1 select-none touch-callout-none",
+              "relative group/bubble w-fit max-w-full flex flex-col select-none touch-callout-none",
               isOwn ? "self-end items-end" : "self-start items-start"
             )}
             onTouchStart={startPress}
             onTouchEnd={endPress}
             onTouchMove={movePress}
           >
-            {/* Reply reference - nested here to align with bubble width and have proper hover styling */}
-            {message.replyTo && (
-              <div 
-                onClick={() => {
-                  const targetId = message.replyTo?._id ?? message.replyTo?.messageId;
-                  if (targetId) {
-                    scrollToMessage(targetId);
-                    window.dispatchEvent(new CustomEvent("highlight-message", { detail: { messageId: targetId } }));
-                  }
-                }}
-                className={cn(
-                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] text-muted-foreground/80 hover:text-foreground cursor-pointer select-none transition-colors border-l-2 mb-0.5 max-w-full w-fit bg-muted/40 border-muted-foreground/20 hover:bg-muted/60"
-                )}
-              >
-                <Reply className="size-3 shrink-0" />
-                <span className="truncate max-w-[200px]">
-                  {message.replyTo?.content?.text ?? "Replied message"}
-                </span>
-              </div>
-            )}
-
-            {/* Bubble - overridden with max-w-full to prevent circular percentage collapse */}
-            <Bubble 
-              variant={isOwn ? ((message.content?.text || activeLinkPreview) ? "default" : "ghost") : ((message.content?.text || activeLinkPreview) ? "outline" : "ghost")} 
+            {/* Bubble Container - consistent uniform rounded-2xl geometry */}
+            <div
               className={cn(
-                "max-w-full transition-all duration-500",
-                isHighlighted && (isOwn 
-                  ? "ring-2 ring-primary ring-offset-2 scale-[1.02] duration-300" 
-                  : "ring-2 ring-primary ring-offset-2 scale-[1.02] bg-primary/5 duration-300"
+                "relative max-w-full rounded-2xl transition-all duration-300 overflow-hidden shadow-2xs",
+                isOwn
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/40 border border-border/70 text-foreground",
+                isHighlighted && (isOwn
+                  ? "brightness-125 ring-2 ring-primary-foreground/70"
+                  : "bg-primary/10 border-primary/50 ring-2 ring-primary/40"
                 )
               )}
             >
-              {/* Attachments FIRST */}
+              {/* Quoted Reply Card - seamlessly nested inside the bubble header */}
+              {message.replyTo && (
+                <div
+                  onClick={handleScrollToReply}
+                  className={cn(
+                    "flex items-stretch gap-2 px-2.5 py-1.5 rounded-xl text-xs cursor-pointer select-none transition-all hover:opacity-90 mx-2 mt-2",
+                    isOwn
+                      ? "bg-black/25 dark:bg-black/35 text-primary-foreground"
+                      : "bg-background/90 dark:bg-card/90 text-foreground border border-border/50 shadow-2xs"
+                  )}
+                >
+                  <div className={cn("w-1 rounded-full shrink-0", isOwn ? "bg-primary-foreground/90" : "bg-primary")} />
+                  <div className="flex flex-col min-w-0 pr-1">
+                    <span className={cn(
+                      "text-[10px] font-bold tracking-tight truncate",
+                      isOwn ? "text-primary-foreground" : "text-primary font-semibold"
+                    )}>
+                      {replyAuthorName}
+                    </span>
+                    <span className={cn(
+                      "text-[11px] truncate leading-snug",
+                      isOwn ? "text-primary-foreground/80" : "text-muted-foreground"
+                    )}>
+                      {replySnippet}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {/* Attachments */}
               {!isEditing && (message.content?.attachments ?? []).length > 0 && (
                 <div className="flex flex-col gap-2 p-1.5 pb-1">
                   {message.content.attachments.map((att, idx) => {
@@ -304,21 +390,28 @@ function MessageItem({
                     const Icon = config.icon;
 
                     return att.type === "image" ? (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setViewerAttachment(att);
-                        }}
-                        className="block max-w-[280px] overflow-hidden rounded-lg border border-border/40 hover:opacity-90 transition-opacity text-left cursor-pointer shadow-xs"
-                      >
-                        <img
-                          src={att.url}
-                          alt={config.displayName}
-                          className="w-full max-h-[220px] object-cover"
-                        />
-                      </button>
+                      <div key={idx} className="relative">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewerAttachment(att);
+                          }}
+                          className="block max-w-[280px] overflow-hidden rounded-lg border border-border/40 hover:opacity-90 transition-opacity text-left cursor-pointer shadow-xs"
+                        >
+                          <img
+                            src={att.url}
+                            alt={config.displayName}
+                            className="w-full max-h-[220px] object-cover"
+                          />
+                        </button>
+                        {!message.content?.text && (
+                          <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-[10px] text-white flex items-center gap-1 select-none pointer-events-none">
+                            <span>{timeLabel}</span>
+                            {isOwn && <CheckCheck className="size-3 text-white/90" />}
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <button
                         key={idx}
@@ -355,10 +448,19 @@ function MessageItem({
                       </button>
                     );
                   })}
+                  {!message.content?.text && message.content?.attachments?.[0]?.type !== "image" && (
+                    <div className={cn(
+                      "flex items-center justify-end gap-1 px-1.5 pb-0.5 text-[10px] select-none",
+                      isOwn ? "text-primary-foreground/75" : "text-muted-foreground"
+                    )}>
+                      <span>{timeLabel}</span>
+                      {isOwn && <CheckCheck className="size-3.5 text-primary-foreground/90 shrink-0" />}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Message Text SECOND */}
+              {/* Message Text & Integrated Timestamp */}
               {isEditing ? (
                 <div className="flex flex-col gap-2 p-2 min-w-[240px]">
                   <textarea
@@ -396,9 +498,25 @@ function MessageItem({
                 </div>
               ) : (
                 Boolean(message.content?.text || activeLinkPreview) && (
-                  <BubbleContent className={cn("flex flex-col gap-2 p-3", activeLinkPreview && "w-[340px] max-w-full")}>
+                  <div className={cn("px-3.5 py-2", activeLinkPreview && "w-[340px] max-w-full")}>
                     {message.content?.text && (
-                      <p className="text-sm leading-relaxed break-all select-text">{message.content.text}</p>
+                      <div>
+                        <span className="text-sm leading-relaxed break-words whitespace-pre-wrap select-text">
+                          {message.content.text}
+                        </span>
+                        <span className={cn(
+                          "inline-flex items-center gap-1 ml-2.5 select-none text-[10px] tabular-nums whitespace-nowrap align-baseline translate-y-0.5",
+                          isOwn ? "text-primary-foreground/75" : "text-muted-foreground"
+                        )}>
+                          {message.editedAt && (
+                            <span className="text-[9px] italic opacity-85">edited</span>
+                          )}
+                          <span>{timeLabel}</span>
+                          {isOwn && (
+                            <CheckCheck className="size-3.5 text-primary-foreground/90 shrink-0" />
+                          )}
+                        </span>
+                      </div>
                     )}
                     {/* Rich Link Preview Card */}
                     {activeLinkPreview && (
@@ -449,26 +567,30 @@ function MessageItem({
                         </div>
                       </a>
                     )}
-                  </BubbleContent>
+                  </div>
                 )
               )}
 
               {/* Reactions */}
               {!isEditing && hasReactions && (
-                <BubbleReactions side="bottom" align={isOwn ? "end" : "start"}>
+                <div className={cn(
+                  "absolute -bottom-2.5 z-10 flex items-center gap-1 rounded-full bg-card border border-border shadow-xs px-1.5 py-0.5 text-xs select-none",
+                  isOwn ? "right-2" : "left-2"
+                )}>
                   {Object.entries(reactionGroups).map(([emoji, count]) => (
                     <button
                       key={emoji}
+                      type="button"
                       onClick={() => onReact?.(message._id, emoji)}
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-full hover:bg-muted/80 text-xs transition-colors"
+                      className="flex items-center gap-1 px-1 py-0.5 rounded-full hover:bg-muted text-xs transition-colors cursor-pointer"
                     >
                       <span>{emoji}</span>
-                      {count > 1 && <span className="text-muted-foreground">{count}</span>}
+                      {count > 1 && <span className="text-[10px] font-semibold text-muted-foreground">{count}</span>}
                     </button>
                   ))}
-                </BubbleReactions>
+                </div>
               )}
-            </Bubble>
+            </div>
 
             {/* Hover Actions Toolbar */}
             {!isEditing && (
@@ -506,18 +628,8 @@ function MessageItem({
               </div>
             )}
           </div>
-
-          {/* Footer */}
-          <MessageFooter className={cn("gap-2 mt-0.5", hasReactions && "mt-3")}>
-            {isOwn && (
-              <span className="text-[10px] text-muted-foreground">{timeLabel}</span>
-            )}
-            {message.editedAt && (
-              <span className="text-[10px] text-muted-foreground italic">edited</span>
-            )}
-          </MessageFooter>
-        </MessageContent>
-      </Message>
+        </div>
+      </div>
 
       {/* In-app File Viewer Modal */}
       <FileViewerModal

@@ -134,7 +134,7 @@ function MessageInput({
   const isSendDisabled = disabled || isUploading || (!text.trim() && selectedFiles.length === 0);
 
   return (
-    <div className="px-4 pb-4 pt-2 shrink-0">
+    <div className="px-4 pb-4 pt-1.5 shrink-0 bg-background">
       {/* Hidden file input */}
       <input
         type="file"
@@ -146,16 +146,16 @@ function MessageInput({
 
       {/* Reply-to banner */}
       {replyTo && (
-        <div className="flex items-center gap-2 mb-2 px-3 py-1.5 bg-muted rounded-lg border-l-2 border-primary">
+        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-muted/70 rounded-xl border-l-2 border-primary border border-border/60 animate-in fade-in slide-in-from-bottom-1 duration-150">
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-muted-foreground font-medium">Replying to message</p>
-            <p className="text-xs text-foreground truncate">{replyPreviewText}</p>
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Replying to message</p>
+            <p className="text-xs text-foreground truncate mt-0.5">{replyPreviewText}</p>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={onCancelReply}
-            className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
+            className="size-6 shrink-0 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
           >
             <X className="size-3" />
           </Button>
@@ -164,7 +164,7 @@ function MessageInput({
 
       {/* Emoji picker bar */}
       {showEmojiPicker && (
-        <div className="flex items-center gap-2 mb-2 p-2 bg-muted/60 rounded-lg border border-border w-fit animate-in fade-in slide-in-from-bottom-2 duration-100">
+        <div className="flex items-center gap-2 mb-2 p-2 bg-popover/95 backdrop-blur-md rounded-xl border border-border shadow-popover w-fit animate-in fade-in slide-in-from-bottom-2 duration-100">
           {["👍", "❤️", "😂", "😮", "🎉", "🔥", "🙏", "👀", "🚀", "✨"].map((emoji) => (
             <button
               key={emoji}
@@ -183,7 +183,7 @@ function MessageInput({
             variant="ghost"
             size="icon"
             onClick={() => setShowEmojiPicker(false)}
-            className="size-6 text-muted-foreground hover:text-foreground"
+            className="size-6 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
           >
             <X className="size-3" />
           </Button>
@@ -192,7 +192,7 @@ function MessageInput({
 
       {/* Pending File Attachments Preview Chips */}
       {selectedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2 p-2 bg-muted/30 rounded-lg border border-border/60 max-h-28 overflow-y-auto">
+        <div className="flex flex-wrap gap-2 mb-2 p-2 bg-muted/30 rounded-xl border border-border/60 max-h-28 overflow-y-auto">
           {selectedFiles.map((file, idx) => {
             const isImage = file.type.startsWith("image/");
             const previewUrl = isImage ? URL.createObjectURL(file) : null;
@@ -246,12 +246,12 @@ function MessageInput({
 
       {/* Live Link Preview Card */}
       {isFetchingPreview ? (
-        <div className="flex items-center gap-2 mb-2 p-2 bg-muted/40 rounded-lg border border-border text-xs animate-pulse">
+        <div className="flex items-center gap-2 mb-2 p-2 bg-muted/40 rounded-xl border border-border text-xs animate-pulse">
           <Loader2 className="size-4 animate-spin text-primary" />
           <span className="text-muted-foreground text-[11px]">Fetching link preview...</span>
         </div>
       ) : linkPreview ? (
-        <div className="relative group flex items-center gap-3 mb-2 p-2.5 bg-background rounded-xl border border-primary/40 shadow-xs max-w-full">
+        <div className="relative group flex items-center gap-3 mb-2 p-2.5 bg-card rounded-xl border border-border shadow-xs max-w-full">
           {linkPreview.image ? (
             <img
               src={linkPreview.image}
@@ -281,7 +281,7 @@ function MessageInput({
             variant="ghost"
             size="icon"
             onClick={handleDismissLinkPreview}
-            className="size-6 text-muted-foreground hover:text-foreground shrink-0"
+            className="size-6 text-muted-foreground hover:text-foreground shrink-0 rounded-full hover:bg-muted"
           >
             <X className="size-3.5" />
           </Button>
@@ -291,8 +291,8 @@ function MessageInput({
       {/* Input area */}
       <div
         className={cn(
-          "flex items-end gap-2 rounded-xl border border-border bg-background px-3 py-2 transition-colors",
-          "focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30"
+          "flex items-end gap-2 rounded-2xl border border-input/80 bg-card p-2 sm:p-2.5 transition-all duration-200 shadow-2xs",
+          "focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 focus-within:shadow-xs"
         )}
       >
         {/* Attachment Button */}
@@ -302,7 +302,7 @@ function MessageInput({
           size="icon"
           disabled={disabled || isUploading}
           onClick={() => fileInputRef.current?.click()}
-          className="size-8 shrink-0 text-muted-foreground hover:text-foreground mb-0.5"
+          className="size-8 rounded-xl shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted mb-0.5 transition-colors"
         >
           <Paperclip className="size-4" />
         </Button>
@@ -326,7 +326,7 @@ function MessageInput({
           rows={1}
           className={cn(
             "flex-1 min-h-[36px] max-h-[140px] resize-none border-0 shadow-none p-0 text-sm leading-relaxed",
-            "focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+            "focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-foreground placeholder:text-muted-foreground/60"
           )}
         />
 
@@ -338,8 +338,8 @@ function MessageInput({
           disabled={disabled || isUploading}
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           className={cn(
-            "size-8 shrink-0 mb-0.5 transition-colors",
-            showEmojiPicker ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
+            "size-8 rounded-xl shrink-0 mb-0.5 transition-colors",
+            showEmojiPicker ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
         >
           <Smile className="size-4" />
@@ -351,7 +351,12 @@ function MessageInput({
           size="icon"
           disabled={isSendDisabled}
           onClick={handleSend}
-          className="size-8 shrink-0 mb-0.5"
+          className={cn(
+            "size-8 rounded-xl shrink-0 mb-0.5 transition-all duration-150 cursor-pointer",
+            isSendDisabled
+              ? "opacity-35 bg-muted text-muted-foreground cursor-not-allowed"
+              : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs active:scale-95"
+          )}
         >
           {isUploading ? (
             <Loader2 className="size-4 animate-spin" />
@@ -361,7 +366,7 @@ function MessageInput({
         </Button>
       </div>
 
-      <p className="text-[10px] text-muted-foreground/50 mt-1.5 pl-1">
+      <p className="text-[10px] text-muted-foreground/50 mt-1.5 pl-1 select-none">
         Enter to send, Shift+Enter for new line
       </p>
     </div>

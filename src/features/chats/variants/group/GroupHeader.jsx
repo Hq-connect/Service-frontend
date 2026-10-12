@@ -23,7 +23,7 @@ function GroupHeader({ chat }) {
 
   return (
     <>
-      <div className="flex items-center justify-between px-4 h-14 border-b border-border bg-background shrink-0">
+      <div className="flex items-center justify-between px-4 h-16 border-b border-border bg-background shrink-0">
         <div 
           onClick={() => setDetailsOpen(true)}
           className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"

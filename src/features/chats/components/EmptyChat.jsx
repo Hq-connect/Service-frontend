@@ -7,7 +7,7 @@ import { MessageSquareDashed } from "lucide-react";
 function EmptyChat() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 text-center select-none px-8">
-      <div className="flex items-center justify-center size-16 rounded-2xl bg-muted">
+      <div className="flex items-center justify-center size-16 rounded-2xl bg-muted/60 border border-border/60 shadow-2xs">
         <MessageSquareDashed className="size-8 text-muted-foreground/50" />
       </div>
       <div className="space-y-1">

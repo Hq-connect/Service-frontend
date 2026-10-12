@@ -43,7 +43,13 @@ export const getUserDisplayName = (u) => {
   const target = extractUser(u);
   if (!target) return "Member";
 
-  if (typeof target === "string") return target;
+  if (typeof target === "string") {
+    // If it's a raw MongoDB ObjectId or UUID hash, do not leak raw hash as display name
+    if (/^[0-9a-fA-F]{24}$/.test(target) || /^[0-9a-fA-F-]{36}$/.test(target)) {
+      return "Member";
+    }
+    return target;
+  }
 
   if (target.firstName || target.lastName) {
     return `${target.firstName || ""} ${target.lastName || ""}`.trim();
@@ -144,4 +150,18 @@ export const getUserProfile = (u) => {
     color,
     avatarStyle,
   };
+};
+
+export const getUserTextColor = (seedOrUser = "") => {
+  const target = extractUser(seedOrUser);
+  const seed = (typeof target === "object" && target !== null)
+    ? String(target?.userId || target?._id || target?.id || target?.email || target?.name || target?.fullName || "")
+    : String(seedOrUser || "");
+
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = Math.abs(Math.round(hash * 137.5)) % 360;
+  return `hsl(${h}, 75%, 45%)`;
 };

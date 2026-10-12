@@ -33,7 +33,7 @@ function MessageActions({
   ].filter((a) => a.show);
 
   return (
-    <div className="flex items-center gap-0.5 bg-background border border-border rounded-lg shadow-sm px-1 py-0.5">
+    <div className="flex items-center gap-0.5 bg-popover/95 backdrop-blur-md border border-border rounded-full shadow-popover px-1.5 py-0.5">
       {/* Reaction Button with Popover */}
       <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
         <Tooltip>
@@ -42,7 +42,7 @@ function MessageActions({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-7 text-muted-foreground hover:text-foreground"
+                className="size-6.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
                 <SmilePlus className="size-3.5" />
               </Button>
@@ -55,7 +55,7 @@ function MessageActions({
         <PopoverContent
           side="top"
           align="center"
-          className="w-fit flex flex-row items-center gap-1.5 p-1 bg-background border border-border rounded-full shadow-md z-50 pointer-events-auto"
+          className="w-fit flex flex-row items-center gap-1.5 px-2 py-1 bg-popover border border-border rounded-full shadow-popover z-50 pointer-events-auto"
         >
           {["👍", "❤️", "😂", "😮", "🎉", "🔥"].map((emoji) => (
             <button
