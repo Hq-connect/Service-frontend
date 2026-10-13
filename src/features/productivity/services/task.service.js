@@ -60,3 +60,39 @@ export const unassignTask = async (projectId, taskId) => {
     );
     return response.data;
 };
+
+// --- SUBTASKS ---
+export const addSubtask = async (projectId, taskId, { title, assignedTo, dueDate } = {}) => {
+    const response = await api.post(
+        `/projects/${projectId}/tasks/${taskId}/subtasks`,
+        { title, assignedTo, dueDate },
+        { headers: getHeaders() }
+    );
+    return response.data;
+};
+
+export const toggleSubtask = async (projectId, taskId, subtaskId, isCompleted) => {
+    const response = await api.patch(
+        `/projects/${projectId}/tasks/${taskId}/subtasks/${subtaskId}/toggle`,
+        { isCompleted },
+        { headers: getHeaders() }
+    );
+    return response.data;
+};
+
+export const updateSubtask = async (projectId, taskId, subtaskId, data) => {
+    const response = await api.patch(
+        `/projects/${projectId}/tasks/${taskId}/subtasks/${subtaskId}`,
+        data,
+        { headers: getHeaders() }
+    );
+    return response.data;
+};
+
+export const deleteSubtask = async (projectId, taskId, subtaskId) => {
+    const response = await api.delete(
+        `/projects/${projectId}/tasks/${taskId}/subtasks/${subtaskId}`,
+        { headers: getHeaders() }
+    );
+    return response.data;
+};

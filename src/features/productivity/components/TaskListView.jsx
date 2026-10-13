@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { 
     Calendar, User, AlertCircle, AlertTriangle, ArrowUp, ArrowDown, Minus, 
-    Trash2, Plus, Check, ChevronDown
+    Trash2, Plus, Check, ChevronDown, CheckSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getInitials, getAvatarStyle } from '@/global/utils/user';
@@ -273,6 +273,21 @@ export const TaskListView = ({
                                                         ))}
                                                     </div>
                                                 )}
+                                                {/* Subtask progress badge */}
+                                                {task.subtasks?.length > 0 && (() => {
+                                                    const total = task.subtasks.length;
+                                                    const done = task.subtasks.filter((st) => st.isCompleted).length;
+                                                    const allDone = done === total;
+                                                    return (
+                                                        <span
+                                                            className={`shrink-0 flex items-center gap-1 text-[10px] font-medium ${allDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}
+                                                            title={`Subtasks: ${done}/${total} completed`}
+                                                        >
+                                                            <CheckSquare className="w-3 h-3" />
+                                                            <span>{done}/{total}</span>
+                                                        </span>
+                                                    );
+                                                })()}
                                             </div>
                                         </TableCell>
 

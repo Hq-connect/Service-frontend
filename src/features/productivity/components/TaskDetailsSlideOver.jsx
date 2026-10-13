@@ -16,6 +16,7 @@ import TaskComments from './TaskComments';
 import TaskLabels from './TaskLabels';
 import TaskAttachments from './TaskAttachments';
 import TaskActivityFeed from './TaskActivityFeed';
+import TaskSubtasks from './TaskSubtasks';
 import { getInitials, getAvatarStyle } from '@/global/utils/user';
 import { getDueDateStatus } from '../utils/dueDate.utils';
 import {
@@ -360,6 +361,11 @@ const TaskDetailsSlideOver = () => {
                                     )}
                                 </div>
                             )}
+                        </div>
+
+                        {/* Subtasks Section */}
+                        <div className="space-y-3 pt-2">
+                            <TaskSubtasks task={task} projectId={projectId} members={members} />
                         </div>
 
                         {/* Attachments Section */}

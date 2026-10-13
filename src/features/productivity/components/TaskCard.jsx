@@ -1,17 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Draggable } from '@hello-pangea/dnd';
 import { 
-    Calendar, MessageSquare, Paperclip, AlertCircle, AlertTriangle, ArrowUp, ArrowDown, Minus 
+    Calendar, MessageSquare, Paperclip, AlertCircle, AlertTriangle, 
+    ArrowUp, ArrowDown, Minus, CheckSquare, Check, ChevronDown 
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { setSelectedTaskId } from '../states/productivity.slice';
-import { format } from 'date-fns';
+import { useToggleSubtask } from '../queries/task.queries';
 import { cn } from '@/lib/utils';
 import { getInitials, getAvatarStyle } from '@/global/utils/user';
 import { getDueDateStatus } from '../utils/dueDate.utils';
 
 export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
     const dispatch = useDispatch();
+    const toggleSubtaskMutation = useToggleSubtask();
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const issueKey = `${projectKey}-${index + 1}`;
     const dueStatus = getDueDateStatus(task.dueDate, task.status);
@@ -35,6 +38,39 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
     const assigneeUserId = task.assignedTo || task.assigneeSnapshot?.userId;
     const assigneeInitials = getInitials(assigneeName);
     const assigneeAvatarStyle = getAvatarStyle(assigneeUserId || assigneeName);
+
+    // Subtask calculations
+    const subtasks = task.subtasks || [];
+    const totalSubtasks = subtasks.length;
+    const completedSubtasks = subtasks.filter((st) => st.isCompleted).length;
+    const allSubtasksDone = totalSubtasks > 0 && completedSubtasks === totalSubtasks;
+
+    // Unique collaborators from subtasks
+    const subtaskCollaborators = React.useMemo(() => {
+        const list = [];
+        const seen = new Set();
+        subtasks.forEach((st) => {
+            if (st.assignedTo && !seen.has(String(st.assignedTo))) {
+                seen.add(String(st.assignedTo));
+                list.push({
+                    id: st.assignedTo,
+                    name: st.assigneeSnapshot?.name || 'Member',
+                    avatar: st.assigneeSnapshot?.avatar || null,
+                });
+            }
+        });
+        return list;
+    }, [subtasks]);
+
+    const handleToggleSubtask = (e, subtaskId, currentCompleted) => {
+        e.stopPropagation();
+        toggleSubtaskMutation.mutate({
+            projectId: task.projectId,
+            taskId: task._id,
+            subtaskId,
+            isCompleted: !currentCompleted,
+        });
+    };
 
     return (
         <Draggable draggableId={task._id} index={index}>
@@ -101,9 +137,66 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                         </p>
                     )}
 
+                    {/* Expandable Subtask Accordion (Linear style) */}
+                    {isExpanded && totalSubtasks > 0 && (
+                        <div 
+                            className="mt-1 mb-2.5 p-2 rounded-lg bg-muted/30 border border-border/60 divide-y divide-border/40 space-y-1 animate-in fade-in-0 duration-150"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {subtasks.map((st) => (
+                                <div key={st._id} className="flex items-center gap-2 py-1 first:pt-0 last:pb-0 text-[11px]">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => handleToggleSubtask(e, st._id, st.isCompleted)}
+                                        disabled={toggleSubtaskMutation.isPending}
+                                        className={cn(
+                                            "w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-all cursor-pointer",
+                                            st.isCompleted 
+                                                ? "bg-emerald-500 border-emerald-500 text-white" 
+                                                : "border-border bg-card hover:border-primary/60"
+                                        )}
+                                    >
+                                        {st.isCompleted && <Check className="w-2.5 h-2.5" strokeWidth={3} />}
+                                    </button>
+
+                                    <span 
+                                        className={cn(
+                                            "flex-1 truncate",
+                                            st.isCompleted ? "line-through text-muted-foreground" : "text-foreground"
+                                        )}
+                                    >
+                                        {st.title}
+                                    </span>
+
+                                    {st.assignedTo && (
+                                        <span 
+                                            className="shrink-0"
+                                            title={`Assigned to ${st.assigneeSnapshot?.name || 'Member'}`}
+                                        >
+                                            {st.assigneeSnapshot?.avatar ? (
+                                                <img 
+                                                    src={st.assigneeSnapshot.avatar} 
+                                                    alt="" 
+                                                    className="w-3.5 h-3.5 rounded-full object-cover" 
+                                                />
+                                            ) : (
+                                                <div 
+                                                    style={getAvatarStyle(st.assignedTo || st.assigneeSnapshot?.name)} 
+                                                    className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] font-bold text-white shadow-2xs"
+                                                >
+                                                    {getInitials(st.assigneeSnapshot?.name || 'M')}
+                                                </div>
+                                            )}
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Bottom Metadata Bar */}
                     <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/40 text-[11px] text-muted-foreground">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2.5 flex-wrap">
                             {dueStatus && (
                                 <span 
                                     className={cn(
@@ -136,11 +229,67 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                                     <span>{task.attachments?.length || task.attachmentCount || 0}</span>
                                 </span>
                             )}
+
+                            {/* Subtask progress badge with expand toggle & collaborator avatars */}
+                            {totalSubtasks > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsExpanded((prev) => !prev);
+                                        }}
+                                        className={cn(
+                                            "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border transition-colors cursor-pointer",
+                                            allSubtasksDone
+                                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
+                                                : "bg-muted/50 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground"
+                                        )}
+                                        title={`Subtasks: ${completedSubtasks}/${totalSubtasks} completed. Click to ${isExpanded ? 'collapse' : 'view'}`}
+                                    >
+                                        <CheckSquare className="w-3 h-3" />
+                                        <span>{completedSubtasks}/{totalSubtasks}</span>
+                                        <ChevronDown className={cn("w-2.5 h-2.5 transition-transform duration-200", isExpanded && "rotate-180")} />
+                                    </button>
+
+                                    {/* Overlapping Subtask Collaborator Avatars */}
+                                    {subtaskCollaborators.length > 0 && (
+                                        <div 
+                                            className="flex items-center -space-x-1.5 ml-0.5" 
+                                            title={`Collaborators: ${subtaskCollaborators.map(c => c.name).join(', ')}`}
+                                        >
+                                            {subtaskCollaborators.slice(0, 3).map((c) => (
+                                                c.avatar ? (
+                                                    <img 
+                                                        key={c.id} 
+                                                        src={c.avatar} 
+                                                        alt={c.name} 
+                                                        className="w-4 h-4 rounded-full object-cover ring-1 ring-card" 
+                                                    />
+                                                ) : (
+                                                    <div 
+                                                        key={c.id} 
+                                                        style={getAvatarStyle(c.id || c.name)} 
+                                                        className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white ring-1 ring-card shadow-2xs"
+                                                    >
+                                                        {getInitials(c.name)}
+                                                    </div>
+                                                )
+                                            ))}
+                                            {subtaskCollaborators.length > 3 && (
+                                                <span className="text-[8px] text-muted-foreground pl-1 font-semibold">
+                                                    +{subtaskCollaborators.length - 3}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Assignee Avatar */}
                         {task.assignedTo ? (
-                            <div className="shrink-0" title={assigneeName}>
+                            <div className="shrink-0 ml-1.5" title={`Owner: ${assigneeName}`}>
                                 {task.assigneeSnapshot?.avatar ? (
                                     <img 
                                         src={task.assigneeSnapshot.avatar} 
