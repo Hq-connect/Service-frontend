@@ -9,13 +9,24 @@ import {
   FileText, 
   AtSign, 
   X, 
-  ExternalLink 
+  ExternalLink,
+  Phone
 } from "lucide-react";
 
 /**
  * Maps notification types to matching visual accents and icons
  */
-const getTypeConfig = (type) => {
+const getTypeConfig = (type, notification = {}) => {
+  if (notification.event === "meeting.incoming_call" || notification.title?.toLowerCase().includes("call")) {
+    const isAudio = notification.title?.toLowerCase().includes("audio");
+    return {
+      icon: isAudio ? Phone : Video,
+      color: isAudio ? "text-emerald-500" : "text-indigo-500",
+      bg: isAudio ? "bg-emerald-500/10" : "bg-indigo-500/10",
+      label: isAudio ? "Incoming Voice Call" : "Incoming Video Call",
+    };
+  }
+
   switch (type) {
     case "chat":
       return {
@@ -75,7 +86,7 @@ const getTypeConfig = (type) => {
  * Microsoft Teams Style Floating Toast Card (Bottom-Right)
  */
 export function TeamsNotificationToast({ notification, onDismiss, onNavigate }) {
-  const typeConfig = getTypeConfig(notification.type);
+  const typeConfig = getTypeConfig(notification.type, notification);
   const IconComponent = typeConfig.icon;
 
   const handleClick = () => {
