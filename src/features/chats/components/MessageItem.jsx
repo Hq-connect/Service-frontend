@@ -9,6 +9,7 @@ import FileViewerModal from "./FileViewerModal";
 import { getFileTypeConfig } from "../utils/fileTypeConfig";
 import mediaService from "../services/media.service";
 import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
+import { CallCard, parseCallMessage } from "./CallCard";
 
 const ATTACHMENT_ICONS = {
   image: Image,
@@ -496,80 +497,80 @@ function MessageItem({
                     </Button>
                   </div>
                 </div>
-              ) : (
-                Boolean(message.content?.text || activeLinkPreview) && (
-                  <div className={cn("px-3.5 py-2", activeLinkPreview && "w-[340px] max-w-full")}>
-                    {message.content?.text && (
-                      <div>
-                        <span className="text-sm leading-relaxed break-words whitespace-pre-wrap select-text">
-                          {message.content.text}
-                        </span>
-                        <span className={cn(
-                          "inline-flex items-center gap-1 ml-2.5 select-none text-[10px] tabular-nums whitespace-nowrap align-baseline translate-y-0.5",
-                          isOwn ? "text-primary-foreground/75" : "text-muted-foreground"
-                        )}>
-                          {message.editedAt && (
-                            <span className="text-[9px] italic opacity-85">edited</span>
-                          )}
-                          <span>{timeLabel}</span>
-                          {isOwn && (
-                            <CheckCheck className="size-3.5 text-primary-foreground/90 shrink-0" />
-                          )}
-                        </span>
-                      </div>
-                    )}
-                    {/* Rich Link Preview Card */}
-                    {activeLinkPreview && (
-                      <a
-                        href={activeLinkPreview.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className={cn(
-                          "block w-full rounded-lg overflow-hidden border transition-all duration-200 shadow-xs group/link text-left mt-1",
-                          isOwn
-                            ? "bg-black/20 hover:bg-black/30 border-white/20 text-primary-foreground"
-                            : "bg-muted/50 hover:bg-muted/80 border-border/80 text-foreground"
+              ) : parseCallMessage(message.content?.text) ? (
+                <CallCard message={message} isOwn={isOwn} timeLabel={timeLabel} />
+              ) : (message.content?.text || activeLinkPreview) ? (
+                <div className={cn("px-3.5 py-2", activeLinkPreview && "w-[340px] max-w-full")}>
+                  {message.content?.text && (
+                    <div>
+                      <span className="text-sm leading-relaxed break-words whitespace-pre-wrap select-text">
+                        {message.content.text}
+                      </span>
+                      <span className={cn(
+                        "inline-flex items-center gap-1 ml-2.5 select-none text-[10px] tabular-nums whitespace-nowrap align-baseline translate-y-0.5",
+                        isOwn ? "text-primary-foreground/75" : "text-muted-foreground"
+                      )}>
+                        {message.editedAt && (
+                          <span className="text-[9px] italic opacity-85">edited</span>
                         )}
-                      >
-                        {activeLinkPreview.image && (
-                          <div className="w-full h-36 overflow-hidden bg-black/20 relative">
-                            <img
-                              src={activeLinkPreview.image}
-                              alt={activeLinkPreview.title}
-                              className="w-full h-full object-cover group-hover/link:scale-105 transition-transform duration-300"
-                              onError={(e) => (e.target.parentElement.style.display = "none")}
-                            />
-                          </div>
+                        <span>{timeLabel}</span>
+                        {isOwn && (
+                          <CheckCheck className="size-3.5 text-primary-foreground/90 shrink-0" />
                         )}
-                        <div className="p-2.5">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider truncate opacity-90">
-                              {activeLinkPreview.favicon && (
-                                <img
-                                  src={activeLinkPreview.favicon}
-                                  alt=""
-                                  className="size-3.5 rounded-full shrink-0"
-                                />
-                              )}
-                              <span className="truncate">{activeLinkPreview.siteName || activeLinkPreview.hostname}</span>
-                            </div>
-                            <ExternalLink className="size-3.5 opacity-60 group-hover/link:opacity-100 transition-opacity shrink-0" />
-                          </div>
-                          <p className="font-semibold text-xs leading-snug line-clamp-2">
-                            {activeLinkPreview.title}
-                          </p>
-                          {activeLinkPreview.description && (
-                            <p className="text-[11px] opacity-80 line-clamp-2 mt-1 leading-normal">
-                              {activeLinkPreview.description}
-                            </p>
-                          )}
+                      </span>
+                    </div>
+                  )}
+                  {/* Rich Link Preview Card */}
+                  {activeLinkPreview && (
+                    <a
+                      href={activeLinkPreview.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className={cn(
+                        "block w-full rounded-lg overflow-hidden border transition-all duration-200 shadow-xs group/link text-left mt-1",
+                        isOwn
+                          ? "bg-black/20 hover:bg-black/30 border-white/20 text-primary-foreground"
+                          : "bg-muted/50 hover:bg-muted/80 border-border/80 text-foreground"
+                      )}
+                    >
+                      {activeLinkPreview.image && (
+                        <div className="w-full h-36 overflow-hidden bg-black/20 relative">
+                          <img
+                            src={activeLinkPreview.image}
+                            alt={activeLinkPreview.title}
+                            className="w-full h-full object-cover group-hover/link:scale-105 transition-transform duration-300"
+                            onError={(e) => (e.target.parentElement.style.display = "none")}
+                          />
                         </div>
-                      </a>
-                    )}
-                  </div>
-                )
-              )}
+                      )}
+                      <div className="p-2.5">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider truncate opacity-90">
+                            {activeLinkPreview.favicon && (
+                              <img
+                                src={activeLinkPreview.favicon}
+                                alt=""
+                                className="size-3.5 rounded-full shrink-0"
+                              />
+                            )}
+                            <span className="truncate">{activeLinkPreview.siteName || activeLinkPreview.hostname}</span>
+                          </div>
+                          <ExternalLink className="size-3.5 opacity-60 group-hover/link:opacity-100 transition-opacity shrink-0" />
+                        </div>
+                        <p className="font-semibold text-xs leading-snug line-clamp-2">
+                          {activeLinkPreview.title}
+                        </p>
+                        {activeLinkPreview.description && (
+                          <p className="text-[11px] opacity-80 line-clamp-2 mt-1 leading-normal">
+                            {activeLinkPreview.description}
+                          </p>
+                        )}
+                      </div>
+                    </a>
+                  )}
+                </div>
+              ) : null}
 
               {/* Reactions */}
               {!isEditing && hasReactions && (
