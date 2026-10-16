@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Info, MoreHorizontal, ChevronLeft } from "lucide-react";
+import { Info, MoreHorizontal, ChevronLeft, Phone, Video, Loader2 } from "lucide-react";
 import GroupDetailsDialog from "./GroupDetailsDialog";
 import { useGroupMembers } from "../../hooks/useGroupMembers";
 import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
+import useInitiateCall from "../../hooks/useInitiateCall";
 
 /**
  * Header for a Group chat window.
@@ -16,6 +17,13 @@ function GroupHeader({ chat }) {
   const chatId = chat?._id || chat?.chatId;
 
   const { data: members = [] } = useGroupMembers(chatId);
+  const { initiateCall, isStartingCall } = useInitiateCall({
+    chat: {
+      ...chat,
+      members: members.length > 0 ? members : chat?.members,
+    },
+    chatType: "group",
+  });
 
   const name = chat?.name ?? "Group";
   const memberList = members.length > 0 ? members : (chat?.members ?? []);
@@ -91,8 +99,37 @@ function GroupHeader({ chat }) {
           <Button 
             variant="ghost" 
             size="icon" 
+            onClick={() => initiateCall({ callType: "audio" })}
+            disabled={isStartingCall}
+            title={`Start group audio call in ${name}`}
+            className="size-8 text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 active:scale-95 transition-all duration-150 cursor-pointer"
+          >
+            {isStartingCall ? (
+              <Loader2 className="size-4 animate-spin text-emerald-500" />
+            ) : (
+              <Phone className="size-4" />
+            )}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => initiateCall({ callType: "video" })}
+            disabled={isStartingCall}
+            title={`Start group video call in ${name}`}
+            className="size-8 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-500/10 active:scale-95 transition-all duration-150 cursor-pointer"
+          >
+            {isStartingCall ? (
+              <Loader2 className="size-4 animate-spin text-indigo-500" />
+            ) : (
+              <Video className="size-4" />
+            )}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
             onClick={() => setDetailsOpen(true)}
-            className="size-8 text-muted-foreground hover:text-foreground"
+            title="Group Info"
+            className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 cursor-pointer"
           >
             <Info className="size-4" />
           </Button>
@@ -100,7 +137,7 @@ function GroupHeader({ chat }) {
             variant="ghost" 
             size="icon" 
             onClick={() => setDetailsOpen(true)}
-            className="size-8 text-muted-foreground hover:text-foreground"
+            className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 cursor-pointer"
           >
             <MoreHorizontal className="size-4" />
           </Button>
