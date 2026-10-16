@@ -1,10 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { UserPlus } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import { PRIMARY_NAV_ITEMS, EXTRA_NAV_ITEMS } from "./navigation";
+import QuickCallModal from "@/features/meets/components/QuickCallModal";
 
 function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySidebarOpen, chatUnreadCount = 0 }) {
+  const [quickCallOpen, setQuickCallOpen] = useState(false);
+  const [quickCallMode, setQuickCallMode] = useState("direct");
   return (
     <aside className="hidden md:flex flex-col items-center w-[72px] bg-primary-sidebar border-r border-primary-sidebar-border text-primary-sidebar-active-text shrink-0 z-30 select-none">
       {/* Logo Icon Only */}
@@ -46,23 +49,33 @@ function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySid
           );
         })}
 
-        {/* Extra Nav Items */}
+        {/* Extra Nav Items: Video & Calls */}
         {EXTRA_NAV_ITEMS.map((item, index) => {
           const Icon = item.icon;
+          const isVideo = item.label === "Video" || item.id === "video";
+          const handleClick = () => {
+            if (item.onClick) {
+              item.onClick();
+              return;
+            }
+            setQuickCallMode(isVideo ? "instant" : "direct");
+            setQuickCallOpen(true);
+          };
+
           return (
             <button
               key={index}
-              title={item.label}
-              onClick={item.onClick}
-              className="relative flex flex-col items-center justify-center w-[58px] h-[52px] rounded-lg text-primary-sidebar-text hover:bg-primary-sidebar-active/60 hover:text-primary-sidebar-active-text transition-all duration-150 group cursor-pointer"
+              title={isVideo ? "Start instant video meeting" : "Start or join a voice call"}
+              onClick={handleClick}
+              className="relative flex flex-col items-center justify-center w-[58px] h-[52px] rounded-lg text-primary-sidebar-text hover:bg-primary-sidebar-active/60 hover:text-primary-sidebar-active-text active:scale-95 transition-all duration-150 group cursor-pointer"
             >
               <Icon className="size-[20px] transition-transform duration-150 group-hover:scale-105 text-primary-sidebar-text group-hover:text-primary-sidebar-active-text" />
               <span className="text-[10px] mt-0.5 tracking-wide select-none opacity-70">{item.label}</span>
-              {item.badge && (
+              {item.badge ? (
                 <span className="absolute top-1 right-2 min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center ring-2 ring-primary-sidebar">
                   {item.badge}
                 </span>
-              )}
+              ) : null}
             </button>
           );
         })}
@@ -90,6 +103,13 @@ function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySid
           </svg>
         </button>
       </div>
+
+      {/* Quick Call & Meeting Modal */}
+      <QuickCallModal
+        open={quickCallOpen}
+        onOpenChange={setQuickCallOpen}
+        initialMode={quickCallMode}
+      />
     </aside>
   );
 }
