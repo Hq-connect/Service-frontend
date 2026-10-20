@@ -18,8 +18,8 @@ export const PRIMARY_NAV_ITEMS = [
 ];
 
 export const EXTRA_NAV_ITEMS = [
-  { label: "Video", icon: Video, badge: 20 },
-  { label: "Calls", icon: Phone, badge: 9 }
+  { id: "video", label: "Video", icon: Video },
+  { id: "calls", label: "Calls", icon: Phone }
 ];
 
 export const SECONDARY_NAV_DATA = {

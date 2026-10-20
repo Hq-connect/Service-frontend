@@ -23,10 +23,14 @@ export const useMeetingRoom = (joinCode) => {
         (state) => state.meetings
     );
 
+    // Read query params to determine if call started as audio-only
+    const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const isAudioOnly = searchParams?.get("callType") === "audio" || searchParams?.get("video") === "false";
+
     // Media & UI states — these are used as props for LiveKitRoom
     // LiveKit manages actual device acquisition; we only track toggle state
     const [isMuted, setIsMuted] = useState(false);
-    const [isVideoOff, setIsVideoOff] = useState(false);
+    const [isVideoOff, setIsVideoOff] = useState(Boolean(isAudioOnly));
     const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
