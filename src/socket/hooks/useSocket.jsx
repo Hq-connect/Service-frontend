@@ -40,6 +40,7 @@ const extractUserId = (userObj) => {
 
 // Track recently processed message IDs to guarantee idempotency across multiple socket broadcasts
 const processedMessageIds = new Set();
+const processedLastMsgIds = new Set();
 
 export const useSocketSetup = (enabled) => {
     const dispatch = useDispatch();
@@ -243,12 +244,12 @@ export const useSocketSetup = (enabled) => {
             const targetType = type || "dm";
 
             const msgId = lastMessage?._id ? String(lastMessage._id) : null;
-            const isDuplicate = Boolean(msgId && processedMessageIds.has(msgId));
+            const isDuplicate = Boolean(msgId && processedLastMsgIds.has(msgId));
             if (msgId && !isUpdate && !isDelete) {
-                processedMessageIds.add(msgId);
-                if (processedMessageIds.size > 500) {
-                    const first = processedMessageIds.values().next().value;
-                    processedMessageIds.delete(first);
+                processedLastMsgIds.add(msgId);
+                if (processedLastMsgIds.size > 500) {
+                    const first = processedLastMsgIds.values().next().value;
+                    processedLastMsgIds.delete(first);
                 }
             }
 
@@ -258,10 +259,11 @@ export const useSocketSetup = (enabled) => {
             const senderId = extractUserId(lastMessage?.senderId) || (typeof lastMessage?.senderId === "string" ? lastMessage.senderId : null);
 
             const isFromOther = senderId && currentUserId ? String(senderId) !== String(currentUserId) : true;
-            const isCurrentChatActive = activeChatId && String(activeChatId) === String(chatId);
+            const isChatRoute = typeof window !== "undefined" && window.location.pathname.includes("/chats");
+            const isCurrentChatActive = isChatRoute && activeChatId && String(activeChatId) === String(chatId);
 
             // If message is for currently active chat, keep unread as 0 and mark read on backend
-            if (isCurrentChatActive && isFromOther && !isUpdate && !isDelete && !isDuplicate) {
+            if (isCurrentChatActive && isFromOther && !isUpdate && !isDelete) {
                 chatService.markChatAsRead({ chatId, messageId: lastMessage?._id }).catch((e) =>
                     console.error("Error auto-marking active chat as read:", e)
                 );
@@ -456,6 +458,9 @@ export const useSocketSetup = (enabled) => {
             if (isChatNotification) {
                 queryClient.invalidateQueries({
                     queryKey: chatKeys.unread(),
+                });
+                queryClient.invalidateQueries({
+                    queryKey: chatKeys.lists(),
                 });
             }
 

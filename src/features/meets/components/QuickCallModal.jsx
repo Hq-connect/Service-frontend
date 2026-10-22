@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useUsers } from "@/global/hooks/useUsers";
 import meetingService from "../services/meeting.service";
-import chatService from "@/features/chats/services/chat.service";
+import dmService from "@/features/chats/services/dm.service";
 import useAuth from "@/features/auth/hooks/useAuth";
 import {
   getUserInitials,
@@ -114,10 +114,11 @@ export const QuickCallModal = ({ open, onOpenChange, initialMode = "all" }) => {
       try {
         const callEmoji = isVideo ? "📹" : "📞";
         const callTypeLabel = isVideo ? "video" : "voice";
-        await chatService.sendMessage({
-          content: `${callEmoji} Started a ${callTypeLabel} call • Join room: /meets/room/${joinCode}?callType=${callType}`,
-          recieverId: targetUserId,
-        });
+        await dmService.sendMessage(
+          null,
+          targetUserId,
+          `${callEmoji} Started a ${callTypeLabel} call • Join room: /meets/room/${joinCode}?callType=${callType}`
+        );
       } catch (chatErr) {
         console.warn("[QuickCallModal] Note on chat message dispatch:", chatErr);
       }

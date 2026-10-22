@@ -395,8 +395,26 @@ export const MeetingRoomPage = ({
                             setIsScreenSharing={setIsScreenSharing}
                             dbParticipants={participants}
                             onError={(err) => {
-                                console.warn("LiveKit connection issue, using fallback stage:", err);
-                                setLivekitError(err.message || "LiveKit connection failed");
+                                console.warn("[LiveKit] Room warning/error:", err);
+                                const isDeviceError =
+                                    err?.name === "NotAllowedError" ||
+                                    err?.name === "NotFoundError" ||
+                                    err?.name === "NotReadableError" ||
+                                    err?.name === "OverconstrainedError" ||
+                                    err?.message?.toLowerCase().includes("permission") ||
+                                    err?.message?.toLowerCase().includes("device") ||
+                                    err?.message?.toLowerCase().includes("track") ||
+                                    err?.message?.toLowerCase().includes("audio") ||
+                                    err?.message?.toLowerCase().includes("camera");
+
+                                if (isDeviceError) {
+                                    toast.error(err?.message || "Could not access camera or microphone.");
+                                    return;
+                                }
+
+                                if (err?.message?.toLowerCase().includes("token") || err?.message?.toLowerCase().includes("connection failed")) {
+                                    setLivekitError(err.message || "LiveKit connection failed");
+                                }
                             }}
                         />
                     ) : (
@@ -409,6 +427,20 @@ export const MeetingRoomPage = ({
                                     <span className="truncate">
                                         Standalone Media Mode active. Add LiveKit API keys to .env to enable multi-peer SFU video.
                                     </span>
+                                </div>
+                            )}
+                            {livekitError && (
+                                <div className="shrink-0 mb-3 px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between gap-2 max-w-xl mx-auto shadow-sm">
+                                    <div className="flex items-center gap-2 truncate">
+                                        <Sparkles className="size-3.5 text-amber-400 shrink-0" />
+                                        <span className="truncate">Media connection issue ({livekitError}).</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setLivekitError(null)}
+                                        className="shrink-0 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[11px] font-medium transition cursor-pointer"
+                                    >
+                                        Reconnect
+                                    </button>
                                 </div>
                             )}
 
