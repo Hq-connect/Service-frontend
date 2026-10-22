@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useCallback } from "react";
 import {
     LiveKitRoom,
     RoomAudioRenderer,
+    StartAudio,
     VideoTrack,
     useTracks,
     useParticipants,
@@ -27,7 +28,8 @@ const LiveKitParticipantTile = ({
     const isLocal = participant.isLocal;
     const isSpeaking = participant.isSpeaking;
     const isMicOn = participant.isMicrophoneEnabled;
-    const isCameraOn = Boolean(cameraTrack?.publication?.track && !cameraTrack?.publication?.isMuted);
+    const hasTrack = Boolean(cameraTrack?.publication?.track || cameraTrack?.track || (isLocal && participant.isCameraEnabled));
+    const isCameraOn = Boolean(participant.isCameraEnabled && hasTrack);
     
     // Resolve display name: LiveKit token name > DB participant name > fallback
     const resolvedDbName = participantNameMap[String(participant.identity)];
@@ -122,18 +124,22 @@ const LiveKitMediaSync = ({ isMuted, isVideoOff, isScreenSharing, setIsScreenSha
     useEffect(() => {
         if (!localParticipant) return;
         const shouldEnable = !isMuted;
-        localParticipant.setMicrophoneEnabled(shouldEnable).catch((err) => {
-            console.warn("LiveKit microphone toggle:", err?.message);
-        });
+        if (localParticipant.isMicrophoneEnabled !== shouldEnable) {
+            localParticipant.setMicrophoneEnabled(shouldEnable).catch((err) => {
+                console.warn("LiveKit microphone toggle:", err?.message);
+            });
+        }
     }, [isMuted, localParticipant]);
 
     // Sync camera state with LiveKit
     useEffect(() => {
         if (!localParticipant) return;
         const shouldEnable = !isVideoOff;
-        localParticipant.setCameraEnabled(shouldEnable).catch((err) => {
-            console.warn("LiveKit camera toggle:", err?.message);
-        });
+        if (localParticipant.isCameraEnabled !== shouldEnable) {
+            localParticipant.setCameraEnabled(shouldEnable).catch((err) => {
+                console.warn("LiveKit camera toggle:", err?.message);
+            });
+        }
     }, [isVideoOff, localParticipant]);
 
     // Sync screen share state with LiveKit
@@ -407,6 +413,7 @@ export const LiveKitVideoStage = ({
         >
             {/* Automatic Multi-Party Audio Playback */}
             <RoomAudioRenderer />
+            <StartAudio label="Click to enable meeting audio" className="absolute top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-full shadow-xl transition-all cursor-pointer animate-bounce" />
 
             {/* Visual Media & Grid Layout */}
             <LiveKitStageInner

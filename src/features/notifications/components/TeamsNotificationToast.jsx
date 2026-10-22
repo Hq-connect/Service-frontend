@@ -17,8 +17,11 @@ import {
  * Maps notification types to matching visual accents and icons
  */
 const getTypeConfig = (type, notification = {}) => {
-  if (notification.event === "meeting.incoming_call" || notification.title?.toLowerCase().includes("call")) {
-    const isAudio = notification.title?.toLowerCase().includes("audio");
+  if (
+    notification.event === "meeting.incoming_call" ||
+    (notification.type === "meeting" && (notification.title?.toLowerCase().includes("call") || notification.event?.includes("call")))
+  ) {
+    const isAudio = notification.title?.toLowerCase().includes("audio") || notification.metadata?.callType === "audio";
     return {
       icon: isAudio ? Phone : Video,
       color: isAudio ? "text-emerald-500" : "text-indigo-500",
@@ -131,7 +134,9 @@ export function TeamsNotificationToast({ notification, onDismiss, onNavigate }) 
             {notification.title || "New Notification"}
           </h4>
           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
-            {notification.message || ""}
+            {typeof notification.message === "object"
+              ? notification.message?.text || notification.message?.message || JSON.stringify(notification.message)
+              : (notification.message || notification.content || "")}
           </p>
         </div>
       </div>

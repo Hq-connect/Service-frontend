@@ -46,9 +46,12 @@ function ChatWindow({ chatId, chatType, chat }) {
   const { mutate: addReaction } = useAddReaction(chatType);
   const { mutate: markChatRead } = useMarkChatRead();
 
-  // Sync activeChatId into Redux whenever chatId changes
+  // Sync activeChatId into Redux whenever chatId changes, and clear on unmount
   React.useEffect(() => {
     dispatch(setActiveChat(chatId ?? null));
+    return () => {
+      dispatch(setActiveChat(null));
+    };
   }, [chatId, dispatch]);
 
   // Mark chat as read when opening conversation or switching chats

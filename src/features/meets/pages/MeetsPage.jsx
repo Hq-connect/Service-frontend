@@ -339,14 +339,12 @@ export const MeetsPage = () => {
 
                     {/* Sort Dropdown */}
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-input bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0 shadow-2xs cursor-pointer"
-                                title="Sort Meetings"
-                            >
-                                <ArrowUpDown className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">{currentSortLabel}</span>
-                            </button>
+                        <DropdownMenuTrigger
+                            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-input bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0 shadow-2xs cursor-pointer"
+                            title="Sort Meetings"
+                        >
+                            <ArrowUpDown className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">{currentSortLabel}</span>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 p-1 text-xs">
                             <DropdownMenuLabel className="text-[10px] font-semibold text-muted-foreground uppercase px-2 py-1">

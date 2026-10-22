@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import meetingService from "@/features/meets/services/meeting.service";
-import chatService from "@/features/chats/services/chat.service";
+import dmService from "../services/dm.service";
+import groupService from "../services/group.service";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { chatKeys } from "../queries/chat.keys";
@@ -74,20 +75,16 @@ export const useInitiateCall = ({ chat, chatType = "dm" }) => {
         const callMessageText = `${callEmoji} Started a ${callTypeLabel} call • Join room: /meets/room/${joinCode}?callType=${callType}`;
 
         try {
-          const sentMessage = await chatService.sendMessage({
-            chatId: activeChatId,
-            content: callMessageText,
-            ...(chatType === "dm" && targetUserId && { recieverId: targetUserId }),
-          });
+          if (chatType === "dm") {
+            await dmService.sendMessage(activeChatId, targetUserId, callMessageText);
+          } else if (chatType === "group" && activeChatId) {
+            await groupService.sendMessage(activeChatId, callMessageText);
+          }
 
           // Invalidate messages query cache to immediately display the card
           if (activeChatId) {
             queryClient.invalidateQueries({
-              queryKey: chatKeys.messages(activeChatId),
-            });
-          } else if (sentMessage?.data?.chatId) {
-            queryClient.invalidateQueries({
-              queryKey: chatKeys.messages(sentMessage.data.chatId),
+              queryKey: chatKeys.messages(chatType, activeChatId),
             });
           }
         } catch (msgErr) {
