@@ -39,6 +39,8 @@ const AUDIT_ACTIONS = [
   { value: "invite.accepted", label: "invite.accepted" },
   { value: "invite.resent", label: "invite.resent" },
   { value: "invite.revoked", label: "invite.revoked" },
+  { value: "owner.ownership_transferred", label: "owner.ownership_transferred" },
+  { value: "owner.sessions_revoked", label: "owner.sessions_revoked" },
 ];
 
 const TARGET_TYPES = [
