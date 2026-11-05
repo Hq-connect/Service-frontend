@@ -16,12 +16,15 @@ import { PRIMARY_NAV_ITEMS } from "./navigation";
 import Logo from "@/components/ui/Logo";
 import NotificationBell from "@/features/notifications/components/NotificationBell";
 import { ProductivitySidebar } from "@/features/productivity/components/ProductivitySidebar";
+import { extractUser } from "@/global/utils/user";
 
 function MobileNavigation({ 
   tenant, user, logout, secondaryNav, selectedSpaceIdx, setSelectedSpaceIdx, 
   currentPath, getInitials, getUserName, getAvatarStyle, mobileDrawerOpen, setMobileDrawerOpen 
 }) {
   const location = useLocation();
+  // Unwrap nested Redux shape so direct field accesses (.avatar, .email) work correctly
+  const normalizedUser = extractUser(user);
 
   const renderSecondaryItems = () => {
     return (
@@ -153,7 +156,7 @@ function MobileNavigation({
           <DropdownMenu>
             <DropdownMenuTrigger className="focus:outline-hidden cursor-pointer rounded-full">
               <Avatar className="size-8">
-                {user?.avatar && <AvatarImage src={user.avatar} alt={getUserName(user)} />}
+                {normalizedUser?.avatar && <AvatarImage src={normalizedUser.avatar} alt={getUserName(user)} />}
                 <AvatarFallback 
                   style={getAvatarStyle(user)} 
                   className="font-bold text-xs font-heading"
@@ -165,7 +168,7 @@ function MobileNavigation({
             <DropdownMenuContent className="w-52" align="end">
               <div className="px-2.5 py-2 flex flex-col min-w-0">
                 <span className="font-semibold text-sm text-foreground truncate">{getUserName(user)}</span>
-                <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+                <span className="text-xs text-muted-foreground truncate">{normalizedUser?.email}</span>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer flex items-center gap-2">

@@ -1,19 +1,32 @@
 import { useNavigate } from "react-router-dom";
 import {
-  LayoutGrid, Search, Smartphone, Calendar, LogOut, User, Settings
+  LayoutGrid,
+  Search,
+  Smartphone,
+  Calendar,
+  LogOut,
+  User,
+  SlidersHorizontal,
+  Building2,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import NotificationBell from "@/features/notifications/components/NotificationBell";
+import { extractUser } from "@/global/utils/user";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle }) {
   const navigate = useNavigate();
+  // Unwrap nested Redux shape (e.g. { data: { user: {...} } }) so direct
+  // field accesses like .avatar and .email work correctly.
+  const normalizedUser = extractUser(user);
+  const isAdminOrOwner =
+    normalizedUser?.role === "owner" || normalizedUser?.role === "admin";
 
   return (
     <header className="hidden md:flex items-center justify-between h-16 border-b border-border px-6 select-none bg-background shrink-0">
@@ -50,7 +63,7 @@ function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle 
         <DropdownMenu>
           <DropdownMenuTrigger className="focus:outline-none cursor-pointer group rounded-full">
             <Avatar className="size-8 ring-2 ring-transparent group-hover:ring-primary/20 transition-all duration-200">
-              {user?.avatar && <AvatarImage src={user.avatar} alt={getUserName(user)} />}
+              {normalizedUser?.avatar && <AvatarImage src={normalizedUser.avatar} alt={getUserName(user)} />}
               <AvatarFallback
                 style={getAvatarStyle(user)}
                 className="font-bold text-xs font-heading"
@@ -62,15 +75,29 @@ function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle 
           <DropdownMenuContent className="w-56" align="end">
             <div className="px-2.5 py-2 flex flex-col min-w-0">
               <span className="font-semibold text-sm text-foreground truncate">{getUserName(user)}</span>
-              <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+              <span className="text-xs text-muted-foreground truncate">{normalizedUser?.email}</span>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
+            <DropdownMenuItem
+              onClick={() => navigate("/settings/profile")}
+              className="cursor-pointer flex items-center gap-2"
+            >
               <User className="size-4" /> Profile Settings
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-              <Settings className="size-4" /> Preferences
+            <DropdownMenuItem
+              onClick={() => navigate("/settings/appearance")}
+              className="cursor-pointer flex items-center gap-2"
+            >
+              <SlidersHorizontal className="size-4" /> Preferences
             </DropdownMenuItem>
+            {isAdminOrOwner && (
+              <DropdownMenuItem
+                onClick={() => navigate("/settings/workspace")}
+                className="cursor-pointer flex items-center gap-2"
+              >
+                <Building2 className="size-4" /> Workspace Settings
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={logout}

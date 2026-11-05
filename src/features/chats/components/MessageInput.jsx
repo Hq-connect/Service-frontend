@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, SendHorizonal, Smile, X, FileText, Image as ImageIcon, Loader2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadMedia } from "../hooks/useUploadMedia";
@@ -124,7 +123,7 @@ function MessageInput({
     const textarea = textareaRef.current;
     if (!textarea) return;
     textarea.style.height = "auto";
-    const targetHeight = Math.min(textarea.scrollHeight, 140);
+    const targetHeight = Math.min(Math.max(textarea.scrollHeight, 32), 140);
     textarea.style.height = `${targetHeight}px`;
     textarea.style.overflowY = textarea.scrollHeight > 140 ? "auto" : "hidden";
   }, [text]);
@@ -291,7 +290,7 @@ function MessageInput({
       {/* Input area */}
       <div
         className={cn(
-          "flex items-end gap-2 rounded-2xl border border-input/80 bg-card p-2 sm:p-2.5 transition-all duration-200 shadow-2xs",
+          "flex items-end gap-1.5 sm:gap-2 rounded-[var(--radius-xl)] border border-input bg-card p-1.5 sm:p-2 transition-all duration-200 shadow-2xs",
           "focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 focus-within:shadow-xs"
         )}
       >
@@ -302,13 +301,13 @@ function MessageInput({
           size="icon"
           disabled={disabled || isUploading}
           onClick={() => fileInputRef.current?.click()}
-          className="size-8 rounded-xl shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted mb-0.5 transition-colors"
+          className="size-8 rounded-[var(--radius-md)] shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
           <Paperclip className="size-4" />
         </Button>
 
         {/* Textarea */}
-        <Textarea
+        <textarea
           ref={textareaRef}
           value={text}
           onChange={(e) => {
@@ -324,10 +323,7 @@ function MessageInput({
           placeholder="Write a message..."
           disabled={disabled || isUploading}
           rows={1}
-          className={cn(
-            "flex-1 min-h-[36px] max-h-[140px] resize-none border-0 shadow-none p-0 text-sm leading-relaxed",
-            "focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-foreground placeholder:text-muted-foreground/60"
-          )}
+          className="flex-1 min-h-[32px] max-h-[140px] resize-none border-0 bg-transparent text-foreground placeholder:text-muted-foreground/60 px-2 py-1.5 text-sm leading-5 outline-none focus:outline-none focus:ring-0 custom-scrollbar"
         />
 
         {/* Emoji Selector */}
@@ -338,7 +334,7 @@ function MessageInput({
           disabled={disabled || isUploading}
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           className={cn(
-            "size-8 rounded-xl shrink-0 mb-0.5 transition-colors",
+            "size-8 rounded-[var(--radius-md)] shrink-0 transition-colors",
             showEmojiPicker ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
         >
@@ -352,7 +348,7 @@ function MessageInput({
           disabled={isSendDisabled}
           onClick={handleSend}
           className={cn(
-            "size-8 rounded-xl shrink-0 mb-0.5 transition-all duration-150 cursor-pointer",
+            "size-8 rounded-[var(--radius-md)] shrink-0 transition-all duration-150 cursor-pointer",
             isSendDisabled
               ? "opacity-35 bg-muted text-muted-foreground cursor-not-allowed"
               : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs active:scale-95"

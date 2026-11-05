@@ -9,11 +9,25 @@ function useAuth() {
         dispatch(setLoading(true));
         try {
             const response = await authService.registerUser(userData);
-            dispatch(setUser(response.data));
-            return response.data;
+            // Invited registration returns `response.data.user` and sets the auth cookie
+            if (response?.data?.user) {
+                dispatch(setUser(response.data));
+                return {
+                    autoLoggedIn: true,
+                    user: response.data.user,
+                };
+            }
+            // Standard self-registration creates a pending account with a message only
+            return {
+                pendingApproval: true,
+                message:
+                    response?.message ||
+                    "You are registered successfully. Admins will onboard you shortly.",
+            };
         } catch (error) {
-            dispatch(setError(error.response.data));
-        }finally {
+            dispatch(setError(error.response?.data));
+            return null;
+        } finally {
             dispatch(setLoading(false));
         }
     };
