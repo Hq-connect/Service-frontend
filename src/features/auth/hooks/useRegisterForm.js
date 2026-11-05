@@ -1,6 +1,8 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import useAuth from "./useAuth"
+import { authService } from "../services/auth.service"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -34,6 +36,7 @@ function validate({ firstName, lastName, email, password }) {
 }
 
 function useRegisterForm() {
+  const navigate = useNavigate()
   const { register, loading: isLoading } = useAuth()
   const [fields, setFields] = useState({
     firstName: "",
@@ -44,7 +47,54 @@ function useRegisterForm() {
   const [errors, setErrors] = useState({})
   const [isSuccess, setIsSuccess] = useState(false)
 
+  // Invitation state when user arrives via ?invite=<rawToken>
+  const [inviteToken, setInviteToken] = useState(null)
+  const [invitation, setInvitation] = useState(null)
+  const [isVerifyingInvite, setIsVerifyingInvite] = useState(false)
+  const [inviteError, setInviteError] = useState(null)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const rawToken = params.get("invite")
+    if (!rawToken) return
+
+    // Strip `?invite=` from the address bar immediately so the token never leaks in history/Referer
+    params.delete("invite")
+    const remainingQuery = params.toString()
+    const cleanUrl = `${window.location.pathname}${remainingQuery ? `?${remainingQuery}` : ""}${window.location.hash}`
+    window.history.replaceState({}, document.title, cleanUrl)
+
+    setInviteToken(rawToken)
+    setIsVerifyingInvite(true)
+    setInviteError(null)
+
+    authService
+      .verifyInvitation(rawToken)
+      .then((inviteData) => {
+        if (inviteData?.email) {
+          setInvitation(inviteData)
+          setFields((prev) => ({ ...prev, email: inviteData.email }))
+        } else {
+          setInviteToken(null)
+          setInviteError("Invitation is invalid or has expired")
+        }
+      })
+      .catch((err) => {
+        setInviteToken(null)
+        const msg = err.response?.data?.message || "Invitation is invalid or has expired"
+        setInviteError(msg)
+        toast.error(msg)
+      })
+      .finally(() => {
+        setIsVerifyingInvite(false)
+      })
+  }, [])
+
   const set = (key) => (value) => {
+    if (key === "email" && invitation?.email) {
+      return // Lock email field when registering via a verified invitation
+    }
     setFields((f) => ({ ...f, [key]: value }))
     if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }))
   }
@@ -56,11 +106,19 @@ function useRegisterForm() {
       setErrors(errs)
       return
     }
-    const result = await register(fields)
-    if (result) {
+
+    const payload = inviteToken
+      ? { ...fields, email: invitation?.email || fields.email, inviteToken }
+      : fields
+
+    const result = await register(payload)
+    if (result?.autoLoggedIn) {
+      toast.success(`Welcome to ${invitation?.workspaceName || "the workspace"}!`)
+      navigate("/home", { replace: true })
+    } else if (result?.pendingApproval) {
       setIsSuccess(true)
       toast.success("Request submitted!", {
-        description: "Your access request is pending admin approval.",
+        description: result.message || "Your access request is pending admin approval.",
       })
     } else {
       toast.error("Registration failed. Please try again.")
@@ -73,7 +131,11 @@ function useRegisterForm() {
     email: fields.email,
     password: fields.password,
     errors,
-    isLoading,
+    isLoading: isLoading || isVerifyingInvite,
+    isVerifyingInvite,
+    invitation,
+    inviteError,
+    isInviteMode: Boolean(invitation && inviteToken),
     isSuccess,
     onFirstNameChange: set("firstName"),
     onLastNameChange: set("lastName"),
