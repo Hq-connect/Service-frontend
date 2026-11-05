@@ -16,6 +16,8 @@ import DocumentPage from "@/features/editor/pages/DocumentPage";
 import {
   SettingsLayout,
   AdminSettingsRoute,
+  OwnerSettingsRoute,
+  OwnerDangerZonePage,
   ProfileSettingsPage,
   SecuritySettingsPage,
   AppearanceSettingsPage,
@@ -109,6 +111,14 @@ export const router = createBrowserRouter([
           <AdminSettingsRoute>
             <AuditLogsPage />
           </AdminSettingsRoute>
+        ),
+      },
+      {
+        path: "danger",
+        element: (
+          <OwnerSettingsRoute>
+            <OwnerDangerZonePage />
+          </OwnerSettingsRoute>
         ),
       },
     ],
