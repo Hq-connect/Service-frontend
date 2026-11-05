@@ -1,7 +1,7 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
-  Menu, Plus, User, Settings, LogOut 
+  Menu, Plus, User, Settings, LogOut, SlidersHorizontal, Building2 
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader, SheetDescription } from "@/components/ui/sheet";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -23,8 +23,10 @@ function MobileNavigation({
   currentPath, getInitials, getUserName, getAvatarStyle, mobileDrawerOpen, setMobileDrawerOpen 
 }) {
   const location = useLocation();
+  const navigate = useNavigate();
   // Unwrap nested Redux shape so direct field accesses (.avatar, .email) work correctly
   const normalizedUser = extractUser(user);
+  const isAdminOrOwner = normalizedUser?.role === "owner" || normalizedUser?.role === "admin";
 
   const renderSecondaryItems = () => {
     return (
@@ -143,6 +145,17 @@ function MobileNavigation({
                   </>
                 )}
               </div>
+              {/* Mobile Drawer Footer: Settings link */}
+              <div className="p-3 border-t border-border mt-auto flex flex-col gap-1 bg-background shrink-0">
+                <Link
+                  to="/settings/profile"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-foreground/80 hover:bg-accent/40 hover:text-foreground transition-all duration-150 group cursor-pointer"
+                >
+                  <Settings className="size-[18px] text-muted-foreground group-hover:text-foreground" />
+                  <span>Settings</span>
+                </Link>
+              </div>
             </SheetContent>
           </Sheet>
           <span className="font-semibold text-base text-foreground font-heading capitalize">
@@ -150,8 +163,16 @@ function MobileNavigation({
           </span>
         </div>
 
-        {/* User Dropdown on Mobile */}
+        {/* User Dropdown & Settings on Mobile */}
         <div className="flex items-center gap-1.5">
+          <Link
+            to="/settings/profile"
+            aria-label="Settings"
+            title="Settings"
+            className="cursor-pointer size-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <Settings className="size-5" />
+          </Link>
           <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger className="focus:outline-hidden cursor-pointer rounded-full">
@@ -171,12 +192,26 @@ function MobileNavigation({
                 <span className="text-xs text-muted-foreground truncate">{normalizedUser?.email}</span>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
+              <DropdownMenuItem 
+                onClick={() => navigate("/settings/profile")}
+                className="cursor-pointer flex items-center gap-2"
+              >
                 <User className="size-4" /> Profile Settings
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-                <Settings className="size-4" /> Preferences
+              <DropdownMenuItem 
+                onClick={() => navigate("/settings/appearance")}
+                className="cursor-pointer flex items-center gap-2"
+              >
+                <SlidersHorizontal className="size-4" /> Preferences
               </DropdownMenuItem>
+              {isAdminOrOwner && (
+                <DropdownMenuItem 
+                  onClick={() => navigate("/settings/workspace")}
+                  className="cursor-pointer flex items-center gap-2"
+                >
+                  <Building2 className="size-4" /> Workspace Settings
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={logout} 
