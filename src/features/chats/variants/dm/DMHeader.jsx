@@ -33,7 +33,7 @@ function DMHeader({ chat }) {
     presence === "away"   ? "Away"       : "Offline";
 
   return (
-    <div className="flex items-center justify-between px-4 h-16 border-b border-border bg-background shrink-0 select-none">
+    <div className="flex items-center justify-between px-4 h-14 border-b border-border bg-background shrink-0 select-none">
       {/* Left: avatar + name + status */}
       <div className="flex items-center gap-3">
         <Link 
@@ -55,42 +55,57 @@ function DMHeader({ chat }) {
             <OnlineIndicator status={presence} size="xs" />
           </div>
         </div>
-        <div className="leading-tight">
+        <div className="flex items-center gap-2">
           <p className="text-sm font-semibold text-foreground tracking-tight">{displayName}</p>
-          <p className="text-[11px] text-muted-foreground">{presenceLabel}</p>
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border border-border bg-muted/40 text-muted-foreground"
+            style={
+              presence === "online"
+                ? {
+                    backgroundColor: "var(--status-live-bg)",
+                    color: "var(--status-live-fg)",
+                    borderColor: "transparent",
+                  }
+                : undefined
+            }
+          >
+            {presenceLabel}
+          </span>
         </div>
       </div>
 
       {/* Right: actions */}
       <div className="flex items-center gap-1">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => initiateCall({ callType: "audio" })}
-          disabled={isStartingCall}
-          title={`Start audio call with ${displayName}`}
-          className="size-8 text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 active:scale-95 transition-all duration-150 cursor-pointer"
-        >
-          {isStartingCall ? (
-            <Loader2 className="size-4 animate-spin text-emerald-500" />
-          ) : (
-            <Phone className="size-4" />
-          )}
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => initiateCall({ callType: "video" })}
-          disabled={isStartingCall}
-          title={`Start video call with ${displayName}`}
-          className="size-8 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-500/10 active:scale-95 transition-all duration-150 cursor-pointer"
-        >
-          {isStartingCall ? (
-            <Loader2 className="size-4 animate-spin text-indigo-500" />
-          ) : (
-            <Video className="size-4" />
-          )}
-        </Button>
+        <div className="flex items-center gap-0.5 p-0.5 rounded-lg border border-border bg-muted/30 mr-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => initiateCall({ callType: "audio" })}
+            disabled={isStartingCall}
+            title={`Start audio call with ${displayName}`}
+            className="size-7 text-muted-foreground hover:text-foreground hover:bg-background active:scale-95 transition-all duration-150 cursor-pointer"
+          >
+            {isStartingCall ? (
+              <Loader2 className="size-3.5 animate-spin text-primary" />
+            ) : (
+              <Phone className="size-3.5" />
+            )}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => initiateCall({ callType: "video" })}
+            disabled={isStartingCall}
+            title={`Start video call with ${displayName}`}
+            className="size-7 text-muted-foreground hover:text-foreground hover:bg-background active:scale-95 transition-all duration-150 cursor-pointer"
+          >
+            {isStartingCall ? (
+              <Loader2 className="size-3.5 animate-spin text-primary" />
+            ) : (
+              <Video className="size-3.5" />
+            )}
+          </Button>
+        </div>
         <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150">
           <Search className="size-4" />
         </Button>

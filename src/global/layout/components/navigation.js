@@ -26,11 +26,11 @@ export const SECONDARY_NAV_DATA = {
   "/home": {
     title: "Home",
     items: [
-      { label: "All Spaces", icon: LayoutGrid },
-      { label: "Marketing Team", icon: "M", color: "#00c2ff" },
-      { label: "Sales Pipeline", icon: "S", color: "#cc5aed" },
-      { label: "Product Launch", icon: "P", color: "#3b82f6" },
-      { label: "Personal Space", icon: "P", color: "#10b981" }
+      { label: "Overview", icon: LayoutGrid, path: "/home" },
+      { label: "Assigned to me", icon: UserCheck, path: "/tasks?view=assigned" },
+      { label: "Upcoming Meets", icon: Video, path: "/meets" },
+      { label: "Knowledge Docs", icon: FileText, path: "/docs" },
+      { label: "Direct Messages", icon: MessageCircle, path: "/chats/dm" }
     ]
   },
   "/tasks": {

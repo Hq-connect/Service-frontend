@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react';
 import { 
-    CheckCircle2, Clock, AlertTriangle, ListTodo, TrendingUp, Users, ShieldCheck, Flame 
+    CheckCircle2, Clock, AlertTriangle, ListTodo 
 } from 'lucide-react';
 import { 
-    ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, PieChart, Pie 
+    ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell 
 } from 'recharts';
+import { Badge } from '@/components/ui/badge';
 import { getInitials, getAvatarStyle } from '@/global/utils/user';
 
-export const ProjectInsightsView = ({ tasks = [], project, members = [] }) => {
+export const ProjectInsightsView = ({ tasks = [] }) => {
     const stats = useMemo(() => {
         const total = tasks.length;
         const done = tasks.filter(t => t.status === 'done').length;
@@ -41,20 +42,20 @@ export const ProjectInsightsView = ({ tasks = [], project, members = [] }) => {
         };
     }, [tasks]);
 
-    // Status Chart Data
+    // Status Chart Data using existing CSS chart tokens from index.css
     const statusData = [
-        { name: 'To Do', count: stats.todo, color: '#94a3b8' },
-        { name: 'In Progress', count: stats.inProgress, color: '#3b82f6' },
-        { name: 'Review', count: stats.review, color: '#6366f1' },
-        { name: 'Done', count: stats.done, color: '#10b981' },
+        { name: 'To Do', count: stats.todo, color: 'var(--chart-2)' },
+        { name: 'In Progress', count: stats.inProgress, color: 'var(--chart-3)' },
+        { name: 'Review', count: stats.review, color: 'var(--chart-4)' },
+        { name: 'Done', count: stats.done, color: 'var(--status-live-fg)' },
     ];
 
-    // Priority Chart Data
+    // Priority Chart Data using existing CSS tokens from index.css
     const priorityData = [
-        { name: 'Urgent', count: stats.urgent, color: '#ef4444' },
-        { name: 'High', count: stats.high, color: '#f97316' },
-        { name: 'Medium', count: stats.medium, color: '#eab308' },
-        { name: 'Low', count: stats.low, color: '#22c55e' },
+        { name: 'Urgent', count: stats.urgent, color: 'var(--destructive)' },
+        { name: 'High', count: stats.high, color: 'var(--primary-sidebar-marker)' },
+        { name: 'Medium', count: stats.medium, color: 'var(--status-warn-fg)' },
+        { name: 'Low', count: stats.low, color: 'var(--chart-2)' },
     ];
 
     // Assignee Workload
@@ -68,61 +69,61 @@ export const ProjectInsightsView = ({ tasks = [], project, members = [] }) => {
     }, [tasks]);
 
     return (
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-background">
-            {/* Top Metrics Cards */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-background custom-scrollbar animate-fade-in">
+            {/* Top Metrics Cards (Matches Settings KPI aesthetic) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
-                    <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2">
+                <div className="p-4 rounded-xl border border-border bg-card shadow-(--shadow-card)">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium mb-1.5">
                         <span>Total Issues</span>
-                        <ListTodo className="w-4 h-4 text-primary" />
+                        <ListTodo className="size-4 text-muted-foreground" />
                     </div>
-                    <div className="text-2xl font-bold text-foreground">
+                    <div className="text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums">
                         {stats.total}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-[11px] text-muted-foreground mt-1">
                         Across all columns & boards
                     </p>
                 </div>
 
-                <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
-                    <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2">
+                <div className="p-4 rounded-xl border border-border bg-card shadow-(--shadow-card)">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium mb-1.5">
                         <span>Completion Rate</span>
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <CheckCircle2 className="size-4 text-status-live-foreground" />
                     </div>
-                    <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    <div className="text-2xl font-bold tracking-tight text-status-live-foreground font-mono tabular-nums">
                         {stats.completionRate}%
                     </div>
                     <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
                         <div 
-                            className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" 
+                            className="bg-status-live-foreground h-1.5 rounded-full transition-all duration-500" 
                             style={{ width: `${stats.completionRate}%` }} 
                         />
                     </div>
                 </div>
 
-                <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
-                    <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2">
-                        <span>In Progress</span>
-                        <Clock className="w-4 h-4 text-blue-500" />
+                <div className="p-4 rounded-xl border border-border bg-card shadow-(--shadow-card)">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium mb-1.5">
+                        <span>In Execution</span>
+                        <Clock className="size-4 text-status-warn-foreground" />
                     </div>
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    <div className="text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums">
                         {stats.inProgress + stats.review}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-[11px] text-muted-foreground mt-1">
                         Active development & review
                     </p>
                 </div>
 
-                <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
-                    <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2">
-                        <span>Overdue / Blocked</span>
-                        <AlertTriangle className="w-4 h-4 text-destructive" />
+                <div className="p-4 rounded-xl border border-border bg-card shadow-(--shadow-card)">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium mb-1.5">
+                        <span>Overdue / At Risk</span>
+                        <AlertTriangle className="size-4 text-destructive" />
                     </div>
-                    <div className="text-2xl font-bold text-destructive">
+                    <div className="text-2xl font-bold tracking-tight text-destructive font-mono tabular-nums">
                         {stats.overdue}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        Past due date or high risk
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                        Past due date or blocked
                     </p>
                 </div>
             </div>
@@ -130,24 +131,35 @@ export const ProjectInsightsView = ({ tasks = [], project, members = [] }) => {
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Status Breakdown */}
-                <div className="p-5 rounded-xl border border-border bg-card shadow-2xs">
-                    <h3 className="text-sm font-semibold text-foreground mb-4">
-                        Issues by Status
-                    </h3>
-                    <div className="h-64 w-full">
+                <section className="rounded-xl border border-border bg-card shadow-(--shadow-card) overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+                        <div>
+                            <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                                Issues by Workflow Status
+                            </h3>
+                            <p className="text-[11px] text-muted-foreground">
+                                Distribution across To Do, In Progress, Review, and Done
+                            </p>
+                        </div>
+                        <Badge variant="outline" className="font-mono text-[10px]">
+                            {stats.total} total
+                        </Badge>
+                    </div>
+                    <div className="p-5 h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={statusData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+                                <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                                <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
                                 <Tooltip 
                                     contentStyle={{ 
                                         backgroundColor: 'var(--card)', 
                                         borderColor: 'var(--border)',
-                                        borderRadius: '8px',
-                                        fontSize: '12px'
+                                        borderRadius: '10px',
+                                        fontSize: '12px',
+                                        boxShadow: 'var(--shadow-popover)'
                                     }} 
                                 />
-                                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                                     {statusData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                     ))}
@@ -155,27 +167,38 @@ export const ProjectInsightsView = ({ tasks = [], project, members = [] }) => {
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </section>
 
                 {/* Priority Breakdown */}
-                <div className="p-5 rounded-xl border border-border bg-card shadow-2xs">
-                    <h3 className="text-sm font-semibold text-foreground mb-4">
-                        Issues by Priority
-                    </h3>
-                    <div className="h-64 w-full">
+                <section className="rounded-xl border border-border bg-card shadow-(--shadow-card) overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+                        <div>
+                            <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                                Issues by Priority Level
+                            </h3>
+                            <p className="text-[11px] text-muted-foreground">
+                                Severity breakdown across Urgent, High, Medium, and Low
+                            </p>
+                        </div>
+                        <Badge variant="outline" className="font-mono text-[10px]">
+                            {stats.urgent + stats.high} high/urgent
+                        </Badge>
+                    </div>
+                    <div className="p-5 h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={priorityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+                                <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                                <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
                                 <Tooltip 
                                     contentStyle={{ 
                                         backgroundColor: 'var(--card)', 
                                         borderColor: 'var(--border)',
-                                        borderRadius: '8px',
-                                        fontSize: '12px'
+                                        borderRadius: '10px',
+                                        fontSize: '12px',
+                                        boxShadow: 'var(--shadow-popover)'
                                     }} 
                                 />
-                                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                                     {priorityData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                     ))}
@@ -183,33 +206,38 @@ export const ProjectInsightsView = ({ tasks = [], project, members = [] }) => {
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </section>
             </div>
 
             {/* Workload by Assignee */}
-            <div className="p-5 rounded-xl border border-border bg-card shadow-2xs">
-                <h3 className="text-sm font-semibold text-foreground mb-4">
-                    Team Workload
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <section className="rounded-xl border border-border bg-card shadow-(--shadow-card) overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-border">
+                    <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                        Team Workload Distribution
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground">
+                        Assigned issue count per workspace contributor
+                    </p>
+                </div>
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
                     {assigneeData.map((item, idx) => (
-                        <div key={idx} className="p-3 rounded-lg border border-border bg-muted/20 flex items-center justify-between">
+                        <div key={idx} className="p-3 rounded-xl border border-border bg-muted/20 flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2.5 truncate">
                                 <div 
                                     style={getAvatarStyle(item.userId || item.name)}
-                                    className="w-7 h-7 rounded-full font-bold text-[10px] flex items-center justify-center shrink-0 border border-border/40"
+                                    className="size-7 rounded-full font-bold text-[10px] flex items-center justify-center shrink-0 border border-border/40"
                                 >
                                     {getInitials(item.name)}
                                 </div>
-                                <span className="text-xs font-medium truncate">{item.name}</span>
+                                <span className="text-xs font-medium text-foreground truncate">{item.name}</span>
                             </div>
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                                {item.count} issues
-                            </span>
+                            <Badge variant="secondary" className="font-mono tabular-nums text-[10px] shrink-0">
+                                {item.count} {item.count === 1 ? 'issue' : 'issues'}
+                            </Badge>
                         </div>
                     ))}
                 </div>
-            </div>
+            </section>
         </div>
     );
 };

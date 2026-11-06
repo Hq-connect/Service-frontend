@@ -94,15 +94,21 @@ function ChatSidebar({ activeType = "dm" }) {
       <aside className={`flex-col w-full md:w-[280px] md:min-w-[240px] border-r border-border bg-background shrink-0 overflow-hidden ${
         chatId ? "hidden md:flex" : "flex"
       }`}>
-        {/* Header Search & Create Action - aligned to h-16 for seamless border symmetry */}
-        <div className="h-16 px-3 flex items-center gap-2 border-b border-border bg-background shrink-0">
+        {/* Header Search & Create Action - aligned to h-14 for seamless border symmetry */}
+        <div className="h-14 px-3 flex items-center gap-2 border-b border-border bg-background shrink-0">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={activeType === "group" ? "Search groups..." : "Search direct messages..."}
-              className="pl-8 h-9 text-xs bg-muted/60 border-input/60 focus-visible:ring-1"
+              placeholder={
+                activeType === "group"
+                  ? "Filter groups..."
+                  : activeType === "channel"
+                  ? "Filter channels..."
+                  : "Search people or DMs..."
+              }
+              className="pl-8 h-8 text-xs bg-muted/50 border-border focus-visible:ring-1"
             />
           </div>
           {activeType === "group" && (
@@ -110,12 +116,26 @@ function ChatSidebar({ activeType = "dm" }) {
               variant="outline"
               size="icon"
               onClick={() => setCreateGroupOpen(true)}
-              className="size-9 shrink-0 text-primary border-border hover:bg-primary/10"
+              className="size-8 shrink-0 text-primary border-border hover:bg-primary/10"
               title="New Group"
             >
-              <Plus className="size-4" />
+              <Plus className="size-3.5" />
             </Button>
           )}
+        </div>
+
+        {/* Section Subtitle + Count */}
+        <div className="px-3.5 pt-2.5 pb-1 flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            {activeType === "group"
+              ? "Active Groups"
+              : activeType === "channel"
+              ? "Channels"
+              : "Direct Messages"}
+          </span>
+          <span className="text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+            {filtered.length}
+          </span>
         </div>
 
         {/* Chat list */}

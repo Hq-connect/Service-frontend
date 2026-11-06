@@ -207,6 +207,22 @@
   ::-webkit-scrollbar-corner {
     background: transparent;
   }
+
+  /* Ensure native HTML date/time picker icons and popups use dark color scheme in dark mode */
+  .dark {
+    color-scheme: dark;
+  }
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    opacity: 0.85;
+    cursor: pointer;
+  }
+  .dark input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator:hover,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
 }
 
 @utility no-scrollbar {
@@ -234,6 +250,34 @@
   &::-webkit-scrollbar-thumb:hover {
     background-color: var(--muted-foreground);
   }
+}
+
+@keyframes saas-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes saas-pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@utility animate-fade-in {
+  animation: saas-fade-up 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@utility animate-pulse-subtle {
+  animation: saas-pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* ── Accessibility: honour reduced-motion system preference ── */

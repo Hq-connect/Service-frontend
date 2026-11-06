@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-    Clock,
     Copy,
     Check,
     Video,
@@ -53,43 +52,37 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
         switch (status) {
             case "ongoing":
                 return (
-                    <Badge
-                        variant="outline"
-                        className="bg-status-live text-status-live-foreground border-status-live-border gap-1.5 px-2 py-0.5 text-[11px] font-medium"
-                    >
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-status-live-border bg-status-live px-2 py-0.5 text-[10px] font-medium text-status-live-foreground">
                         <span className="size-1.5 rounded-full bg-status-live-foreground animate-pulse" />
                         Live Now
-                    </Badge>
+                    </span>
                 );
             case "scheduled":
                 if (isStartingSoon()) {
                     return (
-                        <Badge
-                            variant="outline"
-                            className="bg-status-warn text-status-warn-foreground border-status-warn-border gap-1.5 px-2 py-0.5 text-[11px] font-medium"
-                        >
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-status-warn-border bg-status-warn px-2 py-0.5 text-[10px] font-medium text-status-warn-foreground">
                             <span className="size-1.5 rounded-full bg-status-warn-foreground" />
                             Starts &lt;15m
-                        </Badge>
+                        </span>
                     );
                 }
                 return (
-                    <Badge variant="secondary" className="gap-1.5 px-2 py-0.5 text-[11px] font-medium">
+                    <Badge variant="secondary" className="gap-1.5 px-2 py-0.5 text-[10px] font-medium">
                         <span className="size-1.5 rounded-full bg-primary" />
                         Scheduled
                     </Badge>
                 );
             case "completed":
                 return (
-                    <Badge variant="outline" className="text-muted-foreground border-border px-2 py-0.5 text-[11px]">
+                    <Badge variant="outline" className="text-muted-foreground border-border px-2 py-0.5 text-[10px]">
                         Completed
                     </Badge>
                 );
             case "cancelled":
                 return (
-                    <Badge variant="destructive" className="px-2 py-0.5 text-[11px]">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">
                         Cancelled
-                    </Badge>
+                    </span>
                 );
             default:
                 return null;
@@ -103,9 +96,14 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
         isValidDate &&
         new Date().toDateString() === scheduledDate.toDateString();
 
-    const formattedDate = isValidDate
+    const monthShort = isValidDate
+        ? scheduledDate.toLocaleDateString("en-US", { month: "short" })
+        : "NOW";
+    const dayNum = isValidDate ? scheduledDate.getDate() : "•";
+
+    const formattedTime = isValidDate
         ? isToday
-            ? `Today, ${scheduledDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+            ? `Today · ${scheduledDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
             : scheduledDate.toLocaleDateString("en-US", {
                   weekday: "short",
                   month: "short",
@@ -114,31 +112,31 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                   minute: "2-digit",
                   hour12: true,
               })
-        : "Instant Room";
+        : "Instant Video Room";
 
     const canJoin = meeting.status === "scheduled" || meeting.status === "ongoing";
 
     return (
         <div
             onClick={() => canJoin && onJoin(meeting.joinCode)}
-            className="group relative flex flex-col justify-between rounded-lg border border-border bg-card text-card-foreground shadow-2xs transition-all hover:shadow-sm hover:border-primary/40 overflow-hidden cursor-pointer"
+            className="group relative flex flex-col justify-between rounded-xl border border-border bg-card text-card-foreground shadow-(--shadow-card) transition-all duration-150 hover:border-foreground/25 hover:-translate-y-0.5 overflow-hidden cursor-pointer"
         >
             {/* Card Body */}
-            <div className="p-4 space-y-2.5">
-                {/* Top Header: Badges & Menu */}
-                <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <div className="p-5 space-y-3.5">
+                {/* Top Row: Status Badges & Actions Dropdown */}
+                <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                         {getStatusBadge(meeting.status)}
                         {isRecurring && (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded">
-                                <Repeat className="size-3" />
+                            <Badge variant="outline" className="gap-1 text-[10px] font-normal px-1.5 py-0">
+                                <Repeat className="size-2.5" />
                                 {formatRecurrenceBadge(meeting)}
-                            </span>
+                            </Badge>
                         )}
                         {isHost && (
-                            <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border">
+                            <Badge variant="outline" className="text-[10px] font-mono h-4 px-1.5 text-muted-foreground">
                                 Host
-                            </span>
+                            </Badge>
                         )}
                     </div>
 
@@ -146,10 +144,11 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button
-                                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                                    type="button"
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                                     title="Meeting Actions"
                                 >
-                                    <MoreHorizontal className="w-4 h-4" />
+                                    <MoreHorizontal className="size-4" />
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44 text-xs p-1">
@@ -198,24 +197,34 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                     </div>
                 </div>
 
-                {/* Title */}
-                <div>
-                    <h3 className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                        {meeting.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mt-1 min-h-[32px]">
-                        {meeting.description || "No description provided."}
-                    </p>
+                {/* Middle Row: Calendar Date Badge + Title & Description */}
+                <div className="flex items-start gap-3">
+                    <div className="size-10 rounded-lg border border-border bg-muted/50 flex flex-col items-center justify-center shrink-0 text-center shadow-2xs">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground leading-none">
+                            {monthShort}
+                        </span>
+                        <span className="text-xs font-bold font-mono tabular-nums text-foreground leading-tight mt-0.5">
+                            {dayNum}
+                        </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-[14px] text-foreground truncate group-hover:text-primary transition-colors tracking-tight">
+                            {meeting.title}
+                        </h3>
+                        <p className="text-xs text-muted-foreground line-clamp-1 leading-relaxed mt-0.5">
+                            {meeting.description || "Video conference room & screen sharing."}
+                        </p>
+                    </div>
                 </div>
 
-                {/* Date & Join Code Row */}
+                {/* Bottom Metadata Row: Schedule Time & One-Click Join Code Pill */}
                 <div className="flex items-center justify-between gap-2 pt-1 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1.5 truncate">
-                        <Calendar className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{formattedDate}</span>
+                    <div className="flex items-center gap-1.5 truncate font-mono tabular-nums text-[11px]">
+                        <Calendar className="size-3 shrink-0" />
+                        <span className="truncate">{formattedTime}</span>
                         {meeting.duration && (
                             <>
-                                <span>•</span>
+                                <span>·</span>
                                 <span>{meeting.duration}m</span>
                             </>
                         )}
@@ -224,45 +233,47 @@ export const MeetingCard = ({ meeting, onJoin, onCancel, onEnd, onEdit }) => {
                     <button
                         type="button"
                         onClick={handleCopy}
-                        className="inline-flex items-center gap-1 font-mono text-[11px] bg-muted/60 hover:bg-muted text-foreground border border-border px-2 py-0.5 rounded transition-colors cursor-pointer shrink-0"
+                        className="inline-flex items-center gap-1 font-mono tabular-nums text-[10px] bg-muted/60 hover:bg-muted text-foreground border border-border px-2 py-0.5 rounded-md transition-colors cursor-pointer shrink-0"
                         title="Click to copy join code"
                     >
                         <span>{meeting.joinCode}</span>
                         {copied ? (
-                            <Check className="size-3 text-status-live-foreground" />
+                            <Check className="size-2.5 text-status-live-foreground" />
                         ) : (
-                            <Copy className="size-3 text-muted-foreground" />
+                            <Copy className="size-2.5 text-muted-foreground" />
                         )}
                     </button>
                 </div>
             </div>
 
-            {/* Card Footer: Matches ProjectsDashboard */}
-            <div className="px-4 py-2.5 border-t border-border/60 bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
+            {/* Architectural Card Footer */}
+            <div className="px-5 py-3 border-t border-border bg-muted/35 flex items-center justify-between text-[11px] text-muted-foreground">
                 <span className="capitalize font-medium">
                     {meeting.status === "ongoing"
                         ? "Session in progress"
                         : meeting.status === "scheduled"
-                        ? isHost ? "You are hosting" : "Invited"
+                        ? isHost
+                            ? "You are hosting"
+                            : "Invited"
                         : `${meeting.status} session`}
                 </span>
 
                 {canJoin ? (
-                    <div className="flex items-center gap-1 text-primary font-semibold group-hover:translate-x-0.5 transition-transform text-xs">
+                    <div className="flex items-center gap-1 text-foreground font-semibold group-hover:translate-x-0.5 transition-transform text-xs">
                         {meeting.status === "ongoing" ? (
                             <>
-                                <Video className="w-3.5 h-3.5 text-status-live-foreground animate-pulse" />
-                                <span>Join Live</span>
+                                <Video className="size-3.5 text-status-live-foreground animate-pulse" />
+                                <span className="text-status-live-foreground">Join Live</span>
                             </>
                         ) : isHost ? (
                             <>
-                                <Play className="w-3.5 h-3.5" />
-                                <span>Start Meeting</span>
+                                <Play className="size-3 text-muted-foreground group-hover:text-foreground" />
+                                <span>Start Room</span>
                             </>
                         ) : (
                             <>
-                                <span>Join Meeting</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
+                                <span>Join Room</span>
+                                <ArrowRight className="size-3.5 text-muted-foreground group-hover:text-foreground" />
                             </>
                         )}
                     </div>

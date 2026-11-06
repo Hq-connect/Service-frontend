@@ -1,36 +1,69 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { 
-  Menu, Plus, User, Settings, LogOut, SlidersHorizontal, Building2 
+import {
+  Menu,
+  User,
+  Settings,
+  LogOut,
+  SlidersHorizontal,
+  Building2,
 } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader, SheetDescription } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+  SheetHeader,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PRIMARY_NAV_ITEMS } from "./navigation";
 import Logo from "@/components/ui/Logo";
 import NotificationBell from "@/features/notifications/components/NotificationBell";
 import { ProductivitySidebar } from "@/features/productivity/components/ProductivitySidebar";
+import DocsSidebarTree from "@/features/editor/components/sidebar/DocsSidebarTree";
+import { MeetsSidebar } from "@/features/meets/components/MeetsSidebar";
 import { extractUser } from "@/global/utils/user";
+import { cn } from "@/lib/utils";
 
-function MobileNavigation({ 
-  tenant, user, logout, secondaryNav, selectedSpaceIdx, setSelectedSpaceIdx, 
-  currentPath, getInitials, getUserName, getAvatarStyle, mobileDrawerOpen, setMobileDrawerOpen 
+function MobileNavigation({
+  tenant,
+  user,
+  logout,
+  secondaryNav,
+  selectedSpaceIdx,
+  setSelectedSpaceIdx,
+  currentPath,
+  getInitials,
+  getUserName,
+  getAvatarStyle,
+  mobileDrawerOpen,
+  setMobileDrawerOpen,
 }) {
   const location = useLocation();
   const navigate = useNavigate();
-  // Unwrap nested Redux shape so direct field accesses (.avatar, .email) work correctly
   const normalizedUser = extractUser(user);
-  const isAdminOrOwner = normalizedUser?.role === "owner" || normalizedUser?.role === "admin";
+  const role = normalizedUser?.role || "member";
+  const isAdminOrOwner = role === "owner" || role === "admin";
+
+  const isDocsRoute = currentPath.startsWith("/docs");
+  const isTasksRoute = currentPath.startsWith("/tasks");
+  const isMeetsRoute =
+    currentPath.startsWith("/meets") ||
+    currentPath.startsWith("/calendar") ||
+    currentPath.startsWith("/calander");
 
   const renderSecondaryItems = () => {
     return (
-      <div className="flex flex-col gap-0.5 p-2">
+      <div className="flex flex-col gap-0.5 px-3 py-1">
         {secondaryNav.items.map((item, idx) => {
           const Icon = item.icon;
           const currentUrl = location.pathname + location.search;
@@ -42,37 +75,45 @@ function MobileNavigation({
             if (item.path.includes("?")) {
               isSelected = currentUrl === item.path;
             } else if (item.id === "inbox" || item.label === "Inbox") {
-              isSelected = (!currentView || currentView === "inbox") && location.pathname === item.path;
+              isSelected =
+                (!currentView || currentView === "inbox") &&
+                location.pathname === item.path;
             } else {
-              isSelected = location.pathname === item.path || (item.path !== "/home" && item.path !== "/meets" && !location.pathname.startsWith("/tasks") && location.pathname.startsWith(item.path));
+              isSelected =
+                location.pathname === item.path ||
+                (item.path !== "/home" &&
+                  item.path !== "/meets" &&
+                  !location.pathname.startsWith("/tasks") &&
+                  location.pathname.startsWith(item.path));
             }
           } else {
             isSelected = selectedSpaceIdx === idx;
           }
 
-          const baseClass = `flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 group cursor-pointer ${
-            isSelected 
-              ? "bg-accent/80 text-foreground" 
-              : "text-foreground/80 hover:bg-accent/40 hover:text-foreground"
-          }`;
+          const baseClass = cn(
+            "relative flex items-center justify-between w-full px-2.5 py-2 text-[13px] rounded-lg transition-colors duration-150 group cursor-pointer",
+            isSelected
+              ? "bg-muted text-foreground font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-full before:bg-primary-sidebar-marker"
+              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          );
 
           const content = (
             <>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
                 {typeof Icon === "string" ? (
-                  <span 
-                    className="flex items-center justify-center size-5 text-[10px] font-bold text-white rounded-md shadow-xs shrink-0 select-none"
+                  <span
+                    className="flex items-center justify-center size-4 text-[9px] font-bold text-white rounded shrink-0 select-none"
                     style={{ backgroundColor: item.color || "#00c2ff" }}
                   >
                     {Icon}
                   </span>
                 ) : (
-                  <Icon className="size-[18px] shrink-0 text-muted-foreground group-hover:text-foreground" />
+                  <Icon className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
                 )}
-                <span>{item.label}</span>
+                <span className="truncate">{item.label}</span>
               </div>
               {item.count !== undefined && item.count > 0 && (
-                <span className="px-1.5 py-0.5 text-xs font-semibold rounded-md bg-muted text-muted-foreground group-hover:bg-accent-foreground/10 group-hover:text-accent-foreground">
+                <span className="px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold rounded-md bg-muted text-muted-foreground border border-border/60">
                   {item.count > 99 ? "99+" : item.count}
                 </span>
               )}
@@ -95,6 +136,7 @@ function MobileNavigation({
           return (
             <button
               key={idx}
+              type="button"
               onClick={() => {
                 setSelectedSpaceIdx(idx);
                 setMobileDrawerOpen(false);
@@ -112,53 +154,65 @@ function MobileNavigation({
   return (
     <>
       {/* Top Header Bar */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-background/85 backdrop-blur-md border-b border-border flex items-center justify-between px-4 z-40">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-background/90 backdrop-blur-md border-b border-border flex items-center justify-between px-4 z-40">
         {/* Hamburger Menu & Page Title */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
             <SheetTrigger className="md:hidden cursor-pointer size-8 inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent hover:bg-muted hover:text-foreground outline-none select-none transition-all">
-              <Menu className="size-5" />
+              <Menu className="size-4" />
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0 flex flex-col h-full bg-background">
-              <SheetHeader className="p-4 border-b border-border">
-                <SheetTitle className="text-left font-heading text-lg font-semibold flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {tenant?.logo ? <img src={tenant?.logo} alt="Logo" className="w-7 h-7" /> : <Logo iconOnly={true} className="w-7 h-7 text-foreground" />}
-                    <span className="whitespace-nowrap">{tenant?.name || "Hq"}</span>
-                  </div>
-                </SheetTitle>
-                <SheetDescription className="text-left text-xs">
-                  Sub-navigation for the selected dashboard view.
+            <SheetContent
+              side="left"
+              className="w-72 p-0 flex flex-col h-full bg-sidebar text-sidebar-foreground"
+            >
+              <SheetHeader className="px-4 py-3.5 border-b border-sidebar-border">
+                <SheetTitle className="sr-only">Workspace Navigation</SheetTitle>
+                <SheetDescription className="sr-only">
+                  Sub-navigation for the selected workspace module.
                 </SheetDescription>
+                <div className="flex items-center justify-between gap-2 pr-6">
+                  <span className="text-sm font-semibold text-foreground truncate">
+                    {tenant?.name || "HQ Workspace"}
+                  </span>
+                  <Badge variant="outline" className="capitalize text-[10px] h-5 px-2 shrink-0">
+                    {role}
+                  </Badge>
+                </div>
               </SheetHeader>
+
               <div className="flex-1 overflow-y-auto py-2">
-                {currentPath.startsWith("/tasks") ? (
+                {isTasksRoute ? (
                   <ProductivitySidebar />
+                ) : isDocsRoute ? (
+                  <DocsSidebarTree />
+                ) : isMeetsRoute ? (
+                  <MeetsSidebar />
                 ) : (
                   <>
-                    <div className="px-4 mb-2">
-                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        {secondaryNav.title} Options
+                    <div className="px-5 py-1.5">
+                      <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        {secondaryNav.title}
                       </h3>
                     </div>
                     {renderSecondaryItems()}
                   </>
                 )}
               </div>
+
               {/* Mobile Drawer Footer: Settings link */}
-              <div className="p-3 border-t border-border mt-auto flex flex-col gap-1 bg-background shrink-0">
+              <div className="p-3 border-t border-sidebar-border mt-auto flex flex-col gap-1 bg-sidebar shrink-0">
                 <Link
                   to="/settings/profile"
                   onClick={() => setMobileDrawerOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-foreground/80 hover:bg-accent/40 hover:text-foreground transition-all duration-150 group cursor-pointer"
+                  className="flex items-center gap-2.5 px-2.5 py-2 text-[13px] font-medium rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors group cursor-pointer"
                 >
-                  <Settings className="size-[18px] text-muted-foreground group-hover:text-foreground" />
-                  <span>Settings</span>
+                  <Settings className="size-4 text-muted-foreground group-hover:text-foreground" />
+                  <span>Workspace & Account Settings</span>
                 </Link>
               </div>
             </SheetContent>
           </Sheet>
-          <span className="font-semibold text-base text-foreground font-heading capitalize">
+          <span className="font-semibold text-sm text-foreground tracking-tight capitalize">
             {secondaryNav.title}
           </span>
         </div>
@@ -171,16 +225,18 @@ function MobileNavigation({
             title="Settings"
             className="cursor-pointer size-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
-            <Settings className="size-5" />
+            <Settings className="size-4" />
           </Link>
           <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger className="focus:outline-hidden cursor-pointer rounded-full">
-              <Avatar className="size-8">
-                {normalizedUser?.avatar && <AvatarImage src={normalizedUser.avatar} alt={getUserName(user)} />}
-                <AvatarFallback 
-                  style={getAvatarStyle(user)} 
-                  className="font-bold text-xs font-heading"
+              <Avatar className="size-7 ring-1 ring-border">
+                {normalizedUser?.avatar && (
+                  <AvatarImage src={normalizedUser.avatar} alt={getUserName(user)} />
+                )}
+                <AvatarFallback
+                  style={getAvatarStyle(user)}
+                  className="font-bold text-[10px] font-heading"
                 >
                   {getInitials(user)}
                 </AvatarFallback>
@@ -188,60 +244,68 @@ function MobileNavigation({
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-52" align="end">
               <div className="px-2.5 py-2 flex flex-col min-w-0">
-                <span className="font-semibold text-sm text-foreground truncate">{getUserName(user)}</span>
-                <span className="text-xs text-muted-foreground truncate">{normalizedUser?.email}</span>
+                <span className="font-semibold text-xs text-foreground truncate">
+                  {getUserName(user)}
+                </span>
+                <span className="text-[11px] font-mono text-muted-foreground truncate">
+                  {normalizedUser?.email}
+                </span>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => navigate("/settings/profile")}
-                className="cursor-pointer flex items-center gap-2"
+                className="cursor-pointer flex items-center gap-2 text-xs"
               >
-                <User className="size-4" /> Profile Settings
+                <User className="size-3.5" /> Profile Settings
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => navigate("/settings/appearance")}
-                className="cursor-pointer flex items-center gap-2"
+                className="cursor-pointer flex items-center gap-2 text-xs"
               >
-                <SlidersHorizontal className="size-4" /> Preferences
+                <SlidersHorizontal className="size-3.5" /> Preferences
               </DropdownMenuItem>
               {isAdminOrOwner && (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => navigate("/settings/workspace")}
-                  className="cursor-pointer flex items-center gap-2"
+                  className="cursor-pointer flex items-center gap-2 text-xs"
                 >
-                  <Building2 className="size-4" /> Workspace Settings
+                  <Building2 className="size-3.5" /> Workspace Settings
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={logout} 
+              <DropdownMenuItem
+                onClick={logout}
                 variant="destructive"
-                className="cursor-pointer flex items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                className="cursor-pointer flex items-center gap-2 text-xs text-destructive focus:bg-destructive/10 focus:text-destructive"
               >
-                <LogOut className="size-4" /> Sign Out
+                <LogOut className="size-3.5" /> Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
 
-      {/* Bottom Nav Bar (Mobile Primary Links) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#131517] border-t border-[#222528] flex items-center justify-around z-40 select-none">
-        {PRIMARY_NAV_ITEMS.map((item) => {
+      {/* Bottom Nav Bar (Mobile Primary Links using primary-sidebar tokens) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-primary-sidebar border-t border-primary-sidebar-border flex items-center justify-around px-1 z-40 select-none">
+        {PRIMARY_NAV_ITEMS.slice(0, 6).map((item) => {
           const Icon = item.icon;
-          const isActive = currentPath === item.path;
+          const isActive =
+            currentPath === item.path || currentPath.startsWith(item.path + "/");
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`relative flex flex-col items-center justify-center flex-1 py-1 transition-all duration-150 ${
-                isActive 
-                  ? "text-white font-semibold" 
-                  : "text-[#8e9297] hover:text-white"
-              }`}
+              className={cn(
+                "relative flex flex-col items-center justify-center flex-1 py-1.5 rounded-lg transition-all duration-150",
+                isActive
+                  ? "text-primary-sidebar-active-text font-semibold before:absolute before:top-0 before:left-1/2 before:-translate-x-1/2 before:w-5 before:h-0.5 before:rounded-full before:bg-primary-sidebar-marker"
+                  : "text-primary-sidebar-text hover:text-primary-sidebar-active-text"
+              )}
             >
-              <Icon className="size-5 shrink-0" />
-              <span className="text-[10px] mt-0.5 tracking-wide select-none">{item.label}</span>
+              <Icon className="size-4 shrink-0" />
+              <span className="text-[10px] mt-1 tracking-tight select-none truncate">
+                {item.label}
+              </span>
             </Link>
           );
         })}

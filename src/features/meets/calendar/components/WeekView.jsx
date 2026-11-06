@@ -125,9 +125,9 @@ export const WeekView = ({
     });
 
     return (
-        <div className="flex flex-col flex-1 bg-card rounded-lg border border-border shadow-2xs overflow-hidden">
+        <div className="flex flex-col flex-1 bg-card rounded-xl border border-border shadow-(--shadow-card) overflow-hidden">
             {/* Header: Days of the week */}
-            <div className="flex border-b border-border bg-muted/40 divide-x divide-border">
+            <div className="flex border-b border-border bg-muted/35 divide-x divide-border">
                 {/* Time Gutter Header */}
                 <div className="w-16 shrink-0 py-3 text-center text-xs text-muted-foreground font-medium">
                     <Clock className="size-3.5 mx-auto opacity-70" />
@@ -143,20 +143,23 @@ export const WeekView = ({
                             <div
                                 key={dayKey}
                                 onClick={() => onSelectDate(day)}
-                                className={`py-2 px-1 text-center transition-colors cursor-pointer ${
-                                    isSelected ? "bg-accent/20" : "hover:bg-muted/40"
+                                className={`relative py-2 px-1 text-center transition-colors cursor-pointer ${
+                                    isSelected ? "bg-muted/50" : "hover:bg-muted/30"
                                 }`}
                             >
-                                <div className="text-[11px] font-medium text-muted-foreground uppercase">
+                                {isSelected && (
+                                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary pointer-events-none" />
+                                )}
+                                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                                     {format(day, "EEE")}
                                 </div>
-                                <div className="mt-0.5 flex items-center justify-center gap-1">
+                                <div className="mt-1 flex items-center justify-center gap-1">
                                     <span
-                                        className={`inline-flex items-center justify-center size-6 rounded-full text-xs font-semibold ${
+                                        className={`inline-flex items-center justify-center size-6 rounded-md text-xs font-mono tabular-nums font-semibold ${
                                             isCurrentDay
-                                                ? "bg-primary text-primary-foreground font-bold shadow-xs"
+                                                ? "bg-primary text-primary-foreground font-bold shadow-2xs"
                                                 : isSelected
-                                                ? "text-primary font-bold"
+                                                ? "bg-muted text-foreground font-bold border border-border"
                                                 : "text-foreground"
                                         }`}
                                     >
@@ -165,7 +168,7 @@ export const WeekView = ({
                                     {hasNote && (
                                         <span
                                             title="Date note saved"
-                                            className="p-0.5 rounded-full bg-rose-500/20 text-rose-500"
+                                            className="p-0.5 rounded bg-status-live text-status-live-foreground border border-status-live-border"
                                         >
                                             <FileText className="size-2.5" />
                                         </span>
