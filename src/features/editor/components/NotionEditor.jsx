@@ -338,8 +338,10 @@ export default function NotionEditor({
   }, [editor, readOnly, notifyReadOnly]);
 
   // Hydrate content whenever editor is empty but document content exists in database
+  // and Yjs fragment has not already hydrated the document
   useEffect(() => {
     if (!editor) return;
+    if (yjsFragmentRef.current && yjsFragmentRef.current.length > 0) return;
 
     const isEditorEmpty = editor.isEmpty || editor.state.doc.textContent.trim() === "";
     const hasSubstantialContent = Boolean(

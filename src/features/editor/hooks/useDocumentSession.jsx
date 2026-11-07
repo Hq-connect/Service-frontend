@@ -25,6 +25,7 @@ export function useDocumentSession(documentId) {
 
   const {
     document: doc,
+    dataUpdatedAt,
     isLoading,
     isError,
     updateMetadata: rawUpdateMetadata,
@@ -37,7 +38,7 @@ export function useDocumentSession(documentId) {
   const currentUserName = getUserDisplayName(currentUser);
   const authUserId = currentUser?._id || currentUser?.id;
 
-  const appliedDocIdRef = useRef(null);
+  const appliedSnapshotKeyRef = useRef(null);
 
   const canEdit = Boolean(doc?.userRole === "owner" || doc?.userRole === "editor");
 
@@ -66,15 +67,16 @@ export function useDocumentSession(documentId) {
   // Manage active document id lifecycle in Redux store
   useEffect(() => {
     dispatch(setActiveDocumentId(documentId));
-    appliedDocIdRef.current = null;
+    appliedSnapshotKeyRef.current = null;
 
     return () => {
       dispatch(clearActiveDocumentId());
-      appliedDocIdRef.current = null;
+      appliedSnapshotKeyRef.current = null;
     };
   }, [documentId, dispatch]);
 
-  // Apply server snapshot strictly when documentId matches active state and query doc
+  // Apply server snapshot strictly when documentId matches active state and query doc,
+  // and re-merge whenever fresh server data arrives (CRDT applyUpdate is idempotent).
   useEffect(() => {
     if (
       !activeDocumentId ||
@@ -89,7 +91,8 @@ export function useDocumentSession(documentId) {
       return;
     }
 
-    if (appliedDocIdRef.current === documentId) {
+    const snapshotKey = `${documentId}:${dataUpdatedAt || 0}`;
+    if (appliedSnapshotKeyRef.current === snapshotKey) {
       if (!isCollabReady) {
         dispatch(setIsCollabReady(true));
       }
@@ -100,13 +103,16 @@ export function useDocumentSession(documentId) {
       applyServerSnapshot(doc.yjsSnapshot);
     }
 
-    appliedDocIdRef.current = documentId;
-    dispatch(setIsCollabReady(true));
+    appliedSnapshotKeyRef.current = snapshotKey;
+    if (!isCollabReady) {
+      dispatch(setIsCollabReady(true));
+    }
   }, [
     activeDocumentId,
     documentId,
     yjsXmlFragment,
     doc,
+    dataUpdatedAt,
     applyServerSnapshot,
     dispatch,
     isCollabReady,
