@@ -47,6 +47,7 @@ function MobileNavigation({
   getAvatarStyle,
   mobileDrawerOpen,
   setMobileDrawerOpen,
+  chatUnreadCount = 0,
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -286,23 +287,31 @@ function MobileNavigation({
       </header>
 
       {/* Bottom Nav Bar (Mobile Primary Links using primary-sidebar tokens) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-primary-sidebar border-t border-primary-sidebar-border flex items-center justify-around px-1 z-40 select-none">
-        {PRIMARY_NAV_ITEMS.slice(0, 6).map((item) => {
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-primary-sidebar border-t border-primary-sidebar-border flex items-center justify-around px-1 z-40 select-none overflow-x-auto no-scrollbar">
+        {PRIMARY_NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive =
             currentPath === item.path || currentPath.startsWith(item.path + "/");
+          const hasUnread = item.path === "/chats" && chatUnreadCount > 0;
           return (
             <Link
               key={item.path}
               to={item.path}
               className={cn(
-                "relative flex flex-col items-center justify-center flex-1 py-1.5 rounded-lg transition-all duration-150",
+                "relative flex flex-col items-center justify-center flex-1 min-w-[44px] py-1.5 rounded-lg transition-all duration-150",
                 isActive
                   ? "text-primary-sidebar-active-text font-semibold before:absolute before:top-0 before:left-1/2 before:-translate-x-1/2 before:w-5 before:h-0.5 before:rounded-full before:bg-primary-sidebar-marker"
                   : "text-primary-sidebar-text hover:text-primary-sidebar-active-text"
               )}
             >
-              <Icon className="size-4 shrink-0" />
+              <div className="relative flex items-center justify-center">
+                <Icon className="size-4 shrink-0" />
+                {hasUnread && (
+                  <span className="absolute -top-1.5 -right-2.5 min-w-3.5 h-3.5 px-1 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center ring-2 ring-primary-sidebar">
+                    {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                  </span>
+                )}
+              </div>
               <span className="text-[10px] mt-1 tracking-tight select-none truncate">
                 {item.label}
               </span>

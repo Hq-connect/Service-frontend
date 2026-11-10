@@ -21,6 +21,29 @@ const chatService = {
         });
         return response.data.data;
     },
+
+    /**
+     * Toggle vote on a poll option
+     * @param {{ messageId: string, optionIndex: number }} payload
+     */
+    votePoll: async ({ messageId, optionIndex }) => {
+        const response = await api.post("/chats/poll/vote", {
+            messageId,
+            optionIndex,
+        });
+        return response.data.data.message;
+    },
+
+    /**
+     * Close a poll (creator only)
+     * @param {{ messageId: string }} payload
+     */
+    closePoll: async ({ messageId }) => {
+        const response = await api.post("/chats/poll/close", {
+            messageId,
+        });
+        return response.data.data.message;
+    },
 };
 
 export default chatService;

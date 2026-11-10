@@ -353,6 +353,18 @@ export const useSocketSetup = (enabled) => {
                             ? (chat.unreadCount || 0) + 1
                             : (chat.unreadCount || 0);
 
+                        const isMentioned =
+                            Boolean(lastMessage?.mentionAll) ||
+                            (Array.isArray(lastMessage?.mentions) &&
+                                currentUserId &&
+                                lastMessage.mentions.some((mId) => String(mId) === String(currentUserId)));
+
+                        const unreadMentionCount = isCurrentChatActive
+                            ? 0
+                            : (isFromOther && !isDuplicate && isMentioned)
+                            ? (chat.unreadMentionCount || 0) + 1
+                            : (chat.unreadMentionCount || 0);
+
                         return {
                             ...chat,
                             lastMessage: {
@@ -360,6 +372,7 @@ export const useSocketSetup = (enabled) => {
                                 ...lastMessage,
                             },
                             unreadCount,
+                            unreadMentionCount,
                             updatedAt: updatedAt || lastMessage?.createdAt || new Date().toISOString(),
                         };
                     }
@@ -398,13 +411,13 @@ export const useSocketSetup = (enabled) => {
             }
 
             // Zero out unread count for this chat in list queries
-            ["dm", "group"].forEach((type) => {
+            ["dm", "group", "channel"].forEach((type) => {
                 queryClient.setQueryData(chatKeys.list(type), (oldChats) => {
                     if (!oldChats || !Array.isArray(oldChats)) return oldChats;
                     return oldChats.map((chat) => {
                         const cId = chat.chatId || chat._id;
                         if (cId === chatId) {
-                            return { ...chat, unreadCount: 0 };
+                            return { ...chat, unreadCount: 0, unreadMentionCount: 0 };
                         }
                         return chat;
                     });
@@ -415,23 +428,41 @@ export const useSocketSetup = (enabled) => {
             queryClient.setQueryData(chatKeys.unread(), (old) => {
                 if (!old) return old;
                 const prevCount = old.byChat?.[chatId] || 0;
-                if (prevCount === 0) return old;
+                const prevMentions = old.mentionsByChat?.[chatId] || 0;
+                if (prevCount === 0 && prevMentions === 0) return old;
 
                 const byChat = { ...(old.byChat || {}) };
+                const mentionsByChat = { ...(old.mentionsByChat || {}) };
                 delete byChat[chatId];
+                delete mentionsByChat[chatId];
 
                 return {
                     ...old,
                     total: Math.max(0, (old.total || 0) - prevCount),
                     dm: Math.max(0, (old.dm || 0) - prevCount),
                     group: Math.max(0, (old.group || 0) - prevCount),
+                    channel: Math.max(0, (old.channel || 0) - prevCount),
+                    totalMentions: Math.max(0, (old.totalMentions || 0) - prevMentions),
                     byChat,
+                    mentionsByChat,
                 };
             });
 
             queryClient.invalidateQueries({
                 queryKey: chatKeys.unread(),
             });
+        };
+
+        // CHANNEL UPDATED OR MESSAGE PINNED
+        const handleChannelUpdated = ({ chatId }) => {
+            queryClient.invalidateQueries({
+                queryKey: chatKeys.list("channel"),
+            });
+            if (chatId) {
+                queryClient.invalidateQueries({
+                    queryKey: chatKeys.channelDetails(chatId),
+                });
+            }
         };
 
         // NOTIFICATION RECEIVED
@@ -450,9 +481,11 @@ export const useSocketSetup = (enabled) => {
             // Invalidate chat unread counts if notification is chat-related
             const isChatNotification =
                 notification.type === "chat" ||
+                notification.type === "mention" ||
                 notification.type === "message" ||
                 (typeof notification.event === "string" && notification.event.startsWith("chat.")) ||
                 notification.action?.type === "chat" ||
+                notification.action?.type === "channel" ||
                 Boolean(notification.metadata?.chatId);
 
             if (isChatNotification) {
@@ -520,6 +553,8 @@ export const useSocketSetup = (enabled) => {
         socket.on("message:delete", handleMessageDeleted);
         socket.on("message:deleted", handleMessageDeleted);
         socket.on("message:reaction", handleMessageReaction);
+        socket.on("message:pinned", handleChannelUpdated);
+        socket.on("channel:updated", handleChannelUpdated);
         socket.on("notification:receive", handleNotificationReceive);
         socket.on("chat:read", handleChatRead);
         socket.on("document:tree:refresh", handleDocumentTreeRefresh);
@@ -542,6 +577,8 @@ export const useSocketSetup = (enabled) => {
             socket.off("message:delete", handleMessageDeleted);
             socket.off("message:deleted", handleMessageDeleted);
             socket.off("message:reaction", handleMessageReaction);
+            socket.off("message:pinned", handleChannelUpdated);
+            socket.off("channel:updated", handleChannelUpdated);
             socket.off("notification:receive", handleNotificationReceive);
             socket.off("chat:read", handleChatRead);
             socket.off("document:tree:refresh", handleDocumentTreeRefresh);
