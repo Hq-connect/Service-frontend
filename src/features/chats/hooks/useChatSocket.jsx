@@ -115,7 +115,7 @@ export const useChatSocket = ({
       return ["Someone"];
     }
 
-    if (chatType === "group") {
+    if (chatType === "group" || chatType === "channel") {
       return otherTypingIds.map((id) => {
         const found = groupMembers.find(
           (m) =>

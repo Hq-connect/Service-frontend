@@ -2,6 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import dmService from "../services/dm.service";
 import { chatKeys } from "../queries/chat.keys";
 import groupService from "../services/group.service";
+import channelService from "../services/channel.service";
 
 export const useMessages = (type="dm", chatId, limit=30) => {
     const getMessages = async ({ pageParam }) => {
@@ -15,6 +16,13 @@ export const useMessages = (type="dm", chatId, limit=30) => {
         
         case "group":
             return groupService.getGroupMessages(
+                chatId,
+                limit,
+                pageParam
+            );
+
+        case "channel":
+            return channelService.getChannelMessages(
                 chatId,
                 limit,
                 pageParam

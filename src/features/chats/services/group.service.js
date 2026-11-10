@@ -43,12 +43,14 @@ const groupService = {
         });
         return response.data.data.groupChat;
     },
-    sendMessage: async (chatId, content, replyTo=null) => {
+    sendMessage: async (chatId, content, replyTo = null, mentions = [], mentionAll = false) => {
         const formattedContent = typeof content === "object" && content !== null ? content : { text: content };
         const payload = {
             chatId,
             content: formattedContent,
             replyTo,
+            mentions,
+            mentionAll,
         };
         const response = await api.post("/chats/group/message", payload);
         return response.data.data.message;
@@ -71,11 +73,15 @@ const groupService = {
         });
         return response.data.data.messages;
     },
-    updateMessage: async (messageId, text) => {
-        const response = await api.put("/chats/group/message", {
+    updateMessage: async (messageId, text, mentions, mentionAll) => {
+        const payload = {
             messageId,
-            content: { text },
-        });
+            content: typeof text === "object" && text !== null ? text : { text },
+        };
+        if (mentions !== undefined) payload.mentions = mentions;
+        if (mentionAll !== undefined) payload.mentionAll = mentionAll;
+
+        const response = await api.put("/chats/group/message", payload);
         return response.data.data.message;
     },
     deleteMessage: async (messageId) => {

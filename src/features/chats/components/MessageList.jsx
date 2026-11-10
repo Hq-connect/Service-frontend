@@ -63,10 +63,14 @@ function MessageList({
   otherUser,
   groupMembers = [],
   typingUsers = [],
+  canModerate = false,
+  canPin = false,
+  pinnedMessageIds = [],
   onReply,
   onEdit,
   onDelete,
   onReact,
+  onPin,
 }) {
   const {
     data,
@@ -169,7 +173,7 @@ function MessageList({
                 senderInfo = message.senderId;
               } else if (otherUser && (senderIdStr === String(otherUser.userId || "") || senderIdStr === String(otherUser.id || "") || senderIdStr === String(otherUser._id || ""))) {
                 senderInfo = otherUser;
-              } else if (chatType === "group" && groupMembers.length > 0) {
+              } else if ((chatType === "group" || chatType === "channel") && groupMembers.length > 0) {
                 const found = groupMembers.find((m) => {
                   const mUserIdStr = String(
                     (typeof m.userId === "object" && m.userId !== null)
@@ -251,10 +255,16 @@ function MessageList({
                       otherUser={otherUser}
                       groupMembers={groupMembers}
                       clusterPosition={clusterPosition}
+                      canModerate={canModerate}
+                      canPin={canPin}
+                      isPinned={pinnedMessageIds.includes(
+                        String(message._id || message.messageId || message.id || "")
+                      )}
                       onReply={onReply}
                       onEdit={onEdit}
                       onDelete={onDelete}
                       onReact={onReact}
+                      onPin={onPin}
                     />
                   </MessageScrollerItem>
                 </React.Fragment>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Compass } from "lucide-react";
 import ChatList from "./ChatList";
 import { useChats } from "../hooks/useChats";
 import { useUsers } from "@/global/hooks/useUsers";
@@ -10,6 +10,8 @@ import useCurrentUser from "@/features/auth/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getUserDisplayName, getUserInitials, getAvatarStyle } from "@/global/utils/user";
 import CreateGroupDialog from "../variants/group/CreateGroupDialog";
+import CreateChannelDialog from "../variants/channel/CreateChannelDialog";
+import BrowseChannelsDialog from "../variants/channel/BrowseChannelsDialog";
 
 function NewUserListItem({ user, onClick }) {
   const displayName = getUserDisplayName(user);
@@ -52,6 +54,8 @@ function ChatSidebar({ activeType = "dm" }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [createChannelOpen, setCreateChannelOpen] = useState(false);
+  const [browseChannelsOpen, setBrowseChannelsOpen] = useState(false);
   const { data: chats = [], isLoading } = useChats(activeType);
 
   const { currentUser, currentUserId } = useCurrentUser();
@@ -122,6 +126,28 @@ function ChatSidebar({ activeType = "dm" }) {
               <Plus className="size-3.5" />
             </Button>
           )}
+          {activeType === "channel" && (
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setBrowseChannelsOpen(true)}
+                className="size-8 shrink-0 text-muted-foreground hover:text-foreground border-border"
+                title="Browse Public Channels"
+              >
+                <Compass className="size-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCreateChannelOpen(true)}
+                className="size-8 shrink-0 text-primary border-border hover:bg-primary/10"
+                title="Create Channel"
+              >
+                <Plus className="size-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Section Subtitle + Count */}
@@ -175,6 +201,19 @@ function ChatSidebar({ activeType = "dm" }) {
       <CreateGroupDialog
         open={createGroupOpen}
         onOpenChange={setCreateGroupOpen}
+      />
+
+      {/* Create Channel Dialog */}
+      <CreateChannelDialog
+        open={createChannelOpen}
+        onOpenChange={setCreateChannelOpen}
+      />
+
+      {/* Browse Public Channels Dialog */}
+      <BrowseChannelsDialog
+        open={browseChannelsOpen}
+        onOpenChange={setBrowseChannelsOpen}
+        onOpenCreate={() => setCreateChannelOpen(true)}
       />
     </>
   );

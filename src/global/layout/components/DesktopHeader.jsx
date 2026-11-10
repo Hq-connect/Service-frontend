@@ -14,6 +14,8 @@ import {
   Video,
   Sparkles,
   MessageSquare,
+  Hash,
+  Users,
   Home,
   ArrowUpRight,
   Plus,
@@ -49,6 +51,8 @@ const QUICK_JUMP_ITEMS = [
   { label: "Video Meetings & Rooms", section: "Navigation", path: "/meets", icon: Video, shortcut: "G M" },
   { label: "Workspace Calendar", section: "Navigation", path: "/calendar", icon: Calendar, shortcut: "G C" },
   { label: "Direct Messages", section: "Messaging", path: "/chats/dm", icon: MessageSquare, shortcut: "G I" },
+  { label: "Group Chats", section: "Messaging", path: "/chats/group", icon: Users, shortcut: "G G" },
+  { label: "Channels", section: "Messaging", path: "/chats/channel", icon: Hash, shortcut: "G N" },
   { label: "Start Instant Meeting", section: "Quick Actions", path: "/meets?action=instant", icon: Video, shortcut: "⌘ M" },
   { label: "Account & Workspace Settings", section: "Preferences", path: "/settings/profile", icon: SlidersHorizontal, shortcut: "⌘ ," },
 ];
@@ -60,8 +64,10 @@ function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle 
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const searchContainerRef = useRef(null);
   const inputRef = useRef(null);
+  const listRef = useRef(null);
 
   const normalizedUser = extractUser(user);
   const role = normalizedUser?.role || "member";
@@ -110,6 +116,58 @@ function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle 
       item.section.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Reset selectedIndex whenever search query or focus state changes
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [searchQuery, searchFocused]);
+
+  // Keep active dropdown item scrolled into view
+  useEffect(() => {
+    if (!searchFocused || !listRef.current) return;
+    const activeEl = listRef.current.querySelector(`[data-index="${selectedIndex}"]`);
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: "nearest" });
+    }
+  }, [selectedIndex, searchFocused]);
+
+  const handleSelectJumpItem = (item) => {
+    if (!item) return;
+    navigate(item.path);
+    setSearchFocused(false);
+    setSearchQuery("");
+    inputRef.current?.blur();
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!searchFocused) {
+        setSearchFocused(true);
+        return;
+      }
+      if (filteredJumpItems.length > 0) {
+        setSelectedIndex((prev) => (prev + 1) % filteredJumpItems.length);
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!searchFocused) {
+        setSearchFocused(true);
+        return;
+      }
+      if (filteredJumpItems.length > 0) {
+        setSelectedIndex((prev) => (prev - 1 + filteredJumpItems.length) % filteredJumpItems.length);
+      }
+    } else if ((e.key === "Enter" || e.key === "Tab") && searchFocused && filteredJumpItems.length > 0) {
+      e.preventDefault();
+      const targetItem = filteredJumpItems[selectedIndex] || filteredJumpItems[0];
+      handleSelectJumpItem(targetItem);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setSearchFocused(false);
+      inputRef.current?.blur();
+    }
+  };
+
   return (
     <header className="hidden md:flex items-center justify-between h-14 border-b border-border px-6 select-none bg-background/95 backdrop-blur-md shrink-0 z-20">
       {/* Left: Contextual Breadcrumb & Active Surface Indicator */}
@@ -143,6 +201,7 @@ function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle 
           value={searchQuery}
           onFocus={() => setSearchFocused(true)}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
           placeholder="Jump to pages, boards, docs, or actions…"
           className="w-full h-8 pl-8 pr-14 text-xs bg-muted/50 hover:bg-muted/80 focus:bg-card text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-ring/20 transition-all border border-border/70 focus:border-border placeholder:text-muted-foreground"
         />
@@ -155,36 +214,49 @@ function DesktopHeader({ user, logout, getInitials, getUserName, getAvatarStyle 
           <div className="absolute left-0 right-0 top-full mt-1.5 rounded-xl border border-border bg-popover text-popover-foreground shadow-(--shadow-popover) p-1.5 z-50 animate-fade-in">
             <div className="px-2.5 py-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               <span>Quick Navigation</span>
-              <span className="font-mono text-[10px]">ESC to close</span>
+              <span className="font-mono text-[10px]">↑↓ Navigate · ↵/Tab Select · ESC</span>
             </div>
-            <div className="max-h-64 overflow-y-auto space-y-0.5 mt-0.5 custom-scrollbar">
+            <div ref={listRef} className="max-h-64 overflow-y-auto space-y-0.5 mt-0.5 custom-scrollbar">
               {filteredJumpItems.length === 0 ? (
                 <div className="py-6 text-center text-xs text-muted-foreground">
                   No matching workspace destinations for &ldquo;{searchQuery}&rdquo;
                 </div>
               ) : (
-                filteredJumpItems.map((item) => {
+                filteredJumpItems.map((item, idx) => {
                   const Icon = item.icon;
+                  const isSelected = idx === selectedIndex;
                   return (
                     <button
                       key={item.path}
+                      data-index={idx}
                       type="button"
-                      onClick={() => {
-                        navigate(item.path);
-                        setSearchFocused(false);
-                        setSearchQuery("");
-                      }}
-                      className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs text-foreground/85 hover:text-foreground hover:bg-muted transition-colors cursor-pointer group"
+                      onMouseEnter={() => setSelectedIndex(idx)}
+                      onClick={() => handleSelectJumpItem(item)}
+                      className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer group ${
+                        isSelected
+                          ? "bg-muted text-foreground"
+                          : "text-foreground/85 hover:text-foreground hover:bg-muted"
+                      }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <Icon className="size-3.5 text-muted-foreground group-hover:text-foreground shrink-0" />
+                        <Icon
+                          className={`size-3.5 shrink-0 ${
+                            isSelected
+                              ? "text-foreground"
+                              : "text-muted-foreground group-hover:text-foreground"
+                          }`}
+                        />
                         <span className="truncate font-medium">{item.label}</span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-[10px] text-muted-foreground hidden sm:inline">
                           {item.section}
                         </span>
-                        <ArrowUpRight className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ArrowUpRight
+                          className={`size-3 text-muted-foreground transition-opacity ${
+                            isSelected ? "opacity-100 text-foreground" : "opacity-0 group-hover:opacity-100"
+                          }`}
+                        />
                       </div>
                     </button>
                   );

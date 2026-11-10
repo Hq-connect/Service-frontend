@@ -28,4 +28,24 @@ export const chatKeys = {
     ...chatKeys.all,
     "unread",
   ],
+
+  channelDetails: (chatId) => [
+    ...chatKeys.all,
+    "channel",
+    "details",
+    chatId,
+  ],
+
+  discoverChannels: (search = "") => [
+    ...chatKeys.all,
+    "channel",
+    "discover",
+    search,
+  ],
+
+  mentions: (chatId = "all") => [
+    ...chatKeys.all,
+    "mentions",
+    chatId,
+  ],
 };
