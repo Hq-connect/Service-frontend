@@ -154,17 +154,21 @@ function ChatWindow({ chatId, chatType, chat }) {
     attachments = [],
     replyTo: replyToId,
     linkPreview = null,
+    poll = null,
+    taskRef = null,
     mentions = [],
     mentionAll = false,
   }) => {
     stopTyping();
     const isNew = chatId?.startsWith("new-");
     let contentPayload = text;
-    if (attachments.length > 0 || linkPreview) {
+    if (attachments.length > 0 || linkPreview || poll || taskRef) {
       contentPayload = {
         text: text || null,
         attachments: attachments || [],
         ...(linkPreview && { linkPreview }),
+        ...(poll && { poll }),
+        ...(taskRef && { taskRef }),
       };
     }
 
@@ -283,7 +287,9 @@ function ChatWindow({ chatId, chatType, chat }) {
           onCancelReply={handleCancelReply}
           onTyping={emitTyping}
           onStopTyping={stopTyping}
+          chatId={chatId}
           chatType={chatType}
+          otherUser={resolvedChat?.otherUser}
           members={groupMembers}
           currentUserId={currentUserId}
         />

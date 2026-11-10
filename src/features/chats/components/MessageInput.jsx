@@ -1,4 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useSelector } from "react-redux";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -10,25 +12,31 @@ import {
   X,
   Loader2,
   Globe,
+  Terminal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadMedia } from "../hooks/useUploadMedia";
 import { getFileTypeConfig } from "../utils/fileTypeConfig";
 import mediaService from "../services/media.service";
 import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
+import { useProjects } from "@/features/productivity/queries/project.queries";
+import * as taskService from "@/features/productivity/services/task.service";
+import meetingService from "@/features/meets/services/meeting.service";
+import { chatKeys } from "../queries/chat.keys";
+import { toast } from "sonner";
+import SlashCommandMenu from "./SlashCommandMenu";
+import {
+  SLASH_COMMANDS,
+  parseTaskCommand,
+  parsePollCommand,
+  parseMeetCommand,
+  buildAiChatSummary,
+} from "../utils/slashCommands";
 
 /**
  * Message composition input with auto-grow textarea, @mention autocomplete,
+ * /slash commands (/task, /poll, /meet, /ai, /shrug), #project autocomplete,
  * file attachments, reply-to banner, and live link preview.
- * @param {Function} onSend - Called with { text, attachments, replyTo, linkPreview, mentions, mentionAll }
- * @param {object|null} replyTo - Message being replied to
- * @param {Function} onCancelReply
- * @param {Function} [onTyping] - Called when typing starts/continues
- * @param {Function} [onStopTyping] - Called when typing stops
- * @param {boolean} disabled
- * @param {"dm"|"group"|"channel"} [chatType="dm"]
- * @param {Array} [members=[]] - Active members for @mention autocomplete
- * @param {string|null} [currentUserId=null]
  */
 function MessageInput({
   onSend,
@@ -37,16 +45,29 @@ function MessageInput({
   onTyping,
   onStopTyping,
   disabled = false,
+  chatId = null,
   chatType = "dm",
+  otherUser = null,
   members = [],
   currentUserId = null,
 }) {
+  const queryClient = useQueryClient();
+  const activeReduxProject = useSelector((state) => state.productivity?.activeProject);
+  const { data: projectsData } = useProjects();
+  const projects = useMemo(() => {
+    return (
+      projectsData?.data?.projects ||
+      (Array.isArray(projectsData?.data) ? projectsData.data : [])
+    );
+  }, [projectsData]);
+
   const [text, setText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [linkPreview, setLinkPreview] = useState(null);
   const [isFetchingPreview, setIsFetchingPreview] = useState(false);
   const [dismissedUrl, setDismissedUrl] = useState(null);
+  const [isExecutingCommand, setIsExecutingCommand] = useState(false);
 
   // @Mention autocomplete state
   const [mentionQuery, setMentionQuery] = useState(null);
@@ -55,52 +76,80 @@ function MessageInput({
   // Map of inserted displayName -> userId
   const [selectedMentionsMap, setSelectedMentionsMap] = useState({});
 
+  // Slash command & #Project autocomplete state
+  const [slashSelectedIndex, setSlashSelectedIndex] = useState(0);
+  const [projectQuery, setProjectQuery] = useState(null);
+  const [projectStartIndex, setProjectStartIndex] = useState(-1);
+  const [projectSelectedIndex, setProjectSelectedIndex] = useState(0);
+
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
   const { mutateAsync: uploadFiles, isPending: isUploading } = useUploadMedia();
 
-  const supportsMentions = chatType === "group" || chatType === "channel";
+  const isTaskCommandActive = /^\/task(?:\s|$)/i.test(text.trimStart());
+  const supportsMentions =
+    chatType === "group" || chatType === "channel" || isTaskCommandActive;
 
-  // Normalize member list for mention suggestions
+  // Normalize member list for mention/task-assignee suggestions
   const mentionableMembers = useMemo(() => {
-    if (!supportsMentions || !Array.isArray(members)) return [];
     const seen = new Set();
     const list = [];
 
-    for (const m of members) {
-      if (m.leftAt) continue;
-      const uid = String(
-        (typeof m.userId === "object" && m.userId !== null
-          ? m.userId._id || m.userId.id
-          : m.userId) ||
-          m._id ||
-          m.id ||
-          ""
-      );
-      if (!uid || seen.has(uid) || (currentUserId && uid === String(currentUserId))) {
-        continue;
+    if (chatType === "dm" && otherUser) {
+      const dmUid = String(otherUser.userId || otherUser._id || otherUser.id || "");
+      if (dmUid && (!currentUserId || dmUid !== String(currentUserId))) {
+        seen.add(dmUid);
+        list.push({
+          type: "user",
+          userId: dmUid,
+          displayName: getUserDisplayName(otherUser),
+          avatar: otherUser.avatar || null,
+          role: "member",
+          raw: otherUser,
+        });
       }
-      seen.add(uid);
-      const displayName = getUserDisplayName(m);
-      list.push({
-        type: "user",
-        userId: uid,
-        displayName,
-        avatar: m.userSnapshot?.avatar || m.avatar || null,
-        role: m.role || "member",
-        raw: m,
-      });
+    }
+
+    if (Array.isArray(members)) {
+      for (const m of members) {
+        if (m.leftAt) continue;
+        const uid = String(
+          (typeof m.userId === "object" && m.userId !== null
+            ? m.userId._id || m.userId.id
+            : m.userId) ||
+            m._id ||
+            m.id ||
+            ""
+        );
+        if (!uid || seen.has(uid) || (currentUserId && uid === String(currentUserId))) {
+          continue;
+        }
+        seen.add(uid);
+        const displayName = getUserDisplayName(m);
+        list.push({
+          type: "user",
+          userId: uid,
+          displayName,
+          avatar: m.userSnapshot?.avatar || m.avatar || null,
+          role: m.role || "member",
+          raw: m,
+        });
+      }
     }
     return list;
-  }, [supportsMentions, members, currentUserId]);
+  }, [chatType, otherUser, members, currentUserId]);
 
   const mentionOptions = useMemo(() => {
     if (!supportsMentions || mentionQuery === null) return [];
     const q = mentionQuery.toLowerCase().trim();
 
     const options = [];
-    if ("everyone".includes(q) || "channel".includes(q) || "all".includes(q) || q === "") {
+    if (
+      !isTaskCommandActive &&
+      (chatType === "group" || chatType === "channel") &&
+      ("everyone".includes(q) || "channel".includes(q) || "all".includes(q) || q === "")
+    ) {
       options.push({
         type: "everyone",
         userId: "everyone",
@@ -116,20 +165,91 @@ function MessageInput({
     }
 
     return options.slice(0, 8);
-  }, [supportsMentions, mentionQuery, mentionableMembers, chatType]);
+  }, [supportsMentions, isTaskCommandActive, mentionQuery, mentionableMembers, chatType]);
+
+  // Slash command options when typing `/` at start of input without space
+  const slashCommandQuery = useMemo(() => {
+    const trimmedLeft = text.replace(/^\s+/, "");
+    if (!trimmedLeft.startsWith("/")) return null;
+    if (/\s/.test(trimmedLeft)) return null;
+    return trimmedLeft.toLowerCase();
+  }, [text]);
+
+  const slashCommandOptions = useMemo(() => {
+    if (slashCommandQuery === null) return [];
+    return SLASH_COMMANDS.filter((c) =>
+      c.command.toLowerCase().startsWith(slashCommandQuery)
+    );
+  }, [slashCommandQuery]);
+
+  // #PROJECT autocomplete options inside `/task`
+  const projectOptions = useMemo(() => {
+    if (!isTaskCommandActive || projectQuery === null) return [];
+    const q = projectQuery.toLowerCase().trim();
+    return projects
+      .filter(
+        (p) =>
+          !q ||
+          (p.key && p.key.toLowerCase().includes(q)) ||
+          (p.name && p.name.toLowerCase().includes(q))
+      )
+      .slice(0, 8);
+  }, [isTaskCommandActive, projectQuery, projects]);
+
+  // Live parsed preview when composing `/task ...`
+  const parsedTaskPreview = useMemo(() => {
+    if (!isTaskCommandActive) return null;
+    const args = text.trimStart().replace(/^\/task\s*/i, "");
+    return parseTaskCommand(
+      args,
+      projects,
+      mentionableMembers,
+      selectedMentionsMap,
+      activeReduxProject
+    );
+  }, [isTaskCommandActive, text, projects, mentionableMembers, selectedMentionsMap, activeReduxProject]);
 
   // Reset highlighted index when options change
   useEffect(() => {
     setMentionSelectedIndex(0);
   }, [mentionOptions.length, mentionQuery]);
 
-  const detectMentionTrigger = (inputValue, cursorPosition) => {
-    if (!supportsMentions) {
+  useEffect(() => {
+    setSlashSelectedIndex(0);
+  }, [slashCommandOptions.length, slashCommandQuery]);
+
+  useEffect(() => {
+    setProjectSelectedIndex(0);
+  }, [projectOptions.length, projectQuery]);
+
+  const detectInputTriggers = (inputValue, cursorPosition) => {
+    const textBeforeCursor = inputValue.slice(0, cursorPosition);
+
+    // 1. Detect `#project` trigger when inside `/task`
+    if (/^\/task\s/i.test(inputValue.trimStart())) {
+      const hashMatch = textBeforeCursor.match(/(?:^|\s)#([^\s#]*)$/);
+      if (hashMatch) {
+        const qStr = hashMatch[1];
+        const hashIdx = textBeforeCursor.lastIndexOf(`#${qStr}`);
+        setProjectQuery(qStr);
+        setProjectStartIndex(hashIdx);
+        setMentionQuery(null);
+        return;
+      }
+    }
+    setProjectQuery(null);
+    setProjectStartIndex(-1);
+
+    // 2. Detect `@mention` trigger
+    const canMentionNow =
+      chatType === "group" ||
+      chatType === "channel" ||
+      /^\/task(?:\s|$)/i.test(inputValue.trimStart());
+    if (!canMentionNow) {
       setMentionQuery(null);
       return;
     }
-    const textBeforeCursor = inputValue.slice(0, cursorPosition);
-    // Match the last `@` preceded by start-of-line or whitespace
+
     const match = textBeforeCursor.match(/(?:^|\s)@([^\s@]*)$/);
     if (match) {
       const queryStr = match[1];
@@ -141,6 +261,43 @@ function MessageInput({
       setMentionStartIndex(-1);
     }
   };
+
+  const insertSlashCommand = useCallback((cmd) => {
+    if (!cmd) return;
+    const nextText = `${cmd.command} `;
+    setText(nextText);
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(nextText.length, nextText.length);
+      }
+    });
+  }, []);
+
+  const insertProjectOption = useCallback(
+    (proj) => {
+      if (!proj || projectStartIndex < 0) return;
+      const textarea = textareaRef.current;
+      const cursorEnd = textarea ? textarea.selectionStart : text.length;
+      const beforeHash = text.slice(0, projectStartIndex);
+      const afterCursor = text.slice(cursorEnd);
+      const keyTag = `#${proj.key || proj.name.replace(/\s+/g, "-")} `;
+      const nextText = `${beforeHash}${keyTag}${afterCursor}`;
+      setText(nextText);
+      setProjectQuery(null);
+      setProjectStartIndex(-1);
+
+      requestAnimationFrame(() => {
+        if (textarea) {
+          textarea.focus();
+          const newPos = beforeHash.length + keyTag.length;
+          textarea.setSelectionRange(newPos, newPos);
+        }
+      });
+    },
+    [projectStartIndex, text]
+  );
 
   const insertMentionOption = useCallback(
     (option) => {
@@ -186,6 +343,20 @@ function MessageInput({
       if (textarea) {
         textarea.focus();
         textarea.setSelectionRange(nextText.length, nextText.length);
+      }
+    });
+  };
+
+  const handleTriggerSlashButton = () => {
+    if (disabled || isUploading) return;
+    const textarea = textareaRef.current;
+    setText("/");
+    setMentionQuery(null);
+    setProjectQuery(null);
+    requestAnimationFrame(() => {
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(1, 1);
       }
     });
   };
@@ -238,11 +409,227 @@ function MessageInput({
     setSelectedFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
+  const resetComposer = useCallback(() => {
+    setText("");
+    setSelectedFiles([]);
+    setLinkPreview(null);
+    setDismissedUrl(null);
+    setShowEmojiPicker(false);
+    setMentionQuery(null);
+    setProjectQuery(null);
+    setSelectedMentionsMap({});
+    textareaRef.current?.focus();
+  }, []);
+
   const handleSend = useCallback(async () => {
     const trimmedText = text.trim();
-    if ((!trimmedText && selectedFiles.length === 0) || disabled || isUploading) return;
+    if (
+      (!trimmedText && selectedFiles.length === 0) ||
+      disabled ||
+      isUploading ||
+      isExecutingCommand
+    ) {
+      return;
+    }
 
     try {
+      // 1. Handle Slash Commands if message begins with `/`
+      if (trimmedText.startsWith("/") && selectedFiles.length === 0) {
+        const spaceIdx = trimmedText.indexOf(" ");
+        const cmdName = (
+          spaceIdx === -1 ? trimmedText : trimmedText.slice(0, spaceIdx)
+        ).toLowerCase();
+        const cmdArgs = spaceIdx === -1 ? "" : trimmedText.slice(spaceIdx + 1).trim();
+
+        // /shrug
+        if (cmdName === "/shrug") {
+          const shrugText = cmdArgs ? `${cmdArgs} ¯\\_(ツ)_/¯` : "¯\\_(ツ)_/¯";
+          onStopTyping?.();
+          onSend?.({
+            text: shrugText,
+            attachments: [],
+            replyTo: replyTo?._id ?? null,
+          });
+          resetComposer();
+          return;
+        }
+
+        // /ai
+        if (cmdName === "/ai") {
+          const cachedData = chatId
+            ? queryClient.getQueryData(chatKeys.messages(chatType, chatId))
+            : null;
+          const flatMessages = cachedData?.pages
+            ? cachedData.pages.flat()
+            : [];
+          const summaryText = buildAiChatSummary(flatMessages, cmdArgs);
+          onStopTyping?.();
+          onSend?.({
+            text: summaryText,
+            attachments: [],
+            replyTo: replyTo?._id ?? null,
+          });
+          resetComposer();
+          return;
+        }
+
+        // /meet
+        if (cmdName === "/meet") {
+          setIsExecutingCommand(true);
+          const { callType, title } = parseMeetCommand(cmdArgs);
+          const isVideo = callType === "video";
+          const toastId = toast.loading(
+            isVideo ? "Creating instant video room..." : "Creating instant voice room..."
+          );
+          try {
+            const response = await meetingService.createMeeting({
+              title,
+              type: "instant",
+              duration: 45,
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+            });
+            const created = response?.data?.meeting || response?.meeting;
+            const joinCode = created?.joinCode;
+            if (!joinCode) {
+              throw new Error("Could not retrieve meeting join code");
+            }
+            const callEmoji = isVideo ? "📹" : "📞";
+            const callTypeLabel = isVideo ? "video" : "voice";
+            onStopTyping?.();
+            onSend?.({
+              text: `${callEmoji} Started a ${callTypeLabel} call (${title}) • Join room: /meets/room/${joinCode}?callType=${callType}`,
+              attachments: [],
+              replyTo: replyTo?._id ?? null,
+            });
+            toast.dismiss(toastId);
+            toast.success(`${isVideo ? "Video" : "Voice"} meeting dropped in chat!`);
+            resetComposer();
+          } catch (err) {
+            toast.dismiss(toastId);
+            toast.error(
+              err?.response?.data?.message || err?.message || "Failed to create meeting"
+            );
+          } finally {
+            setIsExecutingCommand(false);
+          }
+          return;
+        }
+
+        // /poll
+        if (cmdName === "/poll") {
+          const pollData = parsePollCommand(cmdArgs);
+          if (!pollData || !pollData.question || pollData.options.length < 2) {
+            toast.error(
+              'Usage: /poll "Question?" "Option 1" "Option 2" (or separate with |)'
+            );
+            return;
+          }
+          onStopTyping?.();
+          onSend?.({
+            text: `📊 Poll: ${pollData.question}`,
+            poll: {
+              question: pollData.question,
+              options: pollData.options.map((optText) => ({
+                text: optText,
+                votes: [],
+              })),
+              allowMultiple: Boolean(pollData.allowMultiple),
+              isClosed: false,
+            },
+            attachments: [],
+            replyTo: replyTo?._id ?? null,
+          });
+          resetComposer();
+          return;
+        }
+
+        // /task
+        if (cmdName === "/task") {
+          const parsed = parseTaskCommand(
+            cmdArgs,
+            projects,
+            mentionableMembers,
+            selectedMentionsMap,
+            activeReduxProject
+          );
+
+          if (!parsed.project?._id) {
+            toast.error(
+              "No project found. Create a project in Tasks first or specify #PROJECT."
+            );
+            return;
+          }
+          if (!parsed.title) {
+            toast.error(
+              "Please enter a task title, e.g. /task #PROJECT Fix login bug @user !high"
+            );
+            return;
+          }
+
+          setIsExecutingCommand(true);
+          const toastId = toast.loading(
+            `Creating task in ${parsed.project.name}...`
+          );
+          try {
+            const taskPayload = {
+              title: parsed.title,
+              priority: parsed.priority || "medium",
+              status: "todo",
+              ...(parsed.assignee?.userId && {
+                assignedTo: parsed.assignee.userId,
+                assigneeSnapshot: {
+                  name: parsed.assignee.displayName,
+                  avatar: parsed.assignee.avatar || null,
+                },
+              }),
+            };
+
+            const res = await taskService.createTask(parsed.project._id, taskPayload);
+            const createdTask = res?.data?.task || res?.task;
+
+            if (!createdTask?._id) {
+              throw new Error("Task created but ID was not returned");
+            }
+
+            queryClient.invalidateQueries({
+              queryKey: ["productivity-tasks", parsed.project._id],
+            });
+
+            onStopTyping?.();
+            onSend?.({
+              text: `✅ Task: ${createdTask.title}`,
+              taskRef: {
+                projectId: parsed.project._id,
+                taskId: createdTask._id,
+                title: createdTask.title,
+                projectKey: parsed.project.key || null,
+                projectName: parsed.project.name || null,
+                priority: createdTask.priority || parsed.priority || "medium",
+                status: createdTask.status || "todo",
+                assigneeId: parsed.assignee?.userId || null,
+                assigneeName: parsed.assignee?.displayName || null,
+              },
+              mentions: parsed.assignee?.userId ? [parsed.assignee.userId] : [],
+              attachments: [],
+              replyTo: replyTo?._id ?? null,
+            });
+
+            toast.dismiss(toastId);
+            toast.success(`Task created in ${parsed.project.name}!`);
+            resetComposer();
+          } catch (err) {
+            toast.dismiss(toastId);
+            toast.error(
+              err?.response?.data?.message || err?.message || "Failed to create task"
+            );
+          } finally {
+            setIsExecutingCommand(false);
+          }
+          return;
+        }
+      }
+
+      // 2. Normal Message Send
       let attachments = [];
       if (selectedFiles.length > 0) {
         attachments = await uploadFiles(selectedFiles);
@@ -256,13 +643,11 @@ function MessageInput({
 
       const resolvedMentionIds = new Set();
       if (supportsMentions && trimmedText.includes("@")) {
-        // Check explicitly selected mentions from map
         for (const [nameKey, uid] of Object.entries(selectedMentionsMap)) {
           if (lowerText.includes(`@${nameKey}`)) {
             resolvedMentionIds.add(uid);
           }
         }
-        // Also match any member whose displayName or firstName is @mentioned
         for (const m of mentionableMembers) {
           const fullLower = m.displayName.toLowerCase();
           const firstLower = fullLower.split(" ")[0];
@@ -285,14 +670,7 @@ function MessageInput({
         mentionAll: Boolean(mentionAll),
       });
 
-      setText("");
-      setSelectedFiles([]);
-      setLinkPreview(null);
-      setDismissedUrl(null);
-      setShowEmojiPicker(false);
-      setMentionQuery(null);
-      setSelectedMentionsMap({});
-      textareaRef.current?.focus();
+      resetComposer();
     } catch (err) {
       console.error("Failed to upload attachments / send message:", err);
     }
@@ -301,6 +679,7 @@ function MessageInput({
     selectedFiles,
     disabled,
     isUploading,
+    isExecutingCommand,
     uploadFiles,
     onSend,
     replyTo,
@@ -309,9 +688,72 @@ function MessageInput({
     selectedMentionsMap,
     mentionableMembers,
     onStopTyping,
+    resetComposer,
+    chatId,
+    chatType,
+    queryClient,
+    projects,
+    activeReduxProject,
   ]);
 
   const handleKeyDown = (e) => {
+    // 1. Slash command menu navigation (`/`)
+    if (slashCommandOptions.length > 0 && slashCommandQuery !== null) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSlashSelectedIndex((prev) => (prev + 1) % slashCommandOptions.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSlashSelectedIndex((prev) =>
+          prev - 1 < 0 ? slashCommandOptions.length - 1 : prev - 1
+        );
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        insertSlashCommand(
+          slashCommandOptions[slashSelectedIndex] || slashCommandOptions[0]
+        );
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setText("");
+        return;
+      }
+    }
+
+    // 2. #Project menu navigation inside `/task`
+    if (projectOptions.length > 0 && projectQuery !== null) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setProjectSelectedIndex((prev) => (prev + 1) % projectOptions.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setProjectSelectedIndex((prev) =>
+          prev - 1 < 0 ? projectOptions.length - 1 : prev - 1
+        );
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        insertProjectOption(
+          projectOptions[projectSelectedIndex] || projectOptions[0]
+        );
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setProjectQuery(null);
+        return;
+      }
+    }
+
+    // 3. @Mention menu navigation
     if (mentionOptions.length > 0 && mentionQuery !== null) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -353,7 +795,20 @@ function MessageInput({
   }, [text]);
 
   const replyPreviewText = replyTo?.content?.text ?? "Attachment";
-  const isSendDisabled = disabled || isUploading || (!text.trim() && selectedFiles.length === 0);
+  const isSendDisabled =
+    disabled ||
+    isUploading ||
+    isExecutingCommand ||
+    (!text.trim() && selectedFiles.length === 0);
+
+  const activeSlashMenuMode =
+    slashCommandQuery !== null && slashCommandOptions.length > 0
+      ? "commands"
+      : projectQuery !== null && projectOptions.length > 0
+      ? "projects"
+      : isTaskCommandActive && mentionQuery === null
+      ? "task-preview"
+      : null;
 
   return (
     <div className="relative px-4 pb-4 pt-1.5 shrink-0 bg-background">
@@ -364,6 +819,34 @@ function MessageInput({
         onChange={handleFileChange}
         multiple
         className="hidden"
+      />
+
+      {/* Slash Commands, #Project Picker, or Live /task Preview */}
+      <SlashCommandMenu
+        mode={activeSlashMenuMode}
+        options={
+          activeSlashMenuMode === "commands"
+            ? slashCommandOptions
+            : activeSlashMenuMode === "projects"
+            ? projectOptions
+            : []
+        }
+        selectedIndex={
+          activeSlashMenuMode === "commands"
+            ? slashSelectedIndex
+            : projectSelectedIndex
+        }
+        onHoverIndex={
+          activeSlashMenuMode === "commands"
+            ? setSlashSelectedIndex
+            : setProjectSelectedIndex
+        }
+        onSelect={
+          activeSlashMenuMode === "commands"
+            ? insertSlashCommand
+            : insertProjectOption
+        }
+        parsedTaskPreview={parsedTaskPreview}
       />
 
       {/* @Mention Autocomplete Floating Menu */}
@@ -614,7 +1097,7 @@ function MessageInput({
           onChange={(e) => {
             const val = e.target.value;
             setText(val);
-            detectMentionTrigger(val, e.target.selectionStart);
+            detectInputTriggers(val, e.target.selectionStart);
             if (val.trim().length > 0) {
               onTyping?.();
             } else {
@@ -623,27 +1106,48 @@ function MessageInput({
           }}
           onBlur={() => {
             onStopTyping?.();
-            setTimeout(() => setMentionQuery(null), 150);
+            setTimeout(() => {
+              setMentionQuery(null);
+              setProjectQuery(null);
+            }, 150);
           }}
           onKeyDown={handleKeyDown}
           placeholder={
             supportsMentions
-              ? "Write a message... (Type @ to mention)"
-              : "Write a message..."
+              ? "Write a message... (Type / for commands, @ to mention)"
+              : "Write a message... (Type / for commands)"
           }
-          disabled={disabled || isUploading}
+          disabled={disabled || isUploading || isExecutingCommand}
           rows={1}
           className="flex-1 min-h-[32px] max-h-[140px] resize-none border-0 bg-transparent text-foreground placeholder:text-muted-foreground/60 px-2 py-1.5 text-sm leading-5 outline-none focus:outline-none focus:ring-0 custom-scrollbar"
         />
 
-        {/* @Mention Quick Button (Group & Channel only) */}
+        {/* Slash Command Quick Button */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          title="Slash commands (/task, /poll, /meet, /ai)"
+          disabled={disabled || isUploading || isExecutingCommand}
+          onClick={handleTriggerSlashButton}
+          className={cn(
+            "size-8 rounded-[var(--radius-md)] shrink-0 transition-colors",
+            slashCommandQuery !== null
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          )}
+        >
+          <Terminal className="size-4" />
+        </Button>
+
+        {/* @Mention Quick Button (Group & Channel or /task) */}
         {supportsMentions && (
           <Button
             type="button"
             variant="ghost"
             size="icon"
             title="Mention someone (@)"
-            disabled={disabled || isUploading}
+            disabled={disabled || isUploading || isExecutingCommand}
             onClick={handleTriggerMentionButton}
             className={cn(
               "size-8 rounded-[var(--radius-md)] shrink-0 transition-colors",
@@ -661,7 +1165,7 @@ function MessageInput({
           type="button"
           variant="ghost"
           size="icon"
-          disabled={disabled || isUploading}
+          disabled={disabled || isUploading || isExecutingCommand}
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           className={cn(
             "size-8 rounded-[var(--radius-md)] shrink-0 transition-colors",
@@ -684,7 +1188,7 @@ function MessageInput({
               : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs active:scale-95"
           )}
         >
-          {isUploading ? (
+          {isUploading || isExecutingCommand ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
             <SendHorizonal className="size-4" />
@@ -693,7 +1197,7 @@ function MessageInput({
       </div>
 
       <p className="text-[10px] text-muted-foreground/50 mt-1.5 pl-1 select-none">
-        Enter to send, Shift+Enter for new line{supportsMentions ? " · @ to mention" : ""}
+        Enter to send, Shift+Enter for new line · / for commands{supportsMentions ? " · @ to mention" : ""}
       </p>
     </div>
   );

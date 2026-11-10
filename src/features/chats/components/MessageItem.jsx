@@ -10,6 +10,8 @@ import { getFileTypeConfig } from "../utils/fileTypeConfig";
 import mediaService from "../services/media.service";
 import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
 import { CallCard, parseCallMessage } from "./CallCard";
+import { PollCard } from "./PollCard";
+import { ChatTaskCard } from "./ChatTaskCard";
 
 const ATTACHMENT_ICONS = {
   image: Image,
@@ -405,42 +407,54 @@ function MessageItem({
             onTouchMove={movePress}
           >
             {/* Bubble Container - consistent uniform rounded-2xl geometry */}
-            <div
-              className={cn(
-                "relative max-w-full rounded-2xl transition-all duration-300 overflow-hidden shadow-2xs",
-                isOwn
-                  ? "bg-primary text-primary-foreground"
-                  : isMentionedForMe
-                  ? "bg-amber-500/10 border border-amber-500/40 text-foreground"
-                  : "bg-muted/40 border border-border/70 text-foreground",
-                isHighlighted && (isOwn
-                  ? "brightness-125 ring-2 ring-primary-foreground/70"
-                  : "bg-primary/10 border-primary/50 ring-2 ring-primary/40"
-                )
-              )}
-            >
+            {(() => {
+              const isRichCard =
+                !isEditing &&
+                Boolean(
+                  message.content?.poll ||
+                    message.content?.taskRef ||
+                    parseCallMessage(message.content?.text)
+                );
+              return (
+                <div
+                  className={cn(
+                    "relative max-w-full rounded-2xl transition-all duration-300 overflow-hidden",
+                    isRichCard
+                      ? "bg-transparent text-foreground"
+                      : isOwn
+                      ? "bg-primary text-primary-foreground shadow-2xs"
+                      : isMentionedForMe
+                      ? "bg-amber-500/10 border border-amber-500/40 text-foreground shadow-2xs"
+                      : "bg-muted/40 border border-border/70 text-foreground shadow-2xs",
+                    isHighlighted &&
+                      (isOwn && !isRichCard
+                        ? "brightness-125 ring-2 ring-primary-foreground/70"
+                        : "bg-primary/10 border-primary/50 ring-2 ring-primary/40")
+                  )}
+                >
               {/* Quoted Reply Card - seamlessly nested inside the bubble header */}
               {message.replyTo && (
                 <div
                   onClick={handleScrollToReply}
                   className={cn(
-                    "flex items-stretch gap-2 px-2.5 py-1.5 rounded-xl text-xs cursor-pointer select-none transition-all hover:opacity-90 mx-2 mt-2",
-                    isOwn
+                    "flex items-stretch gap-2 px-2.5 py-1.5 rounded-xl text-xs cursor-pointer select-none transition-all hover:opacity-90",
+                    isRichCard ? "mb-1.5" : "mx-2 mt-2",
+                    isOwn && !isRichCard
                       ? "bg-black/25 dark:bg-black/35 text-primary-foreground"
                       : "bg-background/90 dark:bg-card/90 text-foreground border border-border/50 shadow-2xs"
                   )}
                 >
-                  <div className={cn("w-1 rounded-full shrink-0", isOwn ? "bg-primary-foreground/90" : "bg-primary")} />
+                  <div className={cn("w-1 rounded-full shrink-0", isOwn && !isRichCard ? "bg-primary-foreground/90" : "bg-primary")} />
                   <div className="flex flex-col min-w-0 pr-1">
                     <span className={cn(
                       "text-[10px] font-bold tracking-tight truncate",
-                      isOwn ? "text-primary-foreground" : "text-primary font-semibold"
+                      isOwn && !isRichCard ? "text-primary-foreground" : "text-primary font-semibold"
                     )}>
                       {replyAuthorName}
                     </span>
                     <span className={cn(
                       "text-[11px] truncate leading-snug",
-                      isOwn ? "text-primary-foreground/80" : "text-muted-foreground"
+                      isOwn && !isRichCard ? "text-primary-foreground/80" : "text-muted-foreground"
                     )}>
                       {replySnippet}
                     </span>
@@ -561,6 +575,19 @@ function MessageItem({
                     </Button>
                   </div>
                 </div>
+              ) : message.content?.poll ? (
+                <PollCard
+                  message={message}
+                  currentUserId={currentUserIdStr}
+                  isOwn={isOwn}
+                  timeLabel={timeLabel}
+                />
+              ) : message.content?.taskRef ? (
+                <ChatTaskCard
+                  message={message}
+                  isOwn={isOwn}
+                  timeLabel={timeLabel}
+                />
               ) : parseCallMessage(message.content?.text) ? (
                 <CallCard message={message} isOwn={isOwn} timeLabel={timeLabel} />
               ) : (message.content?.text || activeLinkPreview) ? (
@@ -655,7 +682,9 @@ function MessageItem({
                   ))}
                 </div>
               )}
-            </div>
+                </div>
+              );
+            })()}
 
             {/* Hover Actions Toolbar */}
             {!isEditing && (
