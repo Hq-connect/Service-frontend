@@ -115,6 +115,18 @@ export const meetingService = {
         return response.data;
     },
 
+    // Share recording with specific workspace users
+    shareRecording: async (recordingId, data) => {
+        const response = await api.patch(`/meetings/recordings/${recordingId}/share`, data);
+        return response.data;
+    },
+
+    // Get recording share settings
+    getRecordingShareSettings: async (recordingId) => {
+        const response = await api.get(`/meetings/recordings/${recordingId}/share`);
+        return response.data;
+    },
+
     // Get LiveKit media token for a meeting
     getLiveKitToken: async (meetingId, userName) => {
         const response = await api.get(`/meetings/${meetingId}/livekit-token`, {
