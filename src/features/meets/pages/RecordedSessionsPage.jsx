@@ -12,20 +12,30 @@ import {
     FileVideo,
     ArrowLeft,
     Film,
+    Share2,
+    Users,
+    Lock,
+    Shield,
 } from "lucide-react";
 import meetingService from "../services/meeting.service";
 import RecordingPlayerModal from "../components/RecordingPlayerModal";
+import ShareRecordingModal from "../components/ShareRecordingModal";
+import useCurrentUser from "@/features/auth/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export const RecordedSessionsPage = () => {
     const navigate = useNavigate();
+    const { currentUser, currentUserId } = useCurrentUser();
     const [recordings, setRecordings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedRecording, setSelectedRecording] = useState(null);
     const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+    const [initialPlayerView, setInitialPlayerView] = useState("player");
+    const [sharingRecording, setSharingRecording] = useState(null);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
     const fetchRecordings = useCallback(async () => {
         setLoading(true);
@@ -44,6 +54,29 @@ export const RecordedSessionsPage = () => {
         fetchRecordings();
     }, [fetchRecordings]);
 
+    const isRecordingOwner = useCallback((rec) => {
+        if (!rec) return false;
+        if (currentUser?.role === "admin" || currentUser?.role === "superadmin") return true;
+
+        const recordedById = (rec.recordedBy?._id || rec.recordedBy)?.toString();
+        if (currentUserId && recordedById === currentUserId.toString()) return true;
+
+        const m = rec.meetingId;
+        if (m && typeof m === "object") {
+            const hostId = (m.hostId?._id || m.hostId)?.toString();
+            const createdById = (m.createdBy?._id || m.createdBy)?.toString();
+            const managerId = (m.managerId?._id || m.managerId)?.toString();
+            const headId = (m.headId?._id || m.headId)?.toString();
+
+            const uid = currentUserId?.toString();
+            if (uid && (hostId === uid || createdById === uid || managerId === uid || headId === uid)) {
+                return true;
+            }
+        }
+
+        return false;
+    }, [currentUser, currentUserId]);
+
     const handleDelete = async (recordingId) => {
         try {
             await meetingService.deleteRecording(recordingId);
@@ -51,13 +84,29 @@ export const RecordedSessionsPage = () => {
             toast.success("Recording deleted successfully");
         } catch (err) {
             console.error("Failed to delete recording:", err);
-            toast.error("Failed to delete recording");
+            toast.error(err?.response?.data?.message || "Failed to delete recording");
         }
     };
 
     const handlePlay = (rec) => {
         setSelectedRecording(rec);
+        setInitialPlayerView("player");
         setIsPlayerOpen(true);
+    };
+
+    const handleOpenShare = (rec) => {
+        setSharingRecording(rec);
+        setIsShareModalOpen(true);
+    };
+
+    const handleUpdateRecording = (updatedRec) => {
+        if (!updatedRec?._id) return;
+        setRecordings((prev) =>
+            prev.map((r) => (r._id === updatedRec._id ? { ...r, ...updatedRec } : r))
+        );
+        if (selectedRecording?._id === updatedRec._id) {
+            setSelectedRecording((prev) => ({ ...prev, ...updatedRec }));
+        }
     };
 
     const formatSeconds = (sec = 0) => {
@@ -102,7 +151,7 @@ export const RecordedSessionsPage = () => {
                             </h1>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            Review, stream, and download archived video recordings from your workspace meetings.
+                            Review, stream, share, and manage archived video recordings from your workspace meetings.
                         </p>
                     </div>
 
@@ -186,7 +235,7 @@ export const RecordedSessionsPage = () => {
                             No Recorded Sessions Yet
                         </h3>
                         <p className="text-xs text-muted-foreground mt-1 max-w-sm leading-relaxed">
-                            When you host a meeting, click the &ldquo;Record&rdquo; control to capture the session. Completed recordings automatically appear here.
+                            When you host a meeting, click the &ldquo;Record&rdquo; control to capture the session. Completed recordings appear here and can be shared with workspace members.
                         </p>
                         <Button
                             onClick={() => navigate("/meets?action=instant")}
@@ -200,118 +249,169 @@ export const RecordedSessionsPage = () => {
                 ) : (
                     /* Recordings Grid */
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {recordings.map((rec) => (
-                            <div
-                                key={rec._id}
-                                className="group flex flex-col justify-between rounded-xl overflow-hidden border border-border bg-card text-card-foreground shadow-(--shadow-card) hover:border-foreground/25 transition-all duration-150"
-                            >
-                                <div>
-                                    {/* Card Video Preview / Thumbnail */}
-                                    <div
-                                        onClick={() => handlePlay(rec)}
-                                        className="relative w-full aspect-video bg-muted flex items-center justify-center cursor-pointer overflow-hidden border-b border-border"
-                                    >
-                                        {rec.fileUrl ? (
-                                            <video
-                                                src={rec.fileUrl}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                preload="metadata"
-                                            />
-                                        ) : (
-                                            <div className="size-11 rounded-xl bg-background/80 border border-border flex items-center justify-center text-muted-foreground">
-                                                <FileVideo className="size-5" />
+                        {recordings.map((rec) => {
+                            const owner = isRecordingOwner(rec);
+                            const sharedCount = Array.isArray(rec.sharedWith)
+                                ? rec.sharedWith.length
+                                : Array.isArray(rec.sharedUsers)
+                                ? rec.sharedUsers.length
+                                : 0;
+
+                            return (
+                                <div
+                                    key={rec._id}
+                                    className="group flex flex-col justify-between rounded-xl overflow-hidden border border-border bg-card text-card-foreground shadow-(--shadow-card) hover:border-foreground/25 transition-all duration-150"
+                                >
+                                    <div>
+                                        {/* Card Video Preview / Thumbnail */}
+                                        <div
+                                            onClick={() => handlePlay(rec)}
+                                            className="relative w-full aspect-video bg-muted flex items-center justify-center cursor-pointer overflow-hidden border-b border-border"
+                                        >
+                                            {rec.fileUrl ? (
+                                                <video
+                                                    src={rec.fileUrl}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                    preload="metadata"
+                                                />
+                                            ) : (
+                                                <div className="size-11 rounded-xl bg-background/80 border border-border flex items-center justify-center text-muted-foreground">
+                                                    <FileVideo className="size-5" />
+                                                </div>
+                                            )}
+
+                                            {/* Play Overlay */}
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
+                                                <div className="p-2.5 rounded-full bg-primary text-primary-foreground shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+                                                    <PlayCircle className="size-5" />
+                                                </div>
                                             </div>
+
+                                            {/* Access & Duration Badges */}
+                                            <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                                                {sharedCount > 0 ? (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="font-medium text-[10px] bg-background/90 backdrop-blur-sm border-border text-primary flex items-center gap-1 shadow-xs"
+                                                    >
+                                                        <Users className="size-2.5" />
+                                                        Shared ({sharedCount})
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="font-medium text-[10px] bg-background/90 backdrop-blur-sm border-border text-muted-foreground flex items-center gap-1 shadow-xs"
+                                                    >
+                                                        <Lock className="size-2.5" />
+                                                        Private
+                                                    </Badge>
+                                                )}
+                                            </div>
+
+                                            <Badge
+                                                variant="secondary"
+                                                className="absolute bottom-2 right-2 font-mono tabular-nums text-[10px] bg-background/90 backdrop-blur-sm border-border"
+                                            >
+                                                {formatSeconds(rec.duration)}
+                                            </Badge>
+                                        </div>
+
+                                        {/* Card Body */}
+                                        <div className="p-4 space-y-2">
+                                            <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate tracking-tight">
+                                                {rec.title}
+                                            </h3>
+
+                                            <div className="space-y-1 text-xs text-muted-foreground">
+                                                <div className="flex items-center justify-between font-mono tabular-nums text-[11px]">
+                                                    <span className="flex items-center gap-1.5">
+                                                        <Calendar className="size-3 text-muted-foreground/70" />
+                                                        {new Date(rec.createdAt).toLocaleDateString("en-US", {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                            year: "numeric",
+                                                        })}
+                                                    </span>
+                                                    <span>{formatFileSize(rec.fileSize)}</span>
+                                                </div>
+
+                                                <div className="flex items-center justify-between gap-1.5 text-[11px]">
+                                                    <div className="flex items-center gap-1.5 truncate">
+                                                        <User className="size-3 text-muted-foreground/70 shrink-0" />
+                                                        <span className="truncate">
+                                                            Recorded by {rec.recorderName || "Host"}
+                                                        </span>
+                                                    </div>
+                                                    {owner && (
+                                                        <span className="text-[10px] font-medium text-primary shrink-0 bg-primary/10 px-1.5 py-0.5 rounded">
+                                                            You own
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Architectural Card Footer */}
+                                    <div className="px-4 py-2.5 border-t border-border bg-muted/35 flex items-center justify-between gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="xs"
+                                            onClick={() => handlePlay(rec)}
+                                            className="flex-1 gap-1.5 text-xs cursor-pointer"
+                                        >
+                                            <PlayCircle className="size-3.5" />
+                                            <span>Watch Session</span>
+                                        </Button>
+
+                                        {owner && (
+                                            <Button
+                                                variant="outline"
+                                                size="xs"
+                                                onClick={() => handleOpenShare(rec)}
+                                                className="gap-1.5 text-xs text-primary hover:text-primary hover:bg-primary/10 border-primary/20 cursor-pointer"
+                                                title="Share recording with workspace members"
+                                            >
+                                                <Share2 className="size-3.5" />
+                                                <span>Share</span>
+                                            </Button>
                                         )}
 
-                                        {/* Play Overlay */}
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
-                                            <div className="p-2.5 rounded-full bg-primary text-primary-foreground shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
-                                                <PlayCircle className="size-5" />
-                                            </div>
-                                        </div>
-
-                                        {/* Duration Badge */}
-                                        <Badge
-                                            variant="secondary"
-                                            className="absolute bottom-2 right-2 font-mono tabular-nums text-[10px] bg-background/90 backdrop-blur-sm border-border"
-                                        >
-                                            {formatSeconds(rec.duration)}
-                                        </Badge>
-                                    </div>
-
-                                    {/* Card Body */}
-                                    <div className="p-4 space-y-2">
-                                        <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate tracking-tight">
-                                            {rec.title}
-                                        </h3>
-
-                                        <div className="space-y-1 text-xs text-muted-foreground">
-                                            <div className="flex items-center justify-between font-mono tabular-nums text-[11px]">
-                                                <span className="flex items-center gap-1.5">
-                                                    <Calendar className="size-3 text-muted-foreground/70" />
-                                                    {new Date(rec.createdAt).toLocaleDateString("en-US", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                        year: "numeric",
-                                                    })}
-                                                </span>
-                                                <span>{formatFileSize(rec.fileSize)}</span>
-                                            </div>
-
-                                            <div className="flex items-center gap-1.5 text-[11px]">
-                                                <User className="size-3 text-muted-foreground/70" />
-                                                <span className="truncate">
-                                                    Recorded by {rec.recorderName || "Host"}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Architectural Card Footer */}
-                                <div className="px-4 py-2.5 border-t border-border bg-muted/35 flex items-center justify-between gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="xs"
-                                        onClick={() => handlePlay(rec)}
-                                        className="flex-1 gap-1.5 text-xs cursor-pointer"
-                                    >
-                                        <PlayCircle className="size-3.5" />
-                                        <span>Watch Session</span>
-                                    </Button>
-
-                                    {rec.fileUrl && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon-xs"
-                                            asChild
-                                            title="Download recording"
-                                        >
-                                            <a
-                                                href={rec.fileUrl}
-                                                download={`${rec.title || "recording"}.webm`}
+                                        {rec.fileUrl && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon-xs"
+                                                asChild
+                                                title="Download recording"
                                             >
-                                                <Download className="size-3.5" />
-                                            </a>
-                                        </Button>
-                                    )}
+                                                <a
+                                                    href={rec.fileUrl}
+                                                    download={`${rec.title || "recording"}.webm`}
+                                                >
+                                                    <Download className="size-3.5" />
+                                                </a>
+                                            </Button>
+                                        )}
 
-                                    <Button
-                                        variant="ghost"
-                                        size="icon-xs"
-                                        onClick={() => {
-                                            if (window.confirm("Delete this recorded session?")) {
-                                                handleDelete(rec._id);
-                                            }
-                                        }}
-                                        className="text-muted-foreground hover:text-destructive cursor-pointer"
-                                        title="Delete recording"
-                                    >
-                                        <Trash2 className="size-3.5" />
-                                    </Button>
+                                        {owner && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon-xs"
+                                                onClick={() => {
+                                                    if (window.confirm("Delete this recorded session?")) {
+                                                        handleDelete(rec._id);
+                                                    }
+                                                }}
+                                                className="text-muted-foreground hover:text-destructive cursor-pointer"
+                                                title="Delete recording"
+                                            >
+                                                <Trash2 className="size-3.5" />
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
 
@@ -324,6 +424,19 @@ export const RecordedSessionsPage = () => {
                         setSelectedRecording(null);
                     }}
                     onDelete={handleDelete}
+                    onUpdateRecording={handleUpdateRecording}
+                    initialView={initialPlayerView}
+                />
+
+                {/* Standalone Share Recording Modal */}
+                <ShareRecordingModal
+                    recording={sharingRecording}
+                    isOpen={isShareModalOpen}
+                    onClose={() => {
+                        setIsShareModalOpen(false);
+                        setSharingRecording(null);
+                    }}
+                    onShared={handleUpdateRecording}
                 />
             </div>
         </div>
