@@ -6,10 +6,12 @@ import { router } from "./router/Router";
 import useAuth from "@/features/auth/hooks/useAuth";
 import { useSocketSetup } from "@/socket/hooks/useSocket";
 import { registerServiceWorker } from "@/features/notifications/utils/pushManager";
+import { useBootstrapBranding } from "@/features/settings";
 
 function App() {
   const { fetchTenant , loading: tenantLoading ,initialized } = useTenant();
   const { getCurrentUser , loading: authLoading , user } = useAuth();
+  useBootstrapBranding();
   useSocketSetup( initialized && !!user );
   useEffect(()=>{
     fetchTenant();

@@ -11,6 +11,7 @@ export const useDocument = (documentId) => {
 
   const {
     data: rawData,
+    dataUpdatedAt,
     isLoading,
     isError,
     error,
@@ -19,7 +20,8 @@ export const useDocument = (documentId) => {
     queryKey: documentKeys.detail(documentId),
     queryFn: () => documentService.getDocumentById(documentId),
     enabled: Boolean(documentId),
-    staleTime: 1000 * 60,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const document = rawData?.document
@@ -66,6 +68,7 @@ export const useDocument = (documentId) => {
 
   return {
     document,
+    dataUpdatedAt,
     isLoading,
     isError,
     error,

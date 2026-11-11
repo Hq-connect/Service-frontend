@@ -3,6 +3,7 @@ import { useParams, useLocation } from "react-router-dom";
 import ChatSidebar from "../components/ChatSidebar";
 import ChatWindow from "../components/ChatWindow";
 import { useChats } from "../hooks/useChats";
+import { useChannelDetails } from "../hooks/useChannelActions";
 import { useUsers } from "@/global/hooks/useUsers";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -66,10 +67,18 @@ function ChatLayout({ chatType }) {
     };
   }, [chatId, newUserId, selectedUser]);
 
-  const activeChat = useMemo(
+  const activeChatFromList = useMemo(
     () => chats.find((c) => (c.chatId ?? c._id) === chatId) ?? mockChat,
     [chats, chatId, mockChat]
   );
+
+  // If viewing a public channel not yet in the user's joined channel list, fetch its details
+  const { data: fallbackChannel } = useChannelDetails(
+    chatId,
+    resolvedType === "channel" && Boolean(chatId) && !activeChatFromList
+  );
+
+  const activeChat = activeChatFromList ?? fallbackChannel ?? null;
 
   return (
     <div className="flex h-full w-full overflow-hidden">

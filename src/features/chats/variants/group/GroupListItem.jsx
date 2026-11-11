@@ -2,13 +2,13 @@ import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { Users } from "lucide-react";
+import { Users, AtSign } from "lucide-react";
 import { getLastMessageInfo } from "../../utils/fileTypeConfig";
 import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
 
 /**
  * List item for a Group chat conversation.
- * @param {{ _id, name, members, lastMessage, unreadCount, updatedAt }} chat
+ * @param {{ _id, name, members, lastMessage, unreadCount, unreadMentionCount, updatedAt }} chat
  */
 function GroupListItem({ chat }) {
   const navigate = useNavigate();
@@ -21,6 +21,7 @@ function GroupListItem({ chat }) {
   const lastInfo = getLastMessageInfo(chat.lastMessage);
   const LastIcon = lastInfo.icon;
   const unread = chat.unreadCount ?? 0;
+  const unreadMentions = chat.unreadMentionCount ?? 0;
   const timeLabel = chat.updatedAt
     ? new Date(chat.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
@@ -32,14 +33,14 @@ function GroupListItem({ chat }) {
     <button
       onClick={() => navigate(`/chats/group/${targetId}`)}
       className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-100 text-left group",
+        "relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-100 text-left group cursor-pointer",
         isActive
-          ? "bg-accent text-foreground"
+          ? "bg-accent text-foreground before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r before:bg-primary-sidebar-marker"
           : "hover:bg-accent/50 text-foreground/80 hover:text-foreground"
       )}
     >
       {/* Stacked mini avatars */}
-      <div className="relative size-9 shrink-0">
+      <div className="relative size-9 shrink-0 flex items-center">
         {visibleMembers.length > 0 ? (
           <div className="flex">
             {visibleMembers.map((member, idx) => {
@@ -81,21 +82,31 @@ function GroupListItem({ chat }) {
       {/* Name + last message */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className={cn("text-sm truncate", unread > 0 ? "font-semibold" : "font-medium")}>
+          <span className={cn("text-sm truncate", unread > 0 || isActive ? "font-semibold" : "font-medium")}>
             {name}
           </span>
-          <span className="text-[10px] text-muted-foreground shrink-0">{timeLabel}</span>
+          <span className="text-[10px] font-mono tabular-nums text-muted-foreground shrink-0">{timeLabel}</span>
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
           <div className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground truncate max-w-[160px]">
             {LastIcon && <LastIcon className={cn("size-3.5 shrink-0", lastInfo.iconColor)} />}
             <span className="truncate">{lastInfo.text}</span>
           </div>
-          {unread > 0 && (
-            <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
-              {unread > 99 ? "99+" : unread}
-            </span>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {unreadMentions > 0 && (
+              <span
+                title={`${unreadMentions} unread mention${unreadMentions > 1 ? "s" : ""}`}
+                className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center"
+              >
+                <AtSign className="size-2.5" />
+              </span>
+            )}
+            {unread > 0 && (
+              <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tabular-nums font-bold flex items-center justify-center">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </button>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, Trash2, Edit2, Plus, X, Check } from 'lucide-react';
+import { MoreHorizontal, Trash2, Edit2, Plus } from 'lucide-react';
 import { useDeleteColumn, useUpdateColumn } from '../queries/board.queries';
 import { useCreateTask } from '../queries/task.queries';
 import { Droppable } from '@hello-pangea/dnd';
@@ -78,13 +78,13 @@ export const BoardColumn = ({
         });
     };
 
-    // Status indicator color
+    // Status indicator color using existing tokens
     const getColumnAccent = (key = '', name = '') => {
         const lower = (key || name).toLowerCase();
-        if (lower.includes('done') || lower.includes('complete')) return 'bg-emerald-500';
-        if (lower.includes('review') || lower.includes('qa')) return 'bg-indigo-500';
-        if (lower.includes('prog') || lower.includes('doing') || lower.includes('wip')) return 'bg-blue-500';
-        return 'bg-slate-400 dark:bg-slate-500';
+        if (lower.includes('done') || lower.includes('complete')) return 'bg-status-live-foreground';
+        if (lower.includes('review') || lower.includes('qa')) return 'bg-primary-sidebar-marker';
+        if (lower.includes('prog') || lower.includes('doing') || lower.includes('wip')) return 'bg-status-warn-foreground';
+        return 'bg-muted-foreground/60';
     };
 
     return (
@@ -92,14 +92,14 @@ export const BoardColumn = ({
             ref={provided.innerRef}
             {...provided.draggableProps}
             className={cn(
-                "shrink-0 w-[280px] sm:w-[300px] flex flex-col rounded-lg bg-muted/30 border border-border/80 transition-all h-full max-h-full overflow-hidden select-none",
-                isDragging ? "shadow-xl ring-2 ring-primary/40 rotate-1" : "shadow-2xs"
+                "shrink-0 w-[290px] sm:w-[308px] flex flex-col rounded-xl bg-muted/30 border border-border transition-all h-full max-h-full overflow-hidden select-none",
+                isDragging ? "shadow-(--shadow-popover) ring-2 ring-ring/40 rotate-1" : "shadow-(--shadow-card)"
             )}
         >
             {/* Column Header */}
             <div 
                 {...provided.dragHandleProps}
-                className="p-3 border-b border-border/60 flex items-center justify-between bg-card/60 rounded-t-lg"
+                className="px-3.5 py-3 border-b border-border flex items-center justify-between bg-card/85 backdrop-blur-xs rounded-t-xl"
             >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className={cn("size-2 rounded-full shrink-0", getColumnAccent(column.key, column.name))} />
@@ -115,38 +115,42 @@ export const BoardColumn = ({
                             />
                         </form>
                     ) : (
-                        <h3 className="font-semibold text-xs text-foreground truncate cursor-grab">
+                        <h3 className="font-semibold text-xs text-foreground tracking-tight truncate cursor-grab">
                             {column.name}
                         </h3>
                     )}
 
-                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-muted text-muted-foreground border border-border shrink-0">
+                    <span className="px-1.5 py-0.2 rounded-md text-[10px] font-mono tabular-nums font-semibold bg-muted text-muted-foreground border border-border shrink-0">
                         {tasks.length}
                     </span>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-0.5 shrink-0">
                     <button
+                        type="button"
                         onClick={() => setIsQuickAdding(true)}
-                        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                         title="Add Issue"
                     >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="size-3.5" />
                     </button>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                                <MoreHorizontal className="w-3.5 h-3.5" />
+                            <button
+                                type="button"
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                            >
+                                <MoreHorizontal className="size-3.5" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-36 p-1 text-xs">
-                            <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                                <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+                            <DropdownMenuItem onClick={() => setIsEditing(true)} className="cursor-pointer">
+                                <Edit2 className="size-3.5 mr-2 text-muted-foreground" />
                                 <span>Rename</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
-                                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive cursor-pointer">
+                                <Trash2 className="size-3.5 mr-2" />
                                 <span>Delete Column</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -155,22 +159,22 @@ export const BoardColumn = ({
             </div>
 
             {/* Column Droppable Area & Cards */}
-            <div className="flex-1 p-2 overflow-y-auto min-h-[150px] bg-muted/10">
+            <div className="flex-1 p-2.5 overflow-y-auto min-h-[150px] custom-scrollbar">
                 <Droppable droppableId={column._id} type="task">
                     {(provided, snapshot) => (
                         <div 
                             ref={provided.innerRef}
                             {...provided.droppableProps}
                             className={cn(
-                                "min-h-[120px] transition-colors rounded-md p-0.5",
-                                snapshot.isDraggingOver && "bg-primary/5 ring-1 ring-primary/20 rounded-md"
+                                "min-h-[120px] transition-colors rounded-lg p-0.5",
+                                snapshot.isDraggingOver && "bg-muted/70 ring-1 ring-border rounded-lg"
                             )}
                         >
                             {/* Inline Quick Add Input Box at top if active */}
                             {isQuickAdding && (
                                 <form 
                                     onSubmit={handleQuickAddSubmit}
-                                    className="p-2.5 mb-2 rounded-md border border-primary/40 bg-card shadow-2xs animate-in fade-in-0 duration-150"
+                                    className="p-3 mb-2.5 rounded-xl border border-ring/50 bg-card shadow-(--shadow-card) animate-in fade-in-0 duration-150"
                                 >
                                     <textarea
                                         autoFocus
@@ -186,23 +190,23 @@ export const BoardColumn = ({
                                                 setIsQuickAdding(false);
                                             }
                                         }}
-                                        placeholder="What needs to be done? (Enter to save, Esc to cancel)"
+                                        placeholder="Issue summary… (Enter to save, Esc to cancel)"
                                         className="w-full text-xs bg-transparent border-0 resize-none focus:outline-none placeholder:text-muted-foreground"
                                     />
                                     <div className="flex items-center justify-end gap-1.5 mt-2 pt-2 border-t border-border">
                                         <button
                                             type="button"
                                             onClick={() => setIsQuickAdding(false)}
-                                            className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                                            className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                                         >
                                             Cancel
                                         </button>
                                         <button
                                             type="submit"
                                             disabled={createTaskMutation.isPending || !quickTitle.trim()}
-                                            className="px-2.5 py-1 text-xs font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                                            className="px-2.5 py-1 text-xs font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
                                         >
-                                            {createTaskMutation.isPending ? 'Adding...' : 'Add'}
+                                            {createTaskMutation.isPending ? 'Adding…' : 'Add Issue'}
                                         </button>
                                     </div>
                                 </form>
@@ -219,13 +223,14 @@ export const BoardColumn = ({
                             {provided.placeholder}
                             
                             {tasks.length === 0 && !snapshot.isDraggingOver && !isQuickAdding && (
-                                <div className="flex flex-col items-center justify-center h-24 text-xs text-muted-foreground border border-dashed border-border/80 rounded-md m-1 py-4 bg-card/20">
-                                    <p className="text-[11px]">No issues</p>
+                                <div className="flex flex-col items-center justify-center h-28 text-xs text-muted-foreground border border-dashed border-border rounded-xl m-0.5 py-4 bg-card/30">
+                                    <p className="text-[11px] font-medium">No issues in {column.name}</p>
                                     <button
+                                        type="button"
                                         onClick={() => setIsQuickAdding(true)}
-                                        className="mt-1 text-[11px] text-primary hover:underline font-medium"
+                                        className="mt-1 text-[11px] text-foreground hover:underline font-medium cursor-pointer"
                                     >
-                                        + Create one
+                                        + Create issue
                                     </button>
                                 </div>
                             )}
@@ -235,13 +240,14 @@ export const BoardColumn = ({
             </div>
             
             {/* Column Footer */}
-            <div className="p-2 border-t border-border/60 bg-card/40">
+            <div className="p-2 border-t border-border bg-card/60">
                 <button 
+                    type="button"
                     onClick={() => setIsQuickAdding(true)}
-                    className="flex items-center justify-center gap-1.5 w-full py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-md transition-colors"
+                    className="flex items-center justify-center gap-1.5 w-full py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-lg transition-colors cursor-pointer"
                 >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Create Issue</span>
+                    <Plus className="size-3.5" />
+                    <span>New Issue</span>
                 </button>
             </div>
         </div>

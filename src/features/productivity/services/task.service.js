@@ -9,6 +9,13 @@ export const getTasks = async (projectId, params = {}) => {
     return response.data;
 };
 
+export const getMyAssignedTasks = async () => {
+    const response = await api.get('/projects/my-tasks', {
+        headers: getHeaders(),
+    });
+    return response.data;
+};
+
 export const getTaskById = async (projectId, taskId) => {
     const response = await api.get(`/projects/${projectId}/tasks/${taskId}`, { headers: getHeaders() });
     return response.data;

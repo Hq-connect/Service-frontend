@@ -7,6 +7,10 @@ import { store } from './app/store/store.js'
 import { QueryClient,QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from './components/ui/sonner.jsx'
 import { TooltipProvider } from './components/ui/tooltip.jsx'
+import { hydrateCachedBranding } from './features/settings/utils/brandingCssInjector.js'
+
+// Stage 1: Synchronous pre-mount branding hydration (0ms network wait, zero theme flash)
+hydrateCachedBranding();
 
 const queryClient = new QueryClient();
 

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import dmService from "../services/dm.service";
 import { chatKeys } from "../queries/chat.keys";
 import groupService from "../services/group.service";
+import channelService from "../services/channel.service";
 
 export const useDeleteMessage = (type="dm") => {
     const queryClient = useQueryClient();
@@ -15,6 +16,11 @@ export const useDeleteMessage = (type="dm") => {
 
         case "group":
             return groupService.deleteMessage(
+                messageId
+            );
+
+        case "channel":
+            return channelService.deleteMessage(
                 messageId
             );
 

@@ -6,6 +6,7 @@ import meetingsReducer from '../../features/meets/states/meeting.slice.js'
 import notificationReducer from '../../features/notifications/states/notification.slice.js'
 import productivityReducer from '../../features/productivity/states/productivity.slice.js'
 import documentReducer from '../../features/editor/states/document.slice.js'
+import settingsReducer from '../../features/settings/states/settings.slice.js'
 
 export const store = configureStore({
   reducer: {
@@ -16,5 +17,6 @@ export const store = configureStore({
     notifications: notificationReducer,
     productivity: productivityReducer,
     document: documentReducer,
+    settings: settingsReducer,
   },
 })

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Compass } from "lucide-react";
 import ChatList from "./ChatList";
 import { useChats } from "../hooks/useChats";
 import { useUsers } from "@/global/hooks/useUsers";
@@ -10,6 +10,8 @@ import useCurrentUser from "@/features/auth/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getUserDisplayName, getUserInitials, getAvatarStyle } from "@/global/utils/user";
 import CreateGroupDialog from "../variants/group/CreateGroupDialog";
+import CreateChannelDialog from "../variants/channel/CreateChannelDialog";
+import BrowseChannelsDialog from "../variants/channel/BrowseChannelsDialog";
 
 function NewUserListItem({ user, onClick }) {
   const displayName = getUserDisplayName(user);
@@ -52,6 +54,8 @@ function ChatSidebar({ activeType = "dm" }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [createChannelOpen, setCreateChannelOpen] = useState(false);
+  const [browseChannelsOpen, setBrowseChannelsOpen] = useState(false);
   const { data: chats = [], isLoading } = useChats(activeType);
 
   const { currentUser, currentUserId } = useCurrentUser();
@@ -94,15 +98,21 @@ function ChatSidebar({ activeType = "dm" }) {
       <aside className={`flex-col w-full md:w-[280px] md:min-w-[240px] border-r border-border bg-background shrink-0 overflow-hidden ${
         chatId ? "hidden md:flex" : "flex"
       }`}>
-        {/* Header Search & Create Action - aligned to h-16 for seamless border symmetry */}
-        <div className="h-16 px-3 flex items-center gap-2 border-b border-border bg-background shrink-0">
+        {/* Header Search & Create Action - aligned to h-14 for seamless border symmetry */}
+        <div className="h-14 px-3 flex items-center gap-2 border-b border-border bg-background shrink-0">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={activeType === "group" ? "Search groups..." : "Search direct messages..."}
-              className="pl-8 h-9 text-xs bg-muted/60 border-input/60 focus-visible:ring-1"
+              placeholder={
+                activeType === "group"
+                  ? "Filter groups..."
+                  : activeType === "channel"
+                  ? "Filter channels..."
+                  : "Search people or DMs..."
+              }
+              className="pl-8 h-8 text-xs bg-muted/50 border-border focus-visible:ring-1"
             />
           </div>
           {activeType === "group" && (
@@ -110,12 +120,48 @@ function ChatSidebar({ activeType = "dm" }) {
               variant="outline"
               size="icon"
               onClick={() => setCreateGroupOpen(true)}
-              className="size-9 shrink-0 text-primary border-border hover:bg-primary/10"
+              className="size-8 shrink-0 text-primary border-border hover:bg-primary/10"
               title="New Group"
             >
-              <Plus className="size-4" />
+              <Plus className="size-3.5" />
             </Button>
           )}
+          {activeType === "channel" && (
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setBrowseChannelsOpen(true)}
+                className="size-8 shrink-0 text-muted-foreground hover:text-foreground border-border"
+                title="Browse Public Channels"
+              >
+                <Compass className="size-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCreateChannelOpen(true)}
+                className="size-8 shrink-0 text-primary border-border hover:bg-primary/10"
+                title="Create Channel"
+              >
+                <Plus className="size-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Section Subtitle + Count */}
+        <div className="px-3.5 pt-2.5 pb-1 flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            {activeType === "group"
+              ? "Active Groups"
+              : activeType === "channel"
+              ? "Channels"
+              : "Direct Messages"}
+          </span>
+          <span className="text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+            {filtered.length}
+          </span>
         </div>
 
         {/* Chat list */}
@@ -155,6 +201,19 @@ function ChatSidebar({ activeType = "dm" }) {
       <CreateGroupDialog
         open={createGroupOpen}
         onOpenChange={setCreateGroupOpen}
+      />
+
+      {/* Create Channel Dialog */}
+      <CreateChannelDialog
+        open={createChannelOpen}
+        onOpenChange={setCreateChannelOpen}
+      />
+
+      {/* Browse Public Channels Dialog */}
+      <BrowseChannelsDialog
+        open={browseChannelsOpen}
+        onOpenChange={setBrowseChannelsOpen}
+        onOpenCreate={() => setCreateChannelOpen(true)}
       />
     </>
   );

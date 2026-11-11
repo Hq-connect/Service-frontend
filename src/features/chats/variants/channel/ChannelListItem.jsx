@@ -1,59 +1,76 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Hash } from "lucide-react";
+import { Hash, Lock, AtSign } from "lucide-react";
 import { getLastMessageInfo } from "../../utils/fileTypeConfig";
 
 /**
  * List item for a Channel conversation.
- * @param {{ _id, name, topic, lastMessage, unreadCount, updatedAt }} chat
+ * @param {{ _id, chatId, name, topic, visibility, lastMessage, unreadCount, unreadMentionCount, updatedAt }} chat
  */
 function ChannelListItem({ chat }) {
   const navigate = useNavigate();
   const { chatId } = useParams();
-  const isActive = chatId === chat._id;
+  const targetId = chat.chatId || chat._id;
+  const isActive = chatId === targetId;
 
   const name = chat.name ?? "channel";
+  const isPrivate = chat.visibility === "private";
   const lastInfo = getLastMessageInfo(chat.lastMessage);
   const LastIcon = lastInfo.icon;
   const unread = chat.unreadCount ?? 0;
+  const unreadMentions = chat.unreadMentionCount ?? 0;
   const timeLabel = chat.updatedAt
     ? new Date(chat.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
 
   return (
     <button
-      onClick={() => navigate(`/chats/channel/${chat._id}`)}
+      onClick={() => navigate(`/chats/channel/${targetId}`)}
       className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-100 text-left group",
+        "relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-100 text-left group cursor-pointer",
         isActive
-          ? "bg-accent text-foreground"
+          ? "bg-accent text-foreground before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r before:bg-primary-sidebar-marker"
           : "hover:bg-accent/50 text-foreground/80 hover:text-foreground"
       )}
     >
-      {/* Hash icon */}
-      <div className="flex items-center justify-center size-9 rounded-full bg-muted shrink-0">
-        <Hash className="size-4 text-muted-foreground" />
+      {/* Hash or Lock icon */}
+      <div className="flex items-center justify-center size-9 rounded-lg bg-muted border border-border/60 shrink-0">
+        {isPrivate ? (
+          <Lock className="size-4 text-muted-foreground" />
+        ) : (
+          <Hash className="size-4 text-muted-foreground" />
+        )}
       </div>
 
       {/* Name + last message */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className={cn("text-sm truncate", unread > 0 ? "font-semibold" : "font-medium")}>
+          <span className={cn("text-sm truncate", unread > 0 || isActive ? "font-semibold" : "font-medium")}>
             {name}
           </span>
-          <span className="text-[10px] text-muted-foreground shrink-0">{timeLabel}</span>
+          <span className="text-[10px] font-mono tabular-nums text-muted-foreground shrink-0">{timeLabel}</span>
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <div className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground truncate max-w-[160px]">
+          <div className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground truncate max-w-[150px]">
             {LastIcon && <LastIcon className={cn("size-3.5 shrink-0", lastInfo.iconColor)} />}
             <span className="truncate">{lastInfo.text}</span>
           </div>
-          {unread > 0 && (
-            <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
-              {unread > 99 ? "99+" : unread}
-            </span>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {unreadMentions > 0 && (
+              <span
+                title={`${unreadMentions} unread mention${unreadMentions > 1 ? "s" : ""}`}
+                className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center"
+              >
+                <AtSign className="size-2.5" />
+              </span>
+            )}
+            {unread > 0 && (
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tabular-nums font-bold flex items-center justify-center">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </button>

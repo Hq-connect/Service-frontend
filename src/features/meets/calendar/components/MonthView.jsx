@@ -75,14 +75,14 @@ export const MonthView = ({
     }
 
     return (
-        <div className="flex flex-col flex-1 bg-card rounded-lg border border-border shadow-2xs overflow-hidden select-none">
+        <div className="flex flex-col flex-1 bg-card rounded-xl border border-border shadow-(--shadow-card) overflow-hidden select-none">
             {/* Weekday Header */}
-            <div className="grid grid-cols-7 border-b border-border bg-muted/40">
+            <div className="grid grid-cols-7 border-b border-border bg-muted/35">
                 {WEEKDAYS.map((day, idx) => (
                     <div
                         key={day}
-                        className={`py-2 text-center text-xs font-semibold uppercase tracking-wider ${
-                            idx === 0 || idx === 6 ? "text-muted-foreground/70" : "text-muted-foreground"
+                        className={`py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider ${
+                            idx === 0 || idx === 6 ? "text-muted-foreground/60" : "text-muted-foreground"
                         }`}
                     >
                         {day}
@@ -91,7 +91,7 @@ export const MonthView = ({
             </div>
 
             {/* Days Grid */}
-            <div className="grid grid-cols-7 grid-rows-5 lg:grid-rows-6 flex-1 min-h-[600px] divide-x divide-y divide-border/60">
+            <div className="grid grid-cols-7 auto-rows-fr flex-1 min-h-[540px] divide-x divide-y divide-border/70">
                 {days.map((day) => {
                     const dateKey = format(day, "yyyy-MM-dd");
                     const dayItems = itemsByDate.get(dateKey) || [];
@@ -107,28 +107,28 @@ export const MonthView = ({
                         <div
                             key={dateKey}
                             onClick={() => onSelectDate(day)}
-                            className={`min-h-[100px] lg:min-h-[120px] p-1.5 lg:p-2 flex flex-col transition-colors cursor-pointer relative group ${
+                            className={`min-h-[96px] lg:min-h-[112px] p-2 flex flex-col transition-colors cursor-pointer relative group ${
                                 !isCurrentMonth
-                                    ? "bg-muted/15 text-muted-foreground/40"
-                                    : "bg-card text-foreground hover:bg-muted/30"
-                            } ${isSelected ? "bg-accent/35" : ""}`}
+                                    ? "bg-muted/20 text-muted-foreground/40"
+                                    : "bg-card text-foreground hover:bg-muted/25"
+                            } ${isSelected ? "bg-muted/45" : ""}`}
                         >
-                            {/* Inset Selection Border - Stays strictly inside cell boundaries */}
+                            {/* Top Selection Indicator Bar */}
                             {isSelected && (
-                                <div className="absolute inset-0 pointer-events-none ring-2 ring-inset ring-primary/60 bg-primary/[0.02]" />
+                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary pointer-events-none" />
                             )}
 
                             {/* Day Header: Date Number + Indicators */}
                             <div className="flex items-center justify-between mb-1.5 relative z-10">
                                 <span
-                                    className={`inline-flex items-center justify-center size-6 rounded-full text-xs font-medium transition-all ${
+                                    className={`inline-flex items-center justify-center size-6 rounded-md text-xs font-mono tabular-nums transition-all ${
                                         isCurrentDay
-                                            ? "bg-primary text-primary-foreground font-bold shadow-xs"
+                                            ? "bg-primary text-primary-foreground font-bold shadow-2xs"
                                             : isSelected
-                                            ? "bg-primary/15 text-primary font-bold ring-1 ring-primary/30"
+                                            ? "bg-muted text-foreground font-bold border border-border"
                                             : isCurrentMonth
-                                            ? "text-foreground group-hover:text-primary"
-                                            : "text-muted-foreground/50"
+                                            ? "text-foreground/90 font-medium group-hover:text-foreground"
+                                            : "text-muted-foreground/45"
                                     }`}
                                 >
                                     {format(day, "d")}
@@ -138,10 +138,10 @@ export const MonthView = ({
                                     {/* Personal Note Indicator */}
                                     {hasNote && (
                                         <span
-                                            title="Personal note saved for this date"
-                                            className="p-0.5 rounded-md bg-rose-500/15 text-rose-500 border border-rose-500/20"
+                                            title="Note saved for this date"
+                                            className="size-5 inline-flex items-center justify-center rounded-md bg-status-live text-status-live-foreground border border-status-live-border"
                                         >
-                                            <FileText className="size-3" />
+                                            <FileText className="size-2.5" />
                                         </span>
                                     )}
 
@@ -153,8 +153,8 @@ export const MonthView = ({
                                             onSelectDate(day);
                                             onQuickAdd && onQuickAdd(day);
                                         }}
-                                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-opacity"
-                                        title="Add meeting or event"
+                                        className="opacity-0 group-hover:opacity-100 size-5 inline-flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-opacity cursor-pointer"
+                                        title="Add event on this date"
                                     >
                                         <Plus className="size-3" />
                                     </button>
@@ -172,12 +172,14 @@ export const MonthView = ({
                                                     e.stopPropagation();
                                                     onSelectMeeting(item);
                                                 }}
-                                                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 hover:scale-[1.02] hover:shadow-xs active:scale-[0.98] transition-all duration-150 truncate cursor-pointer"
+                                                style={{ borderLeftColor: "var(--chart-2)" }}
+                                                className="flex items-center justify-between gap-1.5 px-1.5 py-0.5 rounded bg-muted/60 hover:bg-muted text-foreground border border-border/60 border-l-2 text-[11px] font-medium transition-colors truncate cursor-pointer"
                                                 title={`${item.time} - ${item.title}`}
                                             >
-                                                <Video className="size-2.5 shrink-0" />
-                                                <span className="shrink-0 text-[10px] opacity-75">{item.time}</span>
                                                 <span className="truncate">{item.title}</span>
+                                                <span className="shrink-0 text-[9px] font-mono tabular-nums text-muted-foreground">
+                                                    {item.time.replace(":00", "")}
+                                                </span>
                                             </div>
                                         );
                                     }
@@ -190,12 +192,17 @@ export const MonthView = ({
                                                     e.stopPropagation();
                                                     onSelectMeeting(item);
                                                 }}
-                                                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 hover:scale-[1.02] hover:shadow-xs active:scale-[0.98] transition-all duration-150 truncate cursor-pointer"
+                                                style={{ borderLeftColor: "var(--chart-3)" }}
+                                                className="flex items-center justify-between gap-1.5 px-1.5 py-0.5 rounded bg-muted/60 hover:bg-muted text-foreground border border-border/60 border-l-2 text-[11px] font-medium transition-colors truncate cursor-pointer"
                                                 title={`${item.time} - ${item.title} (Recurring)`}
                                             >
-                                                <Repeat className="size-2.5 shrink-0 text-purple-500" />
-                                                <span className="shrink-0 text-[10px] opacity-75">{item.time}</span>
-                                                <span className="truncate">{item.title}</span>
+                                                <span className="truncate flex items-center gap-1">
+                                                    <Repeat className="size-2.5 shrink-0 text-muted-foreground" />
+                                                    <span className="truncate">{item.title}</span>
+                                                </span>
+                                                <span className="shrink-0 text-[9px] font-mono tabular-nums text-muted-foreground">
+                                                    {item.time.replace(":00", "")}
+                                                </span>
                                             </div>
                                         );
                                     }
@@ -208,12 +215,14 @@ export const MonthView = ({
                                                 e.stopPropagation();
                                                 onSelectEvent(item);
                                             }}
-                                            className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 hover:scale-[1.02] hover:shadow-xs active:scale-[0.98] transition-all duration-150 truncate cursor-pointer"
+                                            style={{ borderLeftColor: "var(--status-warn-fg)" }}
+                                            className="flex items-center justify-between gap-1.5 px-1.5 py-0.5 rounded bg-status-warn/60 hover:bg-status-warn text-foreground border border-status-warn-border/60 border-l-2 text-[11px] font-medium transition-colors truncate cursor-pointer"
                                             title={`${item.time} - ${item.title}`}
                                         >
-                                            <Star className="size-2.5 shrink-0 text-amber-500" />
-                                            <span className="shrink-0 text-[10px] opacity-75">{item.time}</span>
                                             <span className="truncate">{item.title}</span>
+                                            <span className="shrink-0 text-[9px] font-mono tabular-nums text-muted-foreground">
+                                                {item.allDay ? "All day" : item.time.replace(":00", "")}
+                                            </span>
                                         </div>
                                     );
                                 })}
@@ -225,20 +234,20 @@ export const MonthView = ({
                                             <button
                                                 type="button"
                                                 onClick={(e) => e.stopPropagation()}
-                                                className="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                                                className="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-mono tabular-nums font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
                                             >
                                                 +{overflowCount} more
                                             </button>
                                         </PopoverTrigger>
                                         <PopoverContent
                                             align="start"
-                                            className="w-64 p-3 space-y-2 bg-popover/95 backdrop-blur-md border border-border shadow-lg"
+                                            className="w-64 p-3 space-y-2 bg-popover border border-border rounded-xl shadow-lg"
                                         >
                                             <div className="flex items-center justify-between pb-1.5 border-b border-border">
                                                 <span className="text-xs font-semibold text-foreground">
                                                     {format(day, "EEEE, MMMM d")}
                                                 </span>
-                                                <span className="text-[10px] text-muted-foreground">
+                                                <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
                                                     {dayItems.length} items
                                                 </span>
                                             </div>
@@ -254,25 +263,23 @@ export const MonthView = ({
                                                                 onSelectMeeting(item);
                                                             }
                                                         }}
-                                                        className={`p-1.5 rounded-md text-xs border flex items-center justify-between gap-2 cursor-pointer transition-colors ${
-                                                            item.itemType === "recurring"
-                                                                ? "bg-purple-500/10 border-purple-500/20 text-purple-400 hover:bg-purple-500/20"
-                                                                : item.itemType === "event"
-                                                                ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20"
-                                                                : "bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20"
-                                                        }`}
+                                                        className="p-2 rounded-lg text-xs border border-border bg-muted/30 hover:bg-muted/60 flex items-center justify-between gap-2 cursor-pointer transition-colors"
                                                     >
                                                         <div className="flex items-center gap-1.5 truncate">
                                                             {item.itemType === "recurring" ? (
-                                                                <Repeat className="size-3 shrink-0" />
+                                                                <Repeat className="size-3 shrink-0 text-muted-foreground" />
                                                             ) : item.itemType === "event" ? (
-                                                                <Star className="size-3 shrink-0" />
+                                                                <Star className="size-3 shrink-0 text-status-warn-foreground" />
                                                             ) : (
-                                                                <Video className="size-3 shrink-0" />
+                                                                <Video className="size-3 shrink-0 text-primary" />
                                                             )}
-                                                            <span className="font-medium truncate">{item.title}</span>
+                                                            <span className="font-medium text-foreground truncate">
+                                                                {item.title}
+                                                            </span>
                                                         </div>
-                                                        <span className="text-[10px] opacity-75 shrink-0">{item.time}</span>
+                                                        <span className="text-[10px] font-mono tabular-nums text-muted-foreground shrink-0">
+                                                            {item.time}
+                                                        </span>
                                                     </div>
                                                 ))}
                                             </div>

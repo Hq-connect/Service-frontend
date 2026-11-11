@@ -1,16 +1,26 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { UserPlus } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { UserPlus, Settings } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import { PRIMARY_NAV_ITEMS, EXTRA_NAV_ITEMS } from "./navigation";
 import QuickCallModal from "@/features/meets/components/QuickCallModal";
+import useAuth from "@/features/auth/hooks/useAuth";
+import { extractUser } from "@/global/utils/user";
+import { setInviteModalOpen } from "@/features/settings/states/settings.slice";
+import InviteMembersModal from "@/features/settings/components/InviteMembersModal";
 
 function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySidebarOpen, chatUnreadCount = 0 }) {
   const [quickCallOpen, setQuickCallOpen] = useState(false);
   const [quickCallMode, setQuickCallMode] = useState("direct");
+  const dispatch = useDispatch();
+  const { user } = useAuth();
+  const role = extractUser(user)?.role;
+  const isAdminOrOwner = role === "owner" || role === "admin";
+
   return (
     <aside className="hidden md:flex flex-col items-center w-[72px] bg-primary-sidebar border-r border-primary-sidebar-border text-primary-sidebar-active-text shrink-0 z-30 select-none">
-      {/* Logo Icon Only */}
+      {/* Logo Icon Only (Dynamically loads from branding.json with HQ SVG fallback) */}
       <div className="flex items-center justify-center h-14 w-full mt-2">
         <Logo iconOnly={true} isDark={true} className="w-8 h-8" />
       </div>
@@ -83,13 +93,26 @@ function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySid
 
       {/* Profile / Bottom Controls */}
       <div className="flex flex-col items-center gap-2 py-4 w-full border-t border-primary-sidebar-border">
-        {/* Invite User Button */}
-        <button
-          title="Invite user"
+        {/* Invite User Button (Visible to Admins & Owners) */}
+        {isAdminOrOwner && (
+          <button
+            type="button"
+            title="Invite people to workspace"
+            onClick={() => dispatch(setInviteModalOpen(true))}
+            className="flex items-center justify-center size-10 rounded-lg text-primary-sidebar-text hover:bg-primary-sidebar-active hover:text-primary-sidebar-active-text transition-all duration-150 cursor-pointer"
+          >
+            <UserPlus className="size-[20px]" />
+          </button>
+        )}
+
+        {/* Settings Link */}
+        <Link
+          to="/settings/profile"
+          title="Settings"
           className="flex items-center justify-center size-10 rounded-lg text-primary-sidebar-text hover:bg-primary-sidebar-active hover:text-primary-sidebar-active-text transition-all duration-150 cursor-pointer"
         >
-          <UserPlus className="size-[20px]" />
-        </button>
+          <Settings className="size-[20px]" />
+        </Link>
 
         {/* Toggle Sidebar Button */}
         <button
@@ -110,6 +133,9 @@ function PrimarySidebar({ currentPath, isSecondarySidebarOpen, setIsSecondarySid
         onOpenChange={setQuickCallOpen}
         initialMode={quickCallMode}
       />
+
+      {/* Invite Members Modal */}
+      {isAdminOrOwner && <InviteMembersModal />}
     </aside>
   );
 }

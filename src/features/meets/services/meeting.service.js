@@ -7,6 +7,12 @@ export const meetingService = {
         return response.data;
     },
 
+    // List today & tomorrow's scheduled/ongoing meetings for Home view
+    getUpcomingHomeMeetings: async (params) => {
+        const response = await api.get("/meetings/upcoming-home", { params });
+        return response.data;
+    },
+
     // Get a single meeting by ID
     getMeeting: async (meetingId) => {
         const response = await api.get(`/meetings/${meetingId}`);

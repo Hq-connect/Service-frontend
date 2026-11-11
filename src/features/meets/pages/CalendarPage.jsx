@@ -109,7 +109,7 @@ export const CalendarPage = () => {
     const notesCount = notes.length;
 
     return (
-        <div className="flex-1 overflow-y-auto bg-background p-4 sm:p-6 space-y-4 w-full flex flex-col">
+        <div className="flex-1 overflow-y-auto bg-background px-4 sm:px-6 py-4 space-y-4 w-full flex flex-col animate-fade-in">
             {/* Calendar Controls & Filter Header */}
             <CalendarHeader
                 currentDate={currentDate}
@@ -137,16 +137,31 @@ export const CalendarPage = () => {
 
             {/* Main Calendar Body */}
             {isLoading ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-24">
-                    <Loader2 className="size-8 animate-spin text-primary mb-2" />
-                    <p className="text-xs text-muted-foreground">Loading calendar schedule...</p>
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[540px]">
+                    <div className="lg:col-span-9 rounded-xl border border-border bg-card shadow-(--shadow-card) p-4 flex flex-col gap-3">
+                        <div className="grid grid-cols-7 gap-2 pb-2 border-b border-border">
+                            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                                <div key={n} className="h-4 rounded bg-muted animate-pulse" />
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-7 grid-rows-5 gap-2 flex-1">
+                            {Array.from({ length: 35 }).map((_, i) => (
+                                <div key={i} className="rounded-lg bg-muted/40 animate-pulse p-2" />
+                            ))}
+                        </div>
+                    </div>
+                    <div className="lg:col-span-3 rounded-xl border border-border bg-card shadow-(--shadow-card) p-4 space-y-4">
+                        <div className="h-48 rounded-lg bg-muted/50 animate-pulse" />
+                        <div className="h-32 rounded-lg bg-muted/40 animate-pulse" />
+                        <div className="h-32 rounded-lg bg-muted/40 animate-pulse" />
+                    </div>
                 </div>
             ) : (
-                <div className="flex-1 flex flex-col lg:flex-row gap-4 items-stretch min-h-0">
-                    {/* Active View Grid with smooth entrance animation */}
+                <div className="flex-1 flex flex-col xl:flex-row gap-4 items-stretch min-h-0">
+                    {/* Active View Grid */}
                     <div 
                         key={`${viewMode}-${currentDate.toISOString().slice(0, 7)}`}
-                        className="flex-1 w-full flex flex-col min-h-0 animate-in fade-in-50 zoom-in-[0.99] duration-200 ease-out"
+                        className="flex-1 w-full flex flex-col min-h-0 animate-fade-in"
                     >
                         {viewMode === "month" && (
                             <MonthView

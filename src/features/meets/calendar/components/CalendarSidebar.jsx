@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { format, isSameDay, isToday } from "date-fns";
+import { format, isToday } from "date-fns";
 import {
-    Calendar as CalendarIcon,
     FileText,
     Save,
     Trash2,
@@ -11,7 +10,9 @@ import {
     Star,
     Clock,
     ArrowRight,
-    Check,
+    Calendar as CalendarIcon,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,7 @@ export const CalendarSidebar = ({
     const [noteContent, setNoteContent] = useState("");
     const [noteColor, setNoteColor] = useState("default");
     const [isDirty, setIsDirty] = useState(false);
+    const [showMiniCal, setShowMiniCal] = useState(false);
 
     useEffect(() => {
         if (activeNote) {
@@ -61,172 +63,135 @@ export const CalendarSidebar = ({
         setIsDirty(false);
     };
 
-    // Filter items for selected day
     const dayMeetings = meetings.filter(
         (m) => m.scheduledAt && format(new Date(m.scheduledAt), "yyyy-MM-dd") === selectedKey
     );
     const dayEvents = events.filter(
         (e) => e.startDate && format(new Date(e.startDate), "yyyy-MM-dd") === selectedKey
     );
+    const totalItems = dayMeetings.length + dayEvents.length;
 
     return (
-        <aside className="w-80 shrink-0 space-y-4">
-            {/* Mini Calendar Card */}
-            <div className="bg-card rounded-lg border border-border p-3 shadow-2xs flex flex-col items-center">
-                <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && onSelectDate(date)}
-                    className="p-0.5"
-                />
-            </div>
-
-            {/* Selected Date Scratchpad Card */}
-            <div className="bg-card rounded-lg border border-border p-3.5 shadow-2xs space-y-2.5">
-                <div className="flex items-center justify-between pb-2 border-b border-border">
+        <aside className="w-full xl:w-80 shrink-0 rounded-xl border border-border bg-card shadow-(--shadow-card) flex flex-col overflow-hidden select-none">
+            {/* 1. Selected Date Inspector Header */}
+            <div className="px-4 py-3.5 border-b border-border flex items-center justify-between gap-2 bg-muted/20">
+                <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                        <div className="p-1 rounded-md bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                            <FileText className="size-3.5" />
-                        </div>
-                        <div>
-                            <h3 className="text-xs font-semibold text-foreground">Date Scratchpad</h3>
-                            <p className="text-[10px] text-muted-foreground font-mono">
-                                {format(selectedDate, "EEE, MMM d, yyyy")}
-                            </p>
-                        </div>
-                    </div>
-
-                    {activeNote && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleDeleteNote}
-                            disabled={isDeletingNote}
-                            className="size-6 text-muted-foreground hover:text-destructive cursor-pointer"
-                            title="Delete note"
-                        >
-                            {isDeletingNote ? (
-                                <Loader2 className="size-3 animate-spin" />
-                            ) : (
-                                <Trash2 className="size-3" />
-                            )}
-                        </Button>
-                    )}
-                </div>
-
-                <Textarea
-                    value={noteContent}
-                    onChange={(e) => {
-                        setNoteContent(e.target.value);
-                        setIsDirty(true);
-                    }}
-                    placeholder="Quick thoughts, agenda items, or notes for this date..."
-                    className="min-h-[90px] text-xs resize-none bg-muted/20 border-border"
-                />
-
-                <div className="flex items-center justify-between pt-0.5">
-                    <span className="text-[10px] text-muted-foreground">
-                        {noteContent.length > 0 ? `${noteContent.length} chars` : "Personal note"}
-                    </span>
-
-                    <Button
-                        size="sm"
-                        onClick={handleSaveNote}
-                        disabled={isSavingNote || (!isDirty && !!activeNote)}
-                        className="h-7 text-xs gap-1 cursor-pointer shadow-2xs"
-                    >
-                        {isSavingNote ? (
-                            <Loader2 className="size-3 animate-spin" />
-                        ) : (
-                            <Save className="size-3" />
+                        <h3 className="text-sm font-bold text-foreground tracking-tight truncate">
+                            {format(selectedDate, "EEEE, MMM d")}
+                        </h3>
+                        {isToday(selectedDate) && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                                Today
+                            </span>
                         )}
-                        Save
-                    </Button>
+                    </div>
+                    <p className="text-[11px] font-mono tabular-nums text-muted-foreground mt-0.5">
+                        {format(selectedDate, "yyyy")} · {totalItems} scheduled item{totalItems === 1 ? "" : "s"}
+                    </p>
                 </div>
+
+                <Button
+                    variant="outline"
+                    size="xs"
+                    onClick={() => setShowMiniCal((prev) => !prev)}
+                    className="gap-1 text-[11px] h-7 cursor-pointer shrink-0"
+                    title="Toggle mini date picker"
+                >
+                    <CalendarIcon className="size-3" />
+                    {showMiniCal ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                </Button>
             </div>
 
-            {/* Selected Date Agenda Overview Card */}
-            <div className="bg-card rounded-lg border border-border p-3.5 shadow-2xs space-y-2.5">
-                <div className="flex items-center justify-between pb-2 border-b border-border">
-                    <h3 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                        <Clock className="size-3.5 text-primary" />
+            {/* Collapsible Mini Calendar Picker */}
+            {showMiniCal && (
+                <div className="p-3 border-b border-border bg-muted/10 flex justify-center animate-fade-in">
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && onSelectDate(date)}
+                        className="p-0"
+                    />
+                </div>
+            )}
+
+            {/* 2. Day Agenda Section */}
+            <div className="p-4 border-b border-border space-y-2.5">
+                <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Clock className="size-3.5" />
                         Day Agenda
-                    </h3>
-                    <Badge variant="outline" className="text-[10px] py-0 px-1.5">
-                        {dayMeetings.length + dayEvents.length} items
+                    </span>
+                    <Badge variant="outline" className="text-[10px] font-mono tabular-nums py-0 px-1.5">
+                        {totalItems}
                     </Badge>
                 </div>
 
-                {dayMeetings.length === 0 && dayEvents.length === 0 ? (
-                    <div className="py-6 text-center text-xs text-muted-foreground">
-                        No meetings or events on this date.
+                {totalItems === 0 ? (
+                    <div className="py-5 px-3 rounded-lg border border-dashed border-border text-center">
+                        <p className="text-xs font-medium text-foreground">Clear day</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                            No meetings or events on {format(selectedDate, "MMM d")}.
+                        </p>
                     </div>
                 ) : (
-                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                        {/* Events */}
+                    <div className="space-y-1.5 max-h-52 overflow-y-auto pr-0.5">
                         {dayEvents.map((evt) => (
                             <div
                                 key={evt._id}
                                 onClick={() => onSelectEvent(evt)}
-                                className="p-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-xs hover:bg-amber-500/15 transition-colors cursor-pointer space-y-1"
+                                style={{ borderLeftColor: "var(--status-warn-fg)" }}
+                                className="p-2.5 rounded-lg bg-muted/35 hover:bg-muted/60 border border-border border-l-2 text-xs transition-colors cursor-pointer flex items-center justify-between gap-2"
                             >
-                                <div className="flex items-center justify-between text-amber-500 font-medium">
-                                    <span className="flex items-center gap-1 truncate">
-                                        <Star className="size-3 shrink-0" />
-                                        <span className="truncate">{evt.title}</span>
-                                    </span>
-                                    <span className="text-[10px] opacity-80 shrink-0">
-                                        {evt.allDay ? "All Day" : format(new Date(evt.startDate), "h:mm a")}
-                                    </span>
-                                </div>
+                                <span className="flex items-center gap-1.5 font-medium text-foreground truncate">
+                                    <Star className="size-3 text-status-warn-foreground shrink-0" />
+                                    <span className="truncate">{evt.title}</span>
+                                </span>
+                                <span className="text-[10px] font-mono tabular-nums text-muted-foreground shrink-0">
+                                    {evt.allDay ? "All day" : format(new Date(evt.startDate), "HH:mm")}
+                                </span>
                             </div>
                         ))}
 
-                        {/* Meetings */}
                         {dayMeetings.map((m) => {
                             const isRec = m.isRecurring || m.type === "recurring";
                             return (
                                 <div
                                     key={m._id}
                                     onClick={() => onSelectMeeting(m)}
-                                    className={`p-2 rounded-md border text-xs transition-colors cursor-pointer space-y-1.5 ${
-                                        isRec
-                                            ? "bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/15"
-                                            : "bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/15"
-                                    }`}
+                                    style={{
+                                        borderLeftColor: isRec ? "var(--chart-3)" : "var(--chart-2)",
+                                    }}
+                                    className="p-2.5 rounded-lg bg-muted/35 hover:bg-muted/60 border border-border border-l-2 text-xs transition-colors cursor-pointer space-y-1.5"
                                 >
-                                    <div className="flex items-center justify-between font-medium">
-                                        <span
-                                            className={`flex items-center gap-1 truncate ${
-                                                isRec ? "text-purple-400" : "text-blue-500"
-                                            }`}
-                                        >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="flex items-center gap-1.5 font-semibold text-foreground truncate">
                                             {isRec ? (
-                                                <Repeat className="size-3 shrink-0" />
+                                                <Repeat className="size-3 text-muted-foreground shrink-0" />
                                             ) : (
-                                                <Video className="size-3 shrink-0" />
+                                                <Video className="size-3 text-primary shrink-0" />
                                             )}
                                             <span className="truncate">{m.title}</span>
                                         </span>
-                                        <span className="text-[10px] text-muted-foreground shrink-0">
-                                            {format(new Date(m.scheduledAt), "h:mm a")}
+                                        <span className="text-[10px] font-mono tabular-nums text-muted-foreground shrink-0">
+                                            {format(new Date(m.scheduledAt), "HH:mm")}
                                         </span>
                                     </div>
 
                                     <div className="flex items-center justify-between pt-0.5">
-                                        <span className="text-[10px] text-muted-foreground">
-                                            {m.duration} mins
+                                        <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
+                                            {m.duration || 30}m · {m.joinCode}
                                         </span>
                                         <Button
-                                            size="sm"
-                                            variant="ghost"
+                                            size="xs"
+                                            variant="outline"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 onJoinMeeting(m.joinCode);
                                             }}
-                                            className="h-5 px-1.5 text-[10px] gap-1 cursor-pointer text-primary hover:text-primary/90 hover:bg-primary/10"
+                                            className="h-6 px-2 text-[10px] gap-1 cursor-pointer"
                                         >
-                                            Join
+                                            <span>Join</span>
                                             <ArrowRight className="size-2.5" />
                                         </Button>
                                     </div>
@@ -235,6 +200,64 @@ export const CalendarSidebar = ({
                         })}
                     </div>
                 )}
+            </div>
+
+            {/* 3. Date Scratchpad Section */}
+            <div className="p-4 flex-1 flex flex-col justify-between space-y-2.5">
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                            <FileText className="size-3.5" />
+                            Date Scratchpad
+                        </span>
+
+                        {activeNote && (
+                            <button
+                                type="button"
+                                onClick={handleDeleteNote}
+                                disabled={isDeletingNote}
+                                className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                                title="Delete note"
+                            >
+                                {isDeletingNote ? (
+                                    <Loader2 className="size-3 animate-spin" />
+                                ) : (
+                                    <Trash2 className="size-3" />
+                                )}
+                            </button>
+                        )}
+                    </div>
+
+                    <Textarea
+                        value={noteContent}
+                        onChange={(e) => {
+                            setNoteContent(e.target.value);
+                            setIsDirty(true);
+                        }}
+                        placeholder={`Jot down agenda notes or reminders for ${format(selectedDate, "MMM d")}...`}
+                        className="min-h-[110px] text-xs resize-none bg-muted/20 border-border focus-visible:bg-background"
+                    />
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                    <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
+                        {noteContent.length > 0 ? `${noteContent.length} chars` : "Private note"}
+                    </span>
+
+                    <Button
+                        size="xs"
+                        onClick={handleSaveNote}
+                        disabled={isSavingNote || (!isDirty && !!activeNote)}
+                        className="h-7 px-2.5 text-xs gap-1 cursor-pointer"
+                    >
+                        {isSavingNote ? (
+                            <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                            <Save className="size-3" />
+                        )}
+                        <span>Save Note</span>
+                    </Button>
+                </div>
             </div>
         </aside>
     );

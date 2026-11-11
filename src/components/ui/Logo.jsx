@@ -1,10 +1,41 @@
+import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { cn } from "@/lib/utils";
+
 export default function Logo({
   className = "w-auto h-full max-h-8",
   iconOnly = false,
   isDark = false,
+  forceDefault = false,
 }) {
+  const identity = useSelector((state) => state.settings?.branding?.identity);
+  const [imgError, setImgError] = useState(false);
+
+  const logoUrl = isDark
+    ? identity?.logoDark || identity?.logo
+    : identity?.logo || identity?.logoDark;
+
+  useEffect(() => {
+    setImgError(false);
+  }, [logoUrl]);
+
   const primaryColor = isDark ? "#FFFFFF" : "currentColor";
   const subtitleColor = isDark ? "#A1A1AA" : "#71717A";
+
+  if (logoUrl && !imgError && !forceDefault) {
+    return (
+      <img
+        src={logoUrl}
+        alt={identity?.companyName ? `${identity.companyName} logo` : "Workspace logo"}
+        className={cn(
+          "object-contain shrink-0",
+          iconOnly ? "rounded-md" : "",
+          className
+        )}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
 
   if (iconOnly) {
     return (
@@ -73,7 +104,7 @@ export default function Logo({
       <text
         x="112"
         y="23"
-        fontFamily="'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        fontFamily="'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
         fontSize="10.5"
         fontWeight="700"
         letterSpacing="3.5"

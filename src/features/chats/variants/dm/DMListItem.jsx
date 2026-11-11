@@ -49,9 +49,9 @@ function DMListItem({ chat }) {
     <button
       onClick={() => navigate(`/chats/dm/${chat.chatId}`)}
       className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-100 text-left group",
+        "relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-100 text-left group cursor-pointer",
         isActive
-          ? "bg-accent text-foreground"
+          ? "bg-accent text-foreground before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r before:bg-primary-sidebar-marker"
           : "hover:bg-accent/50 text-foreground/80 hover:text-foreground"
       )}
     >
@@ -76,12 +76,12 @@ function DMListItem({ chat }) {
           <span
             className={cn(
               "text-sm truncate",
-              unread > 0 ? "font-semibold" : "font-medium"
+              unread > 0 || isActive ? "font-semibold" : "font-medium"
             )}
           >
             {displayName}
           </span>
-          <span className="text-[10px] text-muted-foreground shrink-0">
+          <span className="text-[10px] font-mono tabular-nums text-muted-foreground shrink-0">
             {timeLabel}
           </span>
         </div>
@@ -91,7 +91,7 @@ function DMListItem({ chat }) {
             <span className="truncate">{lastInfo.text}</span>
           </div>
           {unread > 0 && (
-            <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+            <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tabular-nums font-bold flex items-center justify-center">
               {unread > 99 ? "99+" : unread}
             </span>
           )}

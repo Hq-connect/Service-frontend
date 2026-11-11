@@ -13,6 +13,19 @@ import MeetingRoomContainer from "@/features/meets/containers/MeetingRoomContain
 import { ProjectsDashboard, BoardView } from "@/features/productivity";
 import DocsDashboard from "@/features/editor/pages/DocsDashboard";
 import DocumentPage from "@/features/editor/pages/DocumentPage";
+import {
+  SettingsLayout,
+  AdminSettingsRoute,
+  OwnerSettingsRoute,
+  OwnerDangerZonePage,
+  ProfileSettingsPage,
+  SecuritySettingsPage,
+  AppearanceSettingsPage,
+  WorkspaceGeneralPage,
+  MembersAndInvitesPage,
+  BrandingSettingsPage,
+  AuditLogsPage,
+} from "@/features/settings";
 
 export const router = createBrowserRouter([
   {
@@ -54,6 +67,60 @@ export const router = createBrowserRouter([
       { path: "chats/group/:chatId", element: <ChatPage chatType="group" /> },
       { path: "chats/channel", element: <ChatPage chatType="channel" /> },
       { path: "chats/channel/:chatId", element: <ChatPage chatType="channel" /> },
+    ],
+  },
+  {
+    path: "/settings",
+    element: (
+      <ProtectedRoutes>
+        <SettingsLayout />
+      </ProtectedRoutes>
+    ),
+    children: [
+      { index: true, element: <Navigate to="profile" replace /> },
+      { path: "profile", element: <ProfileSettingsPage /> },
+      { path: "security", element: <SecuritySettingsPage /> },
+      { path: "appearance", element: <AppearanceSettingsPage /> },
+      {
+        path: "workspace",
+        element: (
+          <AdminSettingsRoute>
+            <WorkspaceGeneralPage />
+          </AdminSettingsRoute>
+        ),
+      },
+      {
+        path: "members",
+        element: (
+          <AdminSettingsRoute>
+            <MembersAndInvitesPage />
+          </AdminSettingsRoute>
+        ),
+      },
+      {
+        path: "branding",
+        element: (
+          <AdminSettingsRoute>
+            <BrandingSettingsPage />
+          </AdminSettingsRoute>
+        ),
+      },
+      {
+        path: "audit-logs",
+        element: (
+          <AdminSettingsRoute>
+            <AuditLogsPage />
+          </AdminSettingsRoute>
+        ),
+      },
+      {
+        path: "danger",
+        element: (
+          <OwnerSettingsRoute>
+            <OwnerDangerZonePage />
+          </OwnerSettingsRoute>
+        ),
+      },
     ],
   },
   {

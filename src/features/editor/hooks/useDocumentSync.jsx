@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { socket } from "@/socket/config/socket.config";
 import useAuth from "@/features/auth/hooks/useAuth";
 import { getUserProfile } from "../utils/userProfile";
 import { SocketAwarenessProvider } from "../collaboration/SocketAwarenessProvider";
+import { documentKeys } from "../queries/document.keys";
 
 export const useDocumentSync = (documentId, canEdit = false) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activePeers, setActivePeers] = useState([]);
   const [awareness, setAwareness] = useState(null);
   const [yjsXmlFragment, setYjsXmlFragment] = useState(null);
@@ -40,13 +43,35 @@ export const useDocumentSync = (documentId, canEdit = false) => {
     provider.awareness.on("change", handleAwarenessChange);
 
     return () => {
+      // Save latest in-memory Yjs snapshot to TanStack Query cache on unmount
+      // (Empty Y.Doc state update is 2 bytes [0, 0]; > 2 means document has CRDT state)
+      const latestSnapshot = provider.getSnapshot();
+      if (latestSnapshot && latestSnapshot.length > 2) {
+        queryClient.setQueryData(documentKeys.detail(documentId), (prev) => {
+          if (!prev) return prev;
+          if (prev.document) {
+            return {
+              ...prev,
+              document: {
+                ...prev.document,
+                yjsSnapshot: latestSnapshot,
+              },
+            };
+          }
+          return {
+            ...prev,
+            yjsSnapshot: latestSnapshot,
+          };
+        });
+      }
+
       provider.awareness.off("change", handleAwarenessChange);
       provider.destroy();
       providerRef.current = null;
       setAwareness(null);
       setYjsXmlFragment(null);
     };
-  }, [documentId]);
+  }, [documentId, queryClient]);
 
   useEffect(() => {
     if (providerRef.current) {

@@ -44,6 +44,23 @@ export const toUint8Array = (val) => {
   return null;
 };
 
+// In-memory bounded LRU cache of latest Yjs binary snapshots per documentId.
+// Ensures instant 0ms hydration when switching between documents even before
+// async RabbitMQ -> MongoDB persistence completes on the backend.
+const localSnapshotCache = new Map();
+const MAX_CACHED_DOCS = 50;
+
+function cacheDocumentSnapshot(docId, snapshotUint8) {
+  if (!docId || !snapshotUint8 || snapshotUint8.length <= 2) return;
+  if (localSnapshotCache.has(docId)) {
+    localSnapshotCache.delete(docId);
+  } else if (localSnapshotCache.size >= MAX_CACHED_DOCS) {
+    const oldestKey = localSnapshotCache.keys().next().value;
+    localSnapshotCache.delete(oldestKey);
+  }
+  localSnapshotCache.set(docId, snapshotUint8);
+}
+
 /**
  * SocketAwarenessProvider manages real-time document CRDT synchronization (Yjs Doc)
  * and active user presence (Awareness) via WebSockets.
@@ -57,6 +74,16 @@ export class SocketAwarenessProvider {
     this.yXmlFragment = this.doc.getXmlFragment("prosemirror");
     this.awareness = new Awareness(this.doc);
     this.isDestroyed = false;
+
+    // Immediately seed Y.Doc from in-memory session cache if available
+    const cachedSnapshot = localSnapshotCache.get(this.documentId);
+    if (cachedSnapshot) {
+      try {
+        Y.applyUpdate(this.doc, cachedSnapshot, "cache");
+      } catch (err) {
+        console.warn("Failed to apply cached Yjs snapshot:", err);
+      }
+    }
 
     this.handleLocalAwarenessUpdate = ({ added, updated, removed }, origin) => {
       if (origin === "socket" || this.isDestroyed) return;
@@ -102,9 +129,18 @@ export class SocketAwarenessProvider {
     };
 
     this.handleDocUpdate = (update, origin) => {
-      // In read-only mode or remote origin, never emit outbound updates
-      if (this.readOnly || origin === "socket" || origin === "server" || this.isDestroyed) return;
+      // In read-only mode or remote/hydrated origin, never emit outbound updates
+      if (
+        this.readOnly ||
+        origin === "socket" ||
+        origin === "server" ||
+        origin === "cache" ||
+        this.isDestroyed
+      ) {
+        return;
+      }
       const fullSnapshot = Y.encodeStateAsUpdate(this.doc);
+      cacheDocumentSnapshot(this.documentId, fullSnapshot);
       this.socket.emit("doc:yjs:update", {
         documentId: this.documentId,
         update: Array.from(update),
@@ -146,6 +182,7 @@ export class SocketAwarenessProvider {
       const u8 = toUint8Array(snapshotRaw);
       if (u8 && u8.length > 0) {
         Y.applyUpdate(this.doc, u8, "server");
+        cacheDocumentSnapshot(this.documentId, Y.encodeStateAsUpdate(this.doc));
       }
     } catch (err) {
       console.warn("Failed to apply server snapshot:", err);
@@ -200,6 +237,12 @@ export class SocketAwarenessProvider {
   }
 
   destroy() {
+    try {
+      const finalSnapshot = Y.encodeStateAsUpdate(this.doc);
+      cacheDocumentSnapshot(this.documentId, finalSnapshot);
+    } catch {
+      // ignore
+    }
     this.isDestroyed = true;
     this.awareness.off("update", this.handleLocalAwarenessUpdate);
     this.socket.off("doc:yjs:awareness", this.handleRemoteAwarenessUpdate);

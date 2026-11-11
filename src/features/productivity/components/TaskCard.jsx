@@ -19,18 +19,38 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
     const issueKey = `${projectKey}-${index + 1}`;
     const dueStatus = getDueDateStatus(task.dueDate, task.status);
 
-    const getPriorityIcon = (priority) => {
+    const getPriorityBadge = (priority) => {
         switch (priority) {
             case 'urgent':
-                return <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0" />;
+                return (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-destructive/10 text-destructive border border-destructive/25">
+                        <AlertCircle className="size-2.5 shrink-0" />
+                        Urgent
+                    </span>
+                );
             case 'high':
-                return <ArrowUp className="w-3.5 h-3.5 text-destructive shrink-0" />;
+                return (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-destructive/10 text-destructive border border-destructive/20">
+                        <ArrowUp className="size-2.5 shrink-0" />
+                        High
+                    </span>
+                );
             case 'medium':
-                return <Minus className="w-3.5 h-3.5 text-amber-500 shrink-0" />;
+                return (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-status-warn text-status-warn-foreground border border-status-warn-border">
+                        <Minus className="size-2.5 shrink-0" />
+                        Med
+                    </span>
+                );
             case 'low':
-                return <ArrowDown className="w-3.5 h-3.5 text-emerald-500 shrink-0" />;
+                return (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border">
+                        <ArrowDown className="size-2.5 shrink-0" />
+                        Low
+                    </span>
+                );
             default:
-                return <Minus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
+                return null;
         }
     };
 
@@ -44,6 +64,7 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
     const totalSubtasks = subtasks.length;
     const completedSubtasks = subtasks.filter((st) => st.isCompleted).length;
     const allSubtasksDone = totalSubtasks > 0 && completedSubtasks === totalSubtasks;
+    const subtaskPct = totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
 
     // Unique collaborators from subtasks
     const subtaskCollaborators = React.useMemo(() => {
@@ -81,19 +102,19 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                     {...provided.dragHandleProps}
                     onClick={() => dispatch(setSelectedTaskId(task._id))}
                     className={cn(
-                        "group relative flex flex-col p-3 mb-2 rounded-lg border bg-card text-card-foreground select-none transition-all cursor-pointer",
+                        "group relative flex flex-col p-3.5 mb-2.5 rounded-xl border bg-card text-card-foreground select-none transition-all duration-150 cursor-pointer",
                         snapshot.isDragging 
-                            ? "shadow-xl ring-2 ring-primary/40 rotate-1 scale-[1.01] z-50 bg-card" 
-                            : "shadow-2xs hover:shadow-sm hover:border-primary/40 border-border/80"
+                            ? "shadow-(--shadow-popover) ring-2 ring-ring/40 rotate-1 scale-[1.01] z-50 bg-card border-ring" 
+                            : "shadow-(--shadow-card) hover:border-foreground/25 border-border"
                     )}
                     style={{
                         ...provided.draggableProps.style,
                     }}
                 >
                     {/* Top Row: Key, Labels & Priority */}
-                    <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                    <div className="flex items-center justify-between gap-1.5 mb-2">
                         <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-mono text-[11px] font-bold text-muted-foreground group-hover:text-primary transition-colors">
+                            <span className="font-mono tabular-nums text-[10px] font-semibold px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border/70 group-hover:text-foreground transition-colors">
                                 {issueKey}
                             </span>
                             {task.labels && task.labels.length > 0 && (
@@ -112,7 +133,7 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                                         </span>
                                     ))}
                                     {task.labels.length > 2 && (
-                                        <span className="text-[9px] text-muted-foreground shrink-0">
+                                        <span className="text-[9px] font-mono text-muted-foreground shrink-0">
                                             +{task.labels.length - 2}
                                         </span>
                                     )}
@@ -121,7 +142,7 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                         </div>
 
                         <div className="shrink-0 flex items-center gap-1" title={`Priority: ${task.priority || 'medium'}`}>
-                            {getPriorityIcon(task.priority)}
+                            {getPriorityBadge(task.priority)}
                         </div>
                     </div>
 
@@ -132,15 +153,30 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
 
                     {/* Description preview */}
                     {task.description && (
-                        <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2 leading-relaxed">
+                        <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2.5 leading-relaxed">
                             {task.description}
                         </p>
+                    )}
+
+                    {/* Subtask Linear Progress Bar */}
+                    {totalSubtasks > 0 && (
+                        <div className="mb-2 space-y-1">
+                            <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+                                <div
+                                    className={cn(
+                                        "h-full rounded-full transition-all duration-300",
+                                        allSubtasksDone ? "bg-status-live-foreground" : "bg-primary"
+                                    )}
+                                    style={{ width: `${subtaskPct}%` }}
+                                />
+                            </div>
+                        </div>
                     )}
 
                     {/* Expandable Subtask Accordion (Linear style) */}
                     {isExpanded && totalSubtasks > 0 && (
                         <div 
-                            className="mt-1 mb-2.5 p-2 rounded-lg bg-muted/30 border border-border/60 divide-y divide-border/40 space-y-1 animate-in fade-in-0 duration-150"
+                            className="mt-1 mb-2.5 p-2 rounded-lg bg-muted/40 border border-border divide-y divide-border/50 space-y-1 animate-in fade-in-0 duration-150"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {subtasks.map((st) => (
@@ -150,13 +186,13 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                                         onClick={(e) => handleToggleSubtask(e, st._id, st.isCompleted)}
                                         disabled={toggleSubtaskMutation.isPending}
                                         className={cn(
-                                            "w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-all cursor-pointer",
+                                            "size-3.5 rounded border flex items-center justify-center shrink-0 transition-all cursor-pointer",
                                             st.isCompleted 
-                                                ? "bg-emerald-500 border-emerald-500 text-white" 
-                                                : "border-border bg-card hover:border-primary/60"
+                                                ? "bg-status-live-foreground border-status-live-foreground text-primary-foreground" 
+                                                : "border-border bg-card hover:border-foreground/50"
                                         )}
                                     >
-                                        {st.isCompleted && <Check className="w-2.5 h-2.5" strokeWidth={3} />}
+                                        {st.isCompleted && <Check className="size-2.5" strokeWidth={3} />}
                                     </button>
 
                                     <span 
@@ -177,12 +213,12 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                                                 <img 
                                                     src={st.assigneeSnapshot.avatar} 
                                                     alt="" 
-                                                    className="w-3.5 h-3.5 rounded-full object-cover" 
+                                                    className="size-3.5 rounded-full object-cover" 
                                                 />
                                             ) : (
                                                 <div 
                                                     style={getAvatarStyle(st.assignedTo || st.assigneeSnapshot?.name)} 
-                                                    className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] font-bold text-white shadow-2xs"
+                                                    className="size-3.5 rounded-full flex items-center justify-center text-[7px] font-bold text-white shadow-2xs"
                                                 >
                                                     {getInitials(st.assigneeSnapshot?.name || 'M')}
                                                 </div>
@@ -195,37 +231,37 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                     )}
 
                     {/* Bottom Metadata Bar */}
-                    <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/40 text-[11px] text-muted-foreground">
+                    <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-border/60 text-[11px] text-muted-foreground">
                         <div className="flex items-center gap-2.5 flex-wrap">
                             {dueStatus && (
                                 <span 
                                     className={cn(
-                                        "flex items-center gap-1 text-[10px] transition-colors",
+                                        "flex items-center gap-1 text-[10px] font-mono tabular-nums transition-colors",
                                         dueStatus.colorClass
                                     )} 
                                     title={dueStatus.fullText}
                                 >
                                     {dueStatus.iconType === 'alert-circle' && (
-                                        <AlertCircle className="w-3 h-3 text-destructive shrink-0" />
+                                        <AlertCircle className="size-3 text-destructive shrink-0" />
                                     )}
                                     {dueStatus.iconType === 'alert-triangle' && (
-                                        <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+                                        <AlertTriangle className="size-3 text-status-warn-foreground shrink-0" />
                                     )}
                                     {dueStatus.iconType === 'calendar' && (
-                                        <Calendar className="w-3 h-3 shrink-0" />
+                                        <Calendar className="size-3 shrink-0" />
                                     )}
                                     <span>{dueStatus.label}</span>
                                 </span>
                             )}
                             {(task.comments?.length > 0 || task.commentCount > 0) && (
-                                <span className="flex items-center gap-1 text-[10px]" title="Comments">
-                                    <MessageSquare className="w-3 h-3" />
+                                <span className="flex items-center gap-1 text-[10px] font-mono tabular-nums" title="Comments">
+                                    <MessageSquare className="size-3" />
                                     <span>{task.comments?.length || task.commentCount || 0}</span>
                                 </span>
                             )}
                             {(task.attachments?.length > 0 || task.attachmentCount > 0) && (
-                                <span className="flex items-center gap-1 text-[10px]" title="Attachments">
-                                    <Paperclip className="w-3 h-3" />
+                                <span className="flex items-center gap-1 text-[10px] font-mono tabular-nums" title="Attachments">
+                                    <Paperclip className="size-3" />
                                     <span>{task.attachments?.length || task.attachmentCount || 0}</span>
                                 </span>
                             )}
@@ -240,16 +276,16 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                                             setIsExpanded((prev) => !prev);
                                         }}
                                         className={cn(
-                                            "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border transition-colors cursor-pointer",
+                                            "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono tabular-nums font-medium border transition-colors cursor-pointer",
                                             allSubtasksDone
-                                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
-                                                : "bg-muted/50 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground"
+                                                ? "bg-status-live text-status-live-foreground border-status-live-border"
+                                                : "bg-muted/60 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
                                         )}
                                         title={`Subtasks: ${completedSubtasks}/${totalSubtasks} completed. Click to ${isExpanded ? 'collapse' : 'view'}`}
                                     >
-                                        <CheckSquare className="w-3 h-3" />
+                                        <CheckSquare className="size-3" />
                                         <span>{completedSubtasks}/{totalSubtasks}</span>
-                                        <ChevronDown className={cn("w-2.5 h-2.5 transition-transform duration-200", isExpanded && "rotate-180")} />
+                                        <ChevronDown className={cn("size-2.5 transition-transform duration-200", isExpanded && "rotate-180")} />
                                     </button>
 
                                     {/* Overlapping Subtask Collaborator Avatars */}
@@ -264,20 +300,20 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                                                         key={c.id} 
                                                         src={c.avatar} 
                                                         alt={c.name} 
-                                                        className="w-4 h-4 rounded-full object-cover ring-1 ring-card" 
+                                                        className="size-4 rounded-full object-cover ring-1 ring-card" 
                                                     />
                                                 ) : (
                                                     <div 
                                                         key={c.id} 
                                                         style={getAvatarStyle(c.id || c.name)} 
-                                                        className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white ring-1 ring-card shadow-2xs"
+                                                        className="size-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white ring-1 ring-card shadow-2xs"
                                                     >
                                                         {getInitials(c.name)}
                                                     </div>
                                                 )
                                             ))}
                                             {subtaskCollaborators.length > 3 && (
-                                                <span className="text-[8px] text-muted-foreground pl-1 font-semibold">
+                                                <span className="text-[8px] font-mono text-muted-foreground pl-1 font-semibold">
                                                     +{subtaskCollaborators.length - 3}
                                                 </span>
                                             )}
@@ -294,12 +330,12 @@ export const TaskCard = ({ task, index, projectKey = 'PRJ' }) => {
                                     <img 
                                         src={task.assigneeSnapshot.avatar} 
                                         alt={assigneeName} 
-                                        className="w-5 h-5 rounded-full object-cover border border-border"
+                                        className="size-5 rounded-full object-cover border border-border"
                                     />
                                 ) : (
                                     <div 
                                         style={assigneeAvatarStyle}
-                                        className="w-5 h-5 rounded-full font-bold flex items-center justify-center text-[9px] shadow-2xs border border-border/40"
+                                        className="size-5 rounded-full font-bold flex items-center justify-center text-[9px] shadow-2xs border border-border/40"
                                     >
                                         {assigneeInitials}
                                     </div>

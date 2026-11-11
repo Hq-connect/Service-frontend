@@ -124,6 +124,7 @@ function AppLayout() {
         getAvatarStyle={getAvatarStyle}
         mobileDrawerOpen={mobileDrawerOpen}
         setMobileDrawerOpen={setMobileDrawerOpen}
+        chatUnreadCount={primaryChatUnreadCount}
       />
 
       {/* 4. Desktop Main Content Viewport & Header Panel */}

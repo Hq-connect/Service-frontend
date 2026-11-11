@@ -81,6 +81,7 @@ const TaskDetailsSlideOver = () => {
     const [actualHours, setActualHours] = useState(task?.actualHours != null ? String(task.actualHours) : '');
 
     const prevTaskRef = useRef(task?._id);
+    const dueDateInputRef = useRef(null);
     useEffect(() => {
         if (task && prevTaskRef.current !== task._id) {
             prevTaskRef.current = task._id;
@@ -597,20 +598,35 @@ const TaskDetailsSlideOver = () => {
                                 <Calendar className="w-3.5 h-3.5" />
                                 <span>Due Date</span>
                             </label>
-                            <div className="flex items-center gap-2 p-1.5 bg-card border border-input rounded-xl shadow-2xs">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-card border border-input hover:border-primary/50 rounded-xl shadow-2xs transition-colors">
                                 <input
+                                    ref={dueDateInputRef}
                                     type="date"
                                     value={task?.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''}
                                     onChange={handleDueDateChange}
                                     disabled={updateTaskMutation.isPending}
-                                    className="text-xs font-semibold text-foreground bg-transparent flex-1 cursor-pointer focus:outline-none"
+                                    className="text-xs font-semibold font-mono tabular-nums text-foreground bg-transparent flex-1 cursor-pointer focus:outline-none dark:scheme-dark [&::-webkit-calendar-picker-indicator]:hidden"
                                 />
+                                <button
+                                    type="button"
+                                    title="Open date picker"
+                                    onClick={() => {
+                                        if (dueDateInputRef.current?.showPicker) {
+                                            dueDateInputRef.current.showPicker();
+                                        } else {
+                                            dueDateInputRef.current?.focus();
+                                        }
+                                    }}
+                                    className="p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors cursor-pointer shrink-0"
+                                >
+                                    <Calendar className="w-3.5 h-3.5" />
+                                </button>
                                 {task?.dueDate && (
                                     <button
                                         type="button"
                                         title="Clear due date"
                                         onClick={() => updateTaskMutation.mutate({ projectId, taskId: selectedTaskId, data: { dueDate: null } })}
-                                        className="p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+                                        className="p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors cursor-pointer shrink-0"
                                     >
                                         <X className="w-3 h-3" />
                                     </button>

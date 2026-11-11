@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Reply, FileText, Image, Film, Volume2, ExternalLink, CheckCheck } from "lucide-react";
+import { Reply, FileText, Image, Film, Volume2, ExternalLink, CheckCheck, Pin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MessageActions from "./MessageActions";
 import { useMessageScroller } from "@/components/ui/message-scroller";
@@ -10,6 +10,8 @@ import { getFileTypeConfig } from "../utils/fileTypeConfig";
 import mediaService from "../services/media.service";
 import { getUserInitials, getAvatarStyle, getUserDisplayName } from "@/global/utils/user";
 import { CallCard, parseCallMessage } from "./CallCard";
+import { PollCard } from "./PollCard";
+import { ChatTaskCard } from "./ChatTaskCard";
 
 const ATTACHMENT_ICONS = {
   image: Image,
@@ -37,6 +39,10 @@ function MessageItem({
   onEdit,
   onDelete,
   onReact,
+  onPin,
+  canModerate = false,
+  canPin = false,
+  isPinned = false,
   senderInfo = {},
   clusterPosition = "single",
   chatType = "dm",
@@ -47,6 +53,54 @@ function MessageItem({
   const currentUserIdStr = String(currentUserId || "");
   const isOwn = !!(msgSenderIdStr && currentUserIdStr && msgSenderIdStr === currentUserIdStr);
   const isDeleted = !!message.deletedAt;
+  const isMultiMemberChat = chatType === "group" || chatType === "channel";
+
+  const isMentionedForMe =
+    !isOwn &&
+    (Boolean(message.mentionAll) ||
+      (Array.isArray(message.mentions) &&
+        currentUserIdStr &&
+        message.mentions.some((mId) => String(mId) === currentUserIdStr)));
+
+  const renderFormattedMessageText = (rawText) => {
+    if (!rawText) return null;
+    if (!isMultiMemberChat || !rawText.includes("@")) return rawText;
+
+    // Build known member names for matching multi-word @Full Name mentions
+    const memberNames = (groupMembers || [])
+      .map((m) => getUserDisplayName(m))
+      .filter((n) => n && n !== "Unknown")
+      .sort((a, b) => b.length - a.length);
+
+    const escapedNames = memberNames.map((n) =>
+      n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    );
+    const patternStr = escapedNames.length
+      ? `(@(?:everyone|channel|${escapedNames.join("|")}|[a-zA-Z0-9_.-]+))`
+      : `(@(?:everyone|channel|[a-zA-Z0-9_.-]+))`;
+
+    const regex = new RegExp(patternStr, "gi");
+    const parts = rawText.split(regex);
+
+    return parts.map((part, idx) => {
+      if (part.startsWith("@") && part.length > 1) {
+        return (
+          <span
+            key={idx}
+            className={cn(
+              "inline-block font-semibold px-1 py-0.2 rounded mx-0.5",
+              isOwn
+                ? "bg-white/25 text-primary-foreground"
+                : "bg-primary/15 text-primary"
+            )}
+          >
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
 
   const { scrollToMessage } = useMessageScroller();
   const [isHighlighted, setIsHighlighted] = useState(false);
@@ -304,8 +358,8 @@ function MessageItem({
       )}
     >
       <div className={cn("flex w-full min-w-0 gap-2", isOwn ? "justify-end" : "justify-start")}>
-        {/* Avatar — group chats only, hide in clusters and replace with width spacer */}
-        {chatType === "group" && !isOwn && (
+        {/* Avatar — group & channel chats, hide in clusters and replace with width spacer */}
+        {isMultiMemberChat && !isOwn && (
           isClusterChild ? (
             <div className="w-8 shrink-0 select-none" />
           ) : (
@@ -324,10 +378,20 @@ function MessageItem({
 
         {/* Message content wrapper */}
         <div className={cn("flex flex-col min-w-0 max-w-[85%] md:max-w-[70%]", isOwn ? "items-end" : "items-start")}>
-          {/* Group sender name — shown at head of cluster in clean foreground color */}
-          {chatType === "group" && !isOwn && !isClusterChild && (
-            <div className="text-xs font-semibold text-foreground mb-1 px-0.5 select-none">
-              {displayName}
+          {/* Group / Channel sender name — shown at head of cluster */}
+          {isMultiMemberChat && !isOwn && !isClusterChild && (
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground mb-1 px-0.5 select-none">
+              <span>{displayName}</span>
+              {isPinned && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-primary">
+                  <Pin className="size-2.5" /> Pinned
+                </span>
+              )}
+            </div>
+          )}
+          {isPinned && (isOwn || isClusterChild) && (
+            <div className="flex items-center gap-1 text-[10px] font-medium text-primary mb-0.5 px-1 select-none">
+              <Pin className="size-2.5" /> Pinned
             </div>
           )}
 
@@ -343,40 +407,54 @@ function MessageItem({
             onTouchMove={movePress}
           >
             {/* Bubble Container - consistent uniform rounded-2xl geometry */}
-            <div
-              className={cn(
-                "relative max-w-full rounded-2xl transition-all duration-300 overflow-hidden shadow-2xs",
-                isOwn
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/40 border border-border/70 text-foreground",
-                isHighlighted && (isOwn
-                  ? "brightness-125 ring-2 ring-primary-foreground/70"
-                  : "bg-primary/10 border-primary/50 ring-2 ring-primary/40"
-                )
-              )}
-            >
+            {(() => {
+              const isRichCard =
+                !isEditing &&
+                Boolean(
+                  message.content?.poll ||
+                    message.content?.taskRef ||
+                    parseCallMessage(message.content?.text)
+                );
+              return (
+                <div
+                  className={cn(
+                    "relative max-w-full rounded-2xl transition-all duration-300 overflow-hidden",
+                    isRichCard
+                      ? "bg-transparent text-foreground"
+                      : isOwn
+                      ? "bg-primary text-primary-foreground shadow-2xs"
+                      : isMentionedForMe
+                      ? "bg-amber-500/10 border border-amber-500/40 text-foreground shadow-2xs"
+                      : "bg-muted/40 border border-border/70 text-foreground shadow-2xs",
+                    isHighlighted &&
+                      (isOwn && !isRichCard
+                        ? "brightness-125 ring-2 ring-primary-foreground/70"
+                        : "bg-primary/10 border-primary/50 ring-2 ring-primary/40")
+                  )}
+                >
               {/* Quoted Reply Card - seamlessly nested inside the bubble header */}
               {message.replyTo && (
                 <div
                   onClick={handleScrollToReply}
                   className={cn(
-                    "flex items-stretch gap-2 px-2.5 py-1.5 rounded-xl text-xs cursor-pointer select-none transition-all hover:opacity-90 mx-2 mt-2",
-                    isOwn
+                    "flex items-stretch gap-2 px-2.5 py-1.5 rounded-xl text-xs cursor-pointer select-none transition-all hover:opacity-90",
+                    isRichCard ? "mb-1.5" : "mx-2 mt-2",
+                    isOwn && !isRichCard
                       ? "bg-black/25 dark:bg-black/35 text-primary-foreground"
                       : "bg-background/90 dark:bg-card/90 text-foreground border border-border/50 shadow-2xs"
                   )}
                 >
-                  <div className={cn("w-1 rounded-full shrink-0", isOwn ? "bg-primary-foreground/90" : "bg-primary")} />
+                  <div className={cn("w-1 rounded-full shrink-0", isOwn && !isRichCard ? "bg-primary-foreground/90" : "bg-primary")} />
                   <div className="flex flex-col min-w-0 pr-1">
                     <span className={cn(
                       "text-[10px] font-bold tracking-tight truncate",
-                      isOwn ? "text-primary-foreground" : "text-primary font-semibold"
+                      isOwn && !isRichCard ? "text-primary-foreground" : "text-primary font-semibold"
                     )}>
                       {replyAuthorName}
                     </span>
                     <span className={cn(
                       "text-[11px] truncate leading-snug",
-                      isOwn ? "text-primary-foreground/80" : "text-muted-foreground"
+                      isOwn && !isRichCard ? "text-primary-foreground/80" : "text-muted-foreground"
                     )}>
                       {replySnippet}
                     </span>
@@ -497,6 +575,19 @@ function MessageItem({
                     </Button>
                   </div>
                 </div>
+              ) : message.content?.poll ? (
+                <PollCard
+                  message={message}
+                  currentUserId={currentUserIdStr}
+                  isOwn={isOwn}
+                  timeLabel={timeLabel}
+                />
+              ) : message.content?.taskRef ? (
+                <ChatTaskCard
+                  message={message}
+                  isOwn={isOwn}
+                  timeLabel={timeLabel}
+                />
               ) : parseCallMessage(message.content?.text) ? (
                 <CallCard message={message} isOwn={isOwn} timeLabel={timeLabel} />
               ) : (message.content?.text || activeLinkPreview) ? (
@@ -504,7 +595,7 @@ function MessageItem({
                   {message.content?.text && (
                     <div>
                       <span className="text-sm leading-relaxed break-words whitespace-pre-wrap select-text">
-                        {message.content.text}
+                        {renderFormattedMessageText(message.content.text)}
                       </span>
                       <span className={cn(
                         "inline-flex items-center gap-1 ml-2.5 select-none text-[10px] tabular-nums whitespace-nowrap align-baseline translate-y-0.5",
@@ -591,7 +682,9 @@ function MessageItem({
                   ))}
                 </div>
               )}
-            </div>
+                </div>
+              );
+            })()}
 
             {/* Hover Actions Toolbar */}
             {!isEditing && (
@@ -606,6 +699,9 @@ function MessageItem({
               >
                 <MessageActions
                   isOwn={isOwn}
+                  canModerate={canModerate}
+                  canPin={canPin}
+                  isPinned={isPinned}
                   onReply={() => {
                     onReply?.(message);
                     setShowMobileToolbar(false);
@@ -623,6 +719,14 @@ function MessageItem({
                     onDelete?.(message);
                     setShowMobileToolbar(false);
                   }}
+                  onPin={
+                    canPin && onPin
+                      ? () => {
+                          onPin(message._id, !isPinned);
+                          setShowMobileToolbar(false);
+                        }
+                      : undefined
+                  }
                   showEmojiPicker={showEmojiPicker}
                   setShowEmojiPicker={setShowEmojiPicker}
                 />

@@ -8,34 +8,36 @@ export default function DocsDashboardHeader({
   isCreating = false,
 }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border">
-      <div>
-        <h1 className="text-3xl font-heading font-bold text-foreground tracking-tight">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+      <div className="space-y-1">
+        <h1 className="text-xl font-bold text-foreground tracking-tight">
           Docs & Knowledge Hub
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Create, organize, and collaborate in real-time across your workspace.
+        <p className="text-xs text-muted-foreground">
+          Create, organize, and co-author technical specs, meeting notes, and wikis in real time.
         </p>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 self-start sm:self-auto">
         <Button
           type="button"
           variant="outline"
+          size="sm"
           onClick={onNewFolder}
-          className="gap-1.5"
+          className="gap-1.5 text-xs h-8 cursor-pointer"
         >
-          <FolderPlus className="size-4 text-muted-foreground" />
+          <FolderPlus className="size-3.5 text-muted-foreground" />
           <span>New Folder</span>
         </Button>
         <Button
           type="button"
+          size="sm"
           disabled={isCreating}
           onClick={onNewDocument}
-          className="gap-1.5"
+          className="gap-1.5 text-xs h-8 cursor-pointer"
         >
-          <FilePlus className="size-4" />
-          <span>New Document</span>
+          <FilePlus className="size-3.5" />
+          <span>{isCreating ? "Creating…" : "New Document"}</span>
         </Button>
       </div>
     </div>

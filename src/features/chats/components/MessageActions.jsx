@@ -2,34 +2,53 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { SmilePlus, Reply, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { SmilePlus, Reply, Pencil, Trash2, Pin, PinOff } from "lucide-react";
 
 /**
  * Hover action toolbar shown over a message.
  * TooltipProvider must be provided by a parent (shadcn auto-wraps via App).
  *
- * @param {boolean}  isOwn    - Whether this message belongs to the current user
+ * @param {boolean}  isOwn       - Whether this message belongs to the current user
+ * @param {boolean}  canModerate - Whether current user is a channel admin/owner
+ * @param {boolean}  canPin      - Whether current user can pin messages in this channel
+ * @param {boolean}  isPinned    - Whether this message is currently pinned
  * @param {Function} onReply
  * @param {Function} onReact
- * @param {Function} onEdit   - Only shown for own messages
- * @param {Function} onDelete - Only shown for own messages
+ * @param {Function} onEdit      - Only shown for own messages
+ * @param {Function} onDelete    - Shown for own messages or when canModerate is true
+ * @param {Function} onPin       - Shown when canPin is true
  * @param {boolean}  showEmojiPicker
  * @param {Function} setShowEmojiPicker
  */
 function MessageActions({
   isOwn = false,
+  canModerate = false,
+  canPin = false,
+  isPinned = false,
   onReply,
   onReact,
   onEdit,
   onDelete,
+  onPin,
   showEmojiPicker = false,
   setShowEmojiPicker,
 }) {
   const actions = [
-    { icon: Reply,          label: "Reply",         onClick: onReply,  show: true },
-    { icon: Pencil,         label: "Edit",          onClick: onEdit,   show: isOwn },
-    { icon: Trash2,         label: "Delete",        onClick: onDelete, show: isOwn, destructive: true },
-    { icon: MoreHorizontal, label: "More",          onClick: () => {}, show: true },
+    { icon: Reply, label: "Reply", onClick: onReply, show: true },
+    {
+      icon: isPinned ? PinOff : Pin,
+      label: isPinned ? "Unpin message" : "Pin message",
+      onClick: onPin,
+      show: Boolean(canPin && onPin),
+    },
+    { icon: Pencil, label: "Edit", onClick: onEdit, show: isOwn },
+    {
+      icon: Trash2,
+      label: "Delete",
+      onClick: onDelete,
+      show: isOwn || canModerate,
+      destructive: true,
+    },
   ].filter((a) => a.show);
 
   return (
@@ -37,17 +56,21 @@ function MessageActions({
       {/* Reaction Button with Popover */}
       <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
         <Tooltip>
-          <PopoverTrigger render={
-            <TooltipTrigger render={
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-6.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <SmilePlus className="size-3.5" />
-              </Button>
-            } />
-          } />
+          <PopoverTrigger
+            render={
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    <SmilePlus className="size-3.5" />
+                  </Button>
+                }
+              />
+            }
+          />
           <TooltipContent side="top" className="text-xs">
             Add reaction
           </TooltipContent>

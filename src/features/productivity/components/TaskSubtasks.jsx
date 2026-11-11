@@ -331,16 +331,32 @@ const SubtaskDatePicker = ({ subtask, onDateChange, disabled }) => {
 
                         {/* Native Date Input */}
                         <div className="pt-1">
-                            <input
-                                ref={dateInputRef}
-                                type="date"
-                                value={subtask.dueDate ? new Date(subtask.dueDate).toISOString().split('T')[0] : ''}
-                                onChange={(e) => {
-                                    onDateChange(e.target.value || null);
-                                    setIsOpen(false);
-                                }}
-                                className="w-full text-xs bg-muted/40 border border-input rounded-lg px-2.5 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                            />
+                            <div className="flex items-center gap-1.5 bg-muted/40 border border-input rounded-lg px-2.5 py-1 focus-within:ring-1 focus-within:ring-primary">
+                                <input
+                                    ref={dateInputRef}
+                                    type="date"
+                                    value={subtask.dueDate ? new Date(subtask.dueDate).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => {
+                                        onDateChange(e.target.value || null);
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full text-xs font-mono tabular-nums bg-transparent text-foreground focus:outline-none cursor-pointer dark:scheme-dark [&::-webkit-calendar-picker-indicator]:hidden"
+                                />
+                                <button
+                                    type="button"
+                                    title="Open date picker"
+                                    onClick={() => {
+                                        if (dateInputRef.current?.showPicker) {
+                                            dateInputRef.current.showPicker();
+                                        } else {
+                                            dateInputRef.current?.focus();
+                                        }
+                                    }}
+                                    className="p-0.5 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer shrink-0"
+                                >
+                                    <Calendar className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </>

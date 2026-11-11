@@ -6,6 +6,10 @@ export const authService = {
         const response = await api.post("/auth/register", userData);
         return response.data;
     },
+    verifyInvitation: async (token) => {
+        const response = await api.post("/auth/invitations/verify", { token });
+        return response.data.data?.invitation || null;
+    },
     loginUser: async (userData) => {
         const response = await api.post("/auth/login", userData);
         return response.data;

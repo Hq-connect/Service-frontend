@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import dmService from "../services/dm.service";
 import { chatKeys } from "../queries/chat.keys";
 import groupService from "../services/group.service";
+import channelService from "../services/channel.service";
 
 export const useUpdateMessage = (type="dm") =>{
     const queryClient = useQueryClient();
@@ -9,6 +10,8 @@ export const useUpdateMessage = (type="dm") =>{
     const updateMessage = async ({
         messageId,
         content,
+        mentions,
+        mentionAll,
     }) => {
         switch (type) {
         case "dm":
@@ -20,7 +23,17 @@ export const useUpdateMessage = (type="dm") =>{
         case "group":
             return groupService.updateMessage(
                 messageId,
-                content
+                content,
+                mentions,
+                mentionAll
+            );
+
+        case "channel":
+            return channelService.updateMessage(
+                messageId,
+                content,
+                mentions,
+                mentionAll
             );
         default:
             throw new Error(

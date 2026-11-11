@@ -20,6 +20,13 @@ export const useTasks = (projectId, params = {}) => {
     });
 };
 
+export const useMyAssignedTasks = () => {
+    return useQuery({
+        queryKey: ['productivity-my-assigned-tasks'],
+        queryFn: () => taskService.getMyAssignedTasks(),
+    });
+};
+
 export const useTask = (projectId, taskId) => {
     return useQuery({
         queryKey: ['productivity-task', projectId, taskId],

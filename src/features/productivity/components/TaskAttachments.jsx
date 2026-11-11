@@ -70,7 +70,7 @@ const TaskAttachments = ({ projectId, taskId }) => {
     };
 
     if (isLoading) {
-        return <div className="h-24 bg-zinc-100 animate-pulse rounded-xl" />;
+        return <div className="h-24 bg-muted animate-pulse rounded-xl" />;
     }
 
     return (
@@ -79,7 +79,7 @@ const TaskAttachments = ({ projectId, taskId }) => {
             {/* Upload Drag & Drop Area */}
             <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-zinc-200 hover:border-zinc-400 bg-zinc-50/50 hover:bg-zinc-50 rounded-xl p-5 sm:p-6 text-center transition-all cursor-pointer group"
+                className="border-2 border-dashed border-border hover:border-primary/50 bg-muted/20 hover:bg-muted/40 rounded-xl p-5 sm:p-6 text-center transition-all cursor-pointer group"
             >
                 <input 
                     type="file" 
@@ -87,22 +87,22 @@ const TaskAttachments = ({ projectId, taskId }) => {
                     className="hidden" 
                     onChange={handleFileChange}
                 />
-                <div className="flex flex-col items-center justify-center gap-2 text-zinc-500 group-hover:text-zinc-800">
+                <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground group-hover:text-foreground">
                     {isUploading ? (
                         <>
-                            <Loader2 className="w-7 h-7 animate-spin text-zinc-600" />
-                            <span className="text-sm font-semibold text-zinc-700">Uploading attachment to cloud...</span>
+                            <Loader2 className="w-7 h-7 animate-spin text-primary" />
+                            <span className="text-sm font-semibold text-foreground">Uploading attachment to cloud...</span>
                         </>
                     ) : (
                         <>
-                            <div className="w-10 h-10 rounded-full bg-white shadow-xs border border-zinc-200 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Paperclip className="w-5 h-5 text-zinc-600" />
+                            <div className="w-10 h-10 rounded-full bg-card shadow-xs border border-border flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Paperclip className="w-5 h-5 text-muted-foreground group-hover:text-foreground" />
                             </div>
                             <div className="space-y-0.5">
-                                <p className="text-sm font-semibold text-zinc-800">
+                                <p className="text-sm font-semibold text-foreground">
                                     Click to upload or drag & drop files
                                 </p>
-                                <p className="text-xs text-zinc-400">
+                                <p className="text-xs text-muted-foreground">
                                     Images, PDFs, documents, media, or archives (up to 10MB)
                                 </p>
                             </div>
@@ -124,11 +124,11 @@ const TaskAttachments = ({ projectId, taskId }) => {
                         return (
                             <div 
                                 key={attachment._id} 
-                                className="group relative flex flex-col bg-white border border-zinc-200 hover:border-zinc-300 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-200"
+                                className="group relative flex flex-col bg-card border border-border hover:border-border/80 rounded-xl overflow-hidden shadow-xs hover:shadow-card transition-all duration-200"
                             >
                                 {/* Media Thumbnail / Preview Header */}
                                 {imageFile ? (
-                                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-zinc-100 group/thumbnail cursor-pointer">
+                                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted group/thumbnail cursor-pointer">
                                         <img 
                                             src={fileUrl} 
                                             alt={fileName} 
@@ -144,7 +144,7 @@ const TaskAttachments = ({ projectId, taskId }) => {
                                                     e.stopPropagation();
                                                     setPreviewAttachment({ url: fileUrl, name: fileName, size: fileSize, type: fileType });
                                                 }}
-                                                className="px-2.5 py-1.5 bg-white text-zinc-900 rounded-lg text-xs font-semibold shadow hover:bg-zinc-100 flex items-center gap-1.5 transition-transform hover:scale-105"
+                                                className="px-2.5 py-1.5 bg-card text-foreground rounded-lg text-xs font-semibold shadow hover:bg-muted flex items-center gap-1.5 transition-transform hover:scale-105 border border-border"
                                                 title="Preview image"
                                             >
                                                 <Eye className="w-3.5 h-3.5" />
@@ -155,7 +155,7 @@ const TaskAttachments = ({ projectId, taskId }) => {
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 onClick={(e) => e.stopPropagation()}
-                                                className="px-2.5 py-1.5 bg-zinc-900/80 hover:bg-zinc-900 text-white rounded-lg text-xs font-semibold shadow flex items-center gap-1.5 transition-transform hover:scale-105"
+                                                className="px-2.5 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-semibold shadow flex items-center gap-1.5 transition-transform hover:scale-105"
                                                 title="Open in new tab"
                                             >
                                                 <ExternalLink className="w-3.5 h-3.5" />
@@ -164,12 +164,12 @@ const TaskAttachments = ({ projectId, taskId }) => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="p-4 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between">
+                                    <div className="p-4 bg-muted/40 border-b border-border flex items-center justify-between">
                                         <div className="flex items-center gap-2.5">
-                                            <div className="p-2 bg-white rounded-lg border border-zinc-200 shadow-xs">
+                                            <div className="p-2 bg-card rounded-lg border border-border shadow-xs">
                                                 {getFileIcon(fileType)}
                                             </div>
-                                            <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                                                 {fileType?.split('/')[1]?.slice(0, 8) || 'FILE'}
                                             </span>
                                         </div>
@@ -177,7 +177,7 @@ const TaskAttachments = ({ projectId, taskId }) => {
                                             href={fileUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="p-1.5 text-zinc-400 hover:text-zinc-800 rounded-md hover:bg-white transition-colors"
+                                            className="p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors"
                                             title="Open file in new tab"
                                         >
                                             <ExternalLink className="w-4 h-4" />
@@ -189,13 +189,13 @@ const TaskAttachments = ({ projectId, taskId }) => {
                                 <div className="p-3 flex-1 flex flex-col justify-between gap-2">
                                     <div>
                                         <p 
-                                            className="text-xs font-semibold text-zinc-900 truncate cursor-pointer hover:text-blue-600 transition-colors" 
+                                            className="text-xs font-semibold text-foreground truncate cursor-pointer hover:text-primary transition-colors" 
                                             title={fileName}
                                             onClick={() => imageFile && setPreviewAttachment({ url: fileUrl, name: fileName, size: fileSize, type: fileType })}
                                         >
                                             {fileName}
                                         </p>
-                                        <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 mt-0.5">
+                                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
                                             <span>{formatFileSize(fileSize)}</span>
                                             <span>•</span>
                                             <span>{attachment.createdAt ? formatDistanceToNow(new Date(attachment.createdAt)) + ' ago' : 'Recently'}</span>
@@ -203,13 +203,13 @@ const TaskAttachments = ({ projectId, taskId }) => {
                                     </div>
 
                                     {/* Action Buttons Row */}
-                                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100 text-xs">
+                                    <div className="flex items-center justify-between pt-2 border-t border-border text-xs">
                                         <div className="flex items-center gap-1">
                                             {imageFile && (
                                                 <button
                                                     type="button"
                                                     onClick={() => setPreviewAttachment({ url: fileUrl, name: fileName, size: fileSize, type: fileType })}
-                                                    className="inline-flex items-center gap-1 px-2 py-1 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors"
+                                                    className="inline-flex items-center gap-1 px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                                                     title="Preview"
                                                 >
                                                     <Eye className="w-3.5 h-3.5" />
@@ -220,7 +220,7 @@ const TaskAttachments = ({ projectId, taskId }) => {
                                                 href={fileUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1 px-2 py-1 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors"
+                                                className="inline-flex items-center gap-1 px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                                                 title="Open in new tab"
                                             >
                                                 <ExternalLink className="w-3.5 h-3.5" />
@@ -234,7 +234,7 @@ const TaskAttachments = ({ projectId, taskId }) => {
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
                                                 download
-                                                className="p-1.5 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-md transition-colors"
+                                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                                                 title="Download file"
                                             >
                                                 <Download className="w-3.5 h-3.5" />
@@ -244,7 +244,7 @@ const TaskAttachments = ({ projectId, taskId }) => {
                                                     type="button"
                                                     onClick={() => deleteAttachment({ projectId, taskId, attachmentId: attachment._id })}
                                                     disabled={isDeleting}
-                                                    className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                                                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors disabled:opacity-50"
                                                     title="Delete attachment"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
