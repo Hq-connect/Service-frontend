@@ -13,6 +13,7 @@ import MeetingRoomContainer from "@/features/meets/containers/MeetingRoomContain
 import { ProjectsDashboard, BoardView } from "@/features/productivity";
 import DocsDashboard from "@/features/editor/pages/DocsDashboard";
 import DocumentPage from "@/features/editor/pages/DocumentPage";
+import { FilesPage } from "@/features/drive";
 import {
   SettingsLayout,
   AdminSettingsRoute,
@@ -51,7 +52,7 @@ export const router = createBrowserRouter([
       { path: "tasks/projects/:projectId", element: <BoardView /> },
       { path: "docs", element: <DocsDashboard /> },
       { path: "docs/:documentId", element: <DocumentPage /> },
-      { path: "files", element: <UnderConstruction /> },
+      { path: "files", element: <FilesPage /> },
       { path: "meets", element: <MeetsPage /> },
       { path: "meets/calendar", element: <Navigate to="/calendar" replace /> },
       { path: "calendar", element: <CalendarPage /> },
