@@ -7,6 +7,9 @@ import {
   List,
   ChevronRight,
   Folder,
+  Trash2,
+  Star,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +24,10 @@ export default function DriveHeader({
   onViewModeChange,
   onNewFolder,
   onUploadClick,
+  isTrashView = false,
+  isStarredView = false,
+  onEmptyTrash,
+  hasTrashItems = false,
 }) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-border">
@@ -30,8 +37,22 @@ export default function DriveHeader({
           onClick={() => onNavigateBreadcrumb(null)}
           className="flex items-center gap-1.5 text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer"
         >
-          <Folder className="size-4 text-muted-foreground" />
-          <span>My Drive</span>
+          {isTrashView ? (
+            <>
+              <Trash2 className="size-4 text-muted-foreground" />
+              <span>Trash</span>
+            </>
+          ) : isStarredView ? (
+            <>
+              <Star className="size-4 text-amber-500 fill-amber-500" />
+              <span>Starred</span>
+            </>
+          ) : (
+            <>
+              <Folder className="size-4 text-muted-foreground" />
+              <span>My Drive</span>
+            </>
+          )}
         </button>
 
         {breadcrumbs.map((crumb) => (
@@ -60,13 +81,22 @@ export default function DriveHeader({
       <div className="flex items-center gap-2 flex-wrap">
         {/* Search Input */}
         <div className="relative w-44 sm:w-56">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
           <Input
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search files..."
-            className="pl-8 h-8 text-xs bg-card"
+            placeholder={isTrashView ? "Search trash..." : "Search files & folders..."}
+            className="pl-8 pr-7 h-8 text-xs bg-card"
           />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+              title="Clear search"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
 
         {/* View Mode Toggle (Grid vs List) */}
@@ -95,26 +125,43 @@ export default function DriveHeader({
           </button>
         </div>
 
-        {/* New Folder Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onNewFolder}
-          className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
-        >
-          <FolderPlus className="size-3.5" />
-          <span>New Folder</span>
-        </Button>
+        {/* Trash Actions vs Standard Actions */}
+        {isTrashView ? (
+          hasTrashItems && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onEmptyTrash}
+              className="h-8 gap-1.5 text-xs font-medium text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 cursor-pointer"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Empty Trash</span>
+            </Button>
+          )
+        ) : (
+          <>
+            {/* New Folder Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNewFolder}
+              className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
+            >
+              <FolderPlus className="size-3.5" />
+              <span>New Folder</span>
+            </Button>
 
-        {/* Upload File Button */}
-        <Button
-          size="sm"
-          onClick={onUploadClick}
-          className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
-        >
-          <Upload className="size-3.5" />
-          <span>Upload</span>
-        </Button>
+            {/* Upload File Button */}
+            <Button
+              size="sm"
+              onClick={onUploadClick}
+              className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
+            >
+              <Upload className="size-3.5" />
+              <span>Upload</span>
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

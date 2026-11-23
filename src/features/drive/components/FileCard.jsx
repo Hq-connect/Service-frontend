@@ -1,5 +1,5 @@
 import React from "react";
-import { Star, MoreVertical, Download, Eye, Trash2, Edit2 } from "lucide-react";
+import { Star, MoreVertical, Download, Eye, Trash2, Edit2, Share2, RotateCcw } from "lucide-react";
 import { getFileIcon, formatBytes, formatShortDate } from "../utils/fileIcons";
 import {
   DropdownMenu,
@@ -16,6 +16,10 @@ export default function FileCard({
   onToggleStar,
   onRename,
   onTrash,
+  onShare,
+  isTrashView = false,
+  onRestore,
+  onDeletePermanent,
 }) {
   const { icon: Icon, color, bg } = getFileIcon(file.mimeType, file.name);
 
@@ -31,17 +35,19 @@ export default function FileCard({
         </div>
 
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => onToggleStar(file._id)}
-            className={`p-1 rounded-md transition-colors cursor-pointer ${
-              file.isStarred
-                ? "text-amber-500 fill-amber-500"
-                : "text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
-            }`}
-            title={file.isStarred ? "Unstar" : "Star"}
-          >
-            <Star className={`size-3.5 ${file.isStarred ? "fill-amber-500" : ""}`} />
-          </button>
+          {!isTrashView && (
+            <button
+              onClick={() => onToggleStar(file._id)}
+              className={`p-1 rounded-md transition-colors cursor-pointer ${
+                file.isStarred
+                  ? "text-amber-500 fill-amber-500"
+                  : "text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
+              }`}
+              title={file.isStarred ? "Unstar" : "Star"}
+            >
+              <Star className={`size-3.5 ${file.isStarred ? "fill-amber-500" : ""}`} />
+            </button>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -49,36 +55,79 @@ export default function FileCard({
                 <MoreVertical className="size-3.5" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36">
-              <DropdownMenuItem
-                onClick={() => onPreview(file)}
-                className="text-xs gap-2 cursor-pointer"
-              >
-                <Eye className="size-3" />
-                <span>Preview</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDownload(file)}
-                className="text-xs gap-2 cursor-pointer"
-              >
-                <Download className="size-3" />
-                <span>Download</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onRename(file)}
-                className="text-xs gap-2 cursor-pointer"
-              >
-                <Edit2 className="size-3" />
-                <span>Rename</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onTrash(file._id)}
-                className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
-              >
-                <Trash2 className="size-3" />
-                <span>Move to Trash</span>
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-40">
+              {isTrashView ? (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => onPreview(file)}
+                    className="text-xs gap-2 cursor-pointer"
+                  >
+                    <Eye className="size-3" />
+                    <span>Preview</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onDownload(file)}
+                    className="text-xs gap-2 cursor-pointer"
+                  >
+                    <Download className="size-3" />
+                    <span>Download</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onRestore && onRestore(file._id)}
+                    className="text-xs gap-2 cursor-pointer"
+                  >
+                    <RotateCcw className="size-3" />
+                    <span>Restore</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onDeletePermanent && onDeletePermanent(file._id)}
+                    className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
+                  >
+                    <Trash2 className="size-3" />
+                    <span>Delete permanently</span>
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => onShare && onShare(file)}
+                    className="text-xs gap-2 cursor-pointer"
+                  >
+                    <Share2 className="size-3" />
+                    <span>Share</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onPreview(file)}
+                    className="text-xs gap-2 cursor-pointer"
+                  >
+                    <Eye className="size-3" />
+                    <span>Preview</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onDownload(file)}
+                    className="text-xs gap-2 cursor-pointer"
+                  >
+                    <Download className="size-3" />
+                    <span>Download</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onRename(file)}
+                    className="text-xs gap-2 cursor-pointer"
+                  >
+                    <Edit2 className="size-3" />
+                    <span>Rename</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onTrash(file._id)}
+                    className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
+                  >
+                    <Trash2 className="size-3" />
+                    <span>Move to Trash</span>
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -99,4 +148,3 @@ export default function FileCard({
     </div>
   );
 }
-

@@ -9,6 +9,7 @@ const driveService = {
     folderId = null,
     search = "",
     isStarred,
+    status,
     sortBy = "createdAt",
     order = "desc",
     page = 1,
@@ -18,6 +19,7 @@ const driveService = {
       ...(folderId ? { folderId } : {}),
       ...(search ? { search } : {}),
       ...(isStarred !== undefined ? { isStarred } : {}),
+      ...(status ? { status } : {}),
       sortBy,
       order,
       page,
@@ -59,6 +61,11 @@ const driveService = {
 
   async restoreFolder(folderId) {
     const response = await api.post(`/drive/folders/${folderId}/restore`);
+    return response.data;
+  },
+
+  async deleteFolderPermanently(folderId) {
+    const response = await api.delete(`/drive/folders/${folderId}/permanent`);
     return response.data;
   },
 
@@ -126,6 +133,16 @@ const driveService = {
 
   async restoreFile(fileId) {
     const response = await api.post(`/drive/${fileId}/restore`);
+    return response.data;
+  },
+
+  async deleteFilePermanently(fileId) {
+    const response = await api.delete(`/drive/${fileId}/permanent`);
+    return response.data;
+  },
+
+  async emptyTrash() {
+    const response = await api.delete("/drive/trash/empty");
     return response.data;
   },
 

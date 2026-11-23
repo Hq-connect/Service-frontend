@@ -1,5 +1,5 @@
 import React from "react";
-import { Star, Download, Eye, Trash2, Edit2, MoreVertical, Folder } from "lucide-react";
+import { Star, Download, Eye, Trash2, Edit2, MoreVertical, Folder, Share2, RotateCcw } from "lucide-react";
 import { getFileIcon, formatBytes, formatShortDate } from "../utils/fileIcons";
 import {
   DropdownMenu,
@@ -15,11 +15,18 @@ export default function FileListTable({
   onOpenFolder,
   onRenameFolder,
   onTrashFolder,
+  onShareFolder,
   onPreviewFile,
   onDownloadFile,
   onToggleStarFile,
   onRenameFile,
   onTrashFile,
+  onShareFile,
+  isTrashView = false,
+  onRestoreFolder,
+  onDeletePermanentFolder,
+  onRestoreFile,
+  onDeletePermanentFile,
 }) {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden shadow-(--shadow-card)">
@@ -60,21 +67,51 @@ export default function FileListTable({
                         <MoreVertical className="size-3.5" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-36">
-                      <DropdownMenuItem
-                        onClick={() => onRenameFolder(folder)}
-                        className="text-xs gap-2 cursor-pointer"
-                      >
-                        <Edit2 className="size-3" />
-                        <span>Rename</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onTrashFolder(folder._id)}
-                        className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
-                      >
-                        <Trash2 className="size-3" />
-                        <span>Move to Trash</span>
-                      </DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="w-40">
+                      {isTrashView ? (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => onRestoreFolder && onRestoreFolder(folder._id)}
+                            className="text-xs gap-2 cursor-pointer"
+                          >
+                            <RotateCcw className="size-3" />
+                            <span>Restore</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => onDeletePermanentFolder && onDeletePermanentFolder(folder._id)}
+                            className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
+                          >
+                            <Trash2 className="size-3" />
+                            <span>Delete permanently</span>
+                          </DropdownMenuItem>
+                        </>
+                      ) : (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => onShareFolder && onShareFolder(folder)}
+                            className="text-xs gap-2 cursor-pointer"
+                          >
+                            <Share2 className="size-3" />
+                            <span>Share</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => onRenameFolder(folder)}
+                            className="text-xs gap-2 cursor-pointer"
+                          >
+                            <Edit2 className="size-3" />
+                            <span>Rename</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => onTrashFolder(folder._id)}
+                            className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
+                          >
+                            <Trash2 className="size-3" />
+                            <span>Move to Trash</span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </td>
@@ -100,19 +137,21 @@ export default function FileListTable({
                       </span>
                     </div>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleStarFile(file._id);
-                      }}
-                      className={`p-1 rounded transition-colors cursor-pointer shrink-0 ${
-                        file.isStarred
-                          ? "text-amber-500 fill-amber-500"
-                          : "text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
-                      }`}
-                    >
-                      <Star className={`size-3 ${file.isStarred ? "fill-amber-500" : ""}`} />
-                    </button>
+                    {!isTrashView && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleStarFile(file._id);
+                        }}
+                        className={`p-1 rounded transition-colors cursor-pointer shrink-0 ${
+                          file.isStarred
+                            ? "text-amber-500 fill-amber-500"
+                            : "text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
+                        <Star className={`size-3 ${file.isStarred ? "fill-amber-500" : ""}`} />
+                      </button>
+                    )}
                   </td>
                   <td className="py-2.5 px-4 text-muted-foreground font-mono">
                     {formatBytes(file.size)}
@@ -127,36 +166,79 @@ export default function FileListTable({
                           <MoreVertical className="size-3.5" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-36">
-                        <DropdownMenuItem
-                          onClick={() => onPreviewFile(file)}
-                          className="text-xs gap-2 cursor-pointer"
-                        >
-                          <Eye className="size-3" />
-                          <span>Preview</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => onDownloadFile(file)}
-                          className="text-xs gap-2 cursor-pointer"
-                        >
-                          <Download className="size-3" />
-                          <span>Download</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => onRenameFile(file)}
-                          className="text-xs gap-2 cursor-pointer"
-                        >
-                          <Edit2 className="size-3" />
-                          <span>Rename</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => onTrashFile(file._id)}
-                          className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
-                        >
-                          <Trash2 className="size-3" />
-                          <span>Move to Trash</span>
-                        </DropdownMenuItem>
+                      <DropdownMenuContent align="end" className="w-40">
+                        {isTrashView ? (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => onPreviewFile(file)}
+                              className="text-xs gap-2 cursor-pointer"
+                            >
+                              <Eye className="size-3" />
+                              <span>Preview</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onDownloadFile(file)}
+                              className="text-xs gap-2 cursor-pointer"
+                            >
+                              <Download className="size-3" />
+                              <span>Download</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onRestoreFile && onRestoreFile(file._id)}
+                              className="text-xs gap-2 cursor-pointer"
+                            >
+                              <RotateCcw className="size-3" />
+                              <span>Restore</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => onDeletePermanentFile && onDeletePermanentFile(file._id)}
+                              className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
+                            >
+                              <Trash2 className="size-3" />
+                              <span>Delete permanently</span>
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => onShareFile && onShareFile(file)}
+                              className="text-xs gap-2 cursor-pointer"
+                            >
+                              <Share2 className="size-3" />
+                              <span>Share</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onPreviewFile(file)}
+                              className="text-xs gap-2 cursor-pointer"
+                            >
+                              <Eye className="size-3" />
+                              <span>Preview</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onDownloadFile(file)}
+                              className="text-xs gap-2 cursor-pointer"
+                            >
+                              <Download className="size-3" />
+                              <span>Download</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onRenameFile(file)}
+                              className="text-xs gap-2 cursor-pointer"
+                            >
+                              <Edit2 className="size-3" />
+                              <span>Rename</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => onTrashFile(file._id)}
+                              className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
+                            >
+                              <Trash2 className="size-3" />
+                              <span>Move to Trash</span>
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
@@ -169,4 +251,3 @@ export default function FileListTable({
     </div>
   );
 }
-

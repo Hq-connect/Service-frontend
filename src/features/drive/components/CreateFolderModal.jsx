@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,14 +15,26 @@ export default function CreateFolderModal({
   onClose,
   onCreateFolder,
   isPending,
+  error,
 }) {
-  const [folderName, setFolderName] = useState("");
+  const [folderName, setFolderName] = useState("Untitled folder");
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFolderName("Untitled folder");
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.select();
+        }
+      }, 50);
+    }
+  }, [isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!folderName.trim()) return;
-    onCreateFolder(folderName.trim());
-    setFolderName("");
+    const trimmed = folderName.trim() || "Untitled folder";
+    onCreateFolder(trimmed);
   };
 
   return (
@@ -38,13 +50,17 @@ export default function CreateFolderModal({
               Folder name
             </Label>
             <Input
+              ref={inputRef}
               id="folder-name"
-              placeholder="e.g. Design Assets, Project Docs"
+              placeholder="Untitled folder"
               value={folderName}
               onChange={(e) => setFolderName(e.target.value)}
               autoFocus
-              className="text-sm"
+              className={`text-sm ${error ? "border-destructive focus-visible:ring-destructive" : ""}`}
             />
+            {error && (
+              <p className="text-xs text-destructive">{error}</p>
+            )}
           </div>
 
           <DialogFooter className="gap-2 pt-2">
@@ -60,7 +76,7 @@ export default function CreateFolderModal({
             <Button
               type="submit"
               size="sm"
-              disabled={!folderName.trim() || isPending}
+              disabled={isPending}
             >
               {isPending ? "Creating..." : "Create"}
             </Button>
@@ -70,4 +86,3 @@ export default function CreateFolderModal({
     </Dialog>
   );
 }
-

@@ -90,6 +90,42 @@ export function useTrashFolder() {
 }
 
 /**
+ * Restore folder mutation
+ */
+export function useRestoreFolder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (folderId) => driveService.restoreFolder(folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.all });
+      toast.success("Folder restored from trash");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to restore folder");
+    },
+  });
+}
+
+/**
+ * Permanent delete folder mutation
+ */
+export function useDeleteFolderPermanent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (folderId) => driveService.deleteFolderPermanently(folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.all });
+      toast.success("Folder permanently deleted");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to permanently delete folder");
+    },
+  });
+}
+
+/**
  * Direct-to-R2 upload mutation
  */
 export function useUploadFile() {
@@ -127,7 +163,7 @@ export function useUploadFile() {
       toast.success(`"${uploadedFile.name}" uploaded successfully`);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || "File upload failed");
+      toast.error(error.response?.data?.message || error.message || "File upload failed");
     },
   });
 }
@@ -182,6 +218,118 @@ export function useTrashFile() {
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || "Failed to trash file");
+    },
+  });
+}
+
+/**
+ * Restore file mutation
+ */
+export function useRestoreFile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (fileId) => driveService.restoreFile(fileId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.all });
+      toast.success("File restored from trash");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to restore file");
+    },
+  });
+}
+
+/**
+ * Permanent delete file mutation
+ */
+export function useDeleteFilePermanent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (fileId) => driveService.deleteFilePermanently(fileId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.all });
+      toast.success("File permanently deleted");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to permanently delete file");
+    },
+  });
+}
+
+/**
+ * Empty trash mutation
+ */
+export function useEmptyTrash() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => driveService.emptyTrash(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.all });
+      toast.success("Trash emptied");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to empty trash");
+    },
+  });
+}
+
+/**
+ * Shares Query & Mutations
+ */
+export function useShares(targetId) {
+  return useQuery({
+    queryKey: DRIVE_KEYS.shares(targetId),
+    queryFn: () => driveService.listShares(targetId),
+    enabled: !!targetId,
+  });
+}
+
+export function useGrantUserAccess() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ targetType, targetId, subjectUserId, role }) =>
+      driveService.grantUserAccess({ targetType, targetId, subjectUserId, role }),
+    onSuccess: (share, variables) => {
+      queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.shares(variables.targetId) });
+      toast.success(`Access granted as ${variables.role}`);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to grant access");
+    },
+  });
+}
+
+export function useCreateShareLink() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ targetType, targetId, role, expiresInDays }) =>
+      driveService.createShareLink({ targetType, targetId, role, expiresInDays }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.shares(variables.targetId) });
+      toast.success("Share link created");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to create share link");
+    },
+  });
+}
+
+export function useRevokeShare() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ shareId, targetId }) => driveService.revokeShare(shareId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.shares(variables.targetId) });
+      toast.success("Access revoked");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to revoke access");
     },
   });
 }

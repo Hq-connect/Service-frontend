@@ -1,14 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   useDriveContents,
   useFolderDetails,
   useCreateFolder,
   useRenameFolder,
   useTrashFolder,
+  useRestoreFolder,
+  useDeleteFolderPermanent,
   useUploadFile,
   useRenameFile,
   useToggleStarFile,
   useTrashFile,
+  useRestoreFile,
+  useDeleteFilePermanent,
+  useEmptyTrash,
 } from "../queries/drive.queries";
 import driveService from "../services/drive.service";
 import DriveHeader from "../components/DriveHeader";
@@ -20,7 +26,8 @@ import CreateFolderModal from "../components/CreateFolderModal";
 import UploadModal from "../components/UploadModal";
 import FilePreviewModal from "../components/FilePreviewModal";
 import RenameModal from "../components/RenameModal";
-import { Loader2, FolderOpen } from "lucide-react";
+import ShareModal from "../components/ShareModal";
+import { Loader2, FolderOpen, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export default function FilesPage() {
@@ -30,18 +37,35 @@ export default function FilesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
 
+  // URL search params (for ?isStarred=true or ?status=trashed)
+  const [searchParams] = useSearchParams();
+  const isStarredView = searchParams.get("isStarred") === "true";
+  const statusView = searchParams.get("status"); // 'trashed' | null
+  const isTrashView = statusView === "trashed";
+
+  // Reset folder navigation and search on view change
+  useEffect(() => {
+    setCurrentFolderId(null);
+    setBreadcrumbs([]);
+    setSearchQuery("");
+  }, [statusView, isStarredView]);
+
   // Modal States
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [createFolderError, setCreateFolderError] = useState("");
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const [previewFile, setPreviewFile] = useState(null);
   const [renameTarget, setRenameTarget] = useState(null); // { type: 'file' | 'folder', item }
+  const [shareTarget, setShareTarget] = useState(null); // { type: 'file' | 'folder', item }
 
   // React Queries
   const { data: contents, isLoading } = useDriveContents({
     folderId: currentFolderId,
     search: searchQuery,
+    ...(isStarredView ? { isStarred: true } : {}),
+    ...(statusView ? { status: statusView } : {}),
   });
 
   const { data: currentFolder } = useFolderDetails(currentFolderId);
@@ -50,11 +74,16 @@ export default function FilesPage() {
   const createFolderMutation = useCreateFolder();
   const renameFolderMutation = useRenameFolder();
   const trashFolderMutation = useTrashFolder();
+  const restoreFolderMutation = useRestoreFolder();
+  const deleteFolderPermanentMutation = useDeleteFolderPermanent();
 
   const uploadFileMutation = useUploadFile();
   const renameFileMutation = useRenameFile();
   const toggleStarMutation = useToggleStarFile();
   const trashFileMutation = useTrashFile();
+  const restoreFileMutation = useRestoreFile();
+  const deleteFilePermanentMutation = useDeleteFilePermanent();
+  const emptyTrashMutation = useEmptyTrash();
 
   // Navigation Handlers
   const handleOpenFolder = (folder) => {
@@ -90,6 +119,9 @@ export default function FilesPage() {
         onSuccess: () => {
           setIsUploadOpen(false);
           onSuccess();
+        },
+        onError: () => {
+          setUploadProgress(0);
         },
       }
     );
@@ -138,12 +170,37 @@ export default function FilesPage() {
           onSearchChange={setSearchQuery}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
-          onNewFolder={() => setIsCreateFolderOpen(true)}
+          onNewFolder={() => { setIsCreateFolderOpen(true); setCreateFolderError(""); }}
           onUploadClick={() => setIsUploadOpen(true)}
+          isTrashView={isTrashView}
+          isStarredView={isStarredView}
+          onEmptyTrash={() => {
+            if (window.confirm("Are you sure you want to permanently delete all items in the trash? This action cannot be undone.")) {
+              emptyTrashMutation.mutate();
+            }
+          }}
+          hasTrashItems={!isEmpty}
         />
 
-        {/* Metric KPI Strip */}
-        <DriveKpiStrip folders={folders} files={files} />
+        {/* Search Results Feedback Banner */}
+        {searchQuery.trim() && (
+          <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-muted/60 border border-border text-xs text-muted-foreground animate-fade-in">
+            <span>
+              Showing results for <strong className="text-foreground font-semibold">"{searchQuery.trim()}"</strong> ({folders.length + files.length} items found)
+            </span>
+            <button
+              onClick={() => setSearchQuery("")}
+              className="text-primary hover:underline font-medium cursor-pointer"
+            >
+              Clear search
+            </button>
+          </div>
+        )}
+
+        {/* Metric KPI Strip (hidden when searching or in trash view for clean look) */}
+        {!isTrashView && !searchQuery.trim() && (
+          <DriveKpiStrip folders={folders} files={files} />
+        )}
 
         {/* Loading State */}
         {isLoading ? (
@@ -155,11 +212,27 @@ export default function FilesPage() {
           /* Empty State */
           <div className="flex flex-col items-center justify-center py-20 border border-dashed border-border rounded-2xl bg-card/50 text-center p-6">
             <div className="p-3 rounded-2xl bg-muted text-muted-foreground mb-3">
-              <FolderOpen className="size-8 text-foreground/70" />
+              {isTrashView ? (
+                <Trash2 className="size-8 text-foreground/70" />
+              ) : searchQuery.trim() ? (
+                <Search className="size-8 text-foreground/70" />
+              ) : (
+                <FolderOpen className="size-8 text-foreground/70" />
+              )}
             </div>
-            <h3 className="text-sm font-semibold text-foreground">No files here yet</h3>
+            <h3 className="text-sm font-semibold text-foreground">
+              {isTrashView
+                ? "Trash is empty"
+                : searchQuery.trim()
+                ? `No results for "${searchQuery.trim()}"`
+                : "No files here yet"}
+            </h3>
             <p className="text-xs text-muted-foreground max-w-sm mt-1">
-              Upload documents, images, or media to store them securely in your Cloudflare R2 bucket.
+              {isTrashView
+                ? "Items moved to the trash will show up here. You can restore or permanently delete them."
+                : searchQuery.trim()
+                ? "Check your spelling or try searching for a different keyword."
+                : "Upload documents, images, or media to store them securely in your Cloudflare R2 bucket."}
             </p>
           </div>
         ) : viewMode === "grid" ? (
@@ -178,6 +251,14 @@ export default function FilesPage() {
                       onOpen={handleOpenFolder}
                       onRename={(f) => setRenameTarget({ type: "folder", item: f })}
                       onTrash={(id) => trashFolderMutation.mutate(id)}
+                      onShare={(f) => setShareTarget({ type: "folder", item: f })}
+                      isTrashView={isTrashView}
+                      onRestore={(id) => restoreFolderMutation.mutate(id)}
+                      onDeletePermanent={(id) => {
+                        if (window.confirm(`Permanently delete folder "${folder.name}" and all contents?`)) {
+                          deleteFolderPermanentMutation.mutate(id);
+                        }
+                      }}
                     />
                   ))}
                 </div>
@@ -199,6 +280,14 @@ export default function FilesPage() {
                       onToggleStar={(id) => toggleStarMutation.mutate(id)}
                       onRename={(f) => setRenameTarget({ type: "file", item: f })}
                       onTrash={(id) => trashFileMutation.mutate(id)}
+                      onShare={(f) => setShareTarget({ type: "file", item: f })}
+                      isTrashView={isTrashView}
+                      onRestore={(id) => restoreFileMutation.mutate(id)}
+                      onDeletePermanent={(id) => {
+                        if (window.confirm(`Permanently delete file "${file.name}"?`)) {
+                          deleteFilePermanentMutation.mutate(id);
+                        }
+                      }}
                     />
                   ))}
                 </div>
@@ -213,11 +302,26 @@ export default function FilesPage() {
             onOpenFolder={handleOpenFolder}
             onRenameFolder={(f) => setRenameTarget({ type: "folder", item: f })}
             onTrashFolder={(id) => trashFolderMutation.mutate(id)}
+            onShareFolder={(f) => setShareTarget({ type: "folder", item: f })}
             onPreviewFile={setPreviewFile}
             onDownloadFile={handleDownloadFile}
             onToggleStarFile={(id) => toggleStarMutation.mutate(id)}
             onRenameFile={(f) => setRenameTarget({ type: "file", item: f })}
             onTrashFile={(id) => trashFileMutation.mutate(id)}
+            onShareFile={(f) => setShareTarget({ type: "file", item: f })}
+            isTrashView={isTrashView}
+            onRestoreFolder={(id) => restoreFolderMutation.mutate(id)}
+            onDeletePermanentFolder={(id) => {
+              if (window.confirm("Permanently delete this folder and all its contents?")) {
+                deleteFolderPermanentMutation.mutate(id);
+              }
+            }}
+            onRestoreFile={(id) => restoreFileMutation.mutate(id)}
+            onDeletePermanentFile={(id) => {
+              if (window.confirm("Permanently delete this file?")) {
+                deleteFilePermanentMutation.mutate(id);
+              }
+            }}
           />
         )}
       </div>
@@ -225,14 +329,21 @@ export default function FilesPage() {
       {/* Create Folder Modal */}
       <CreateFolderModal
         isOpen={isCreateFolderOpen}
-        onClose={() => setIsCreateFolderOpen(false)}
+        onClose={() => { setIsCreateFolderOpen(false); setCreateFolderError(""); }}
         onCreateFolder={(name) =>
           createFolderMutation.mutate(
             { name, parentFolderId: currentFolderId },
-            { onSuccess: () => setIsCreateFolderOpen(false) }
+            {
+              onSuccess: () => { setIsCreateFolderOpen(false); setCreateFolderError(""); },
+              onError: (error) => {
+                const msg = error.response?.data?.message || "Failed to create folder";
+                setCreateFolderError(msg);
+              },
+            }
           )
         }
         isPending={createFolderMutation.isPending}
+        error={createFolderError}
       />
 
       {/* Direct-to-R2 Upload Modal */}
@@ -261,6 +372,14 @@ export default function FilesPage() {
         isPending={
           renameFolderMutation.isPending || renameFileMutation.isPending
         }
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={!!shareTarget}
+        onClose={() => setShareTarget(null)}
+        targetType={shareTarget?.type}
+        targetItem={shareTarget?.item}
       />
     </div>
   );

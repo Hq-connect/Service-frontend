@@ -1,13 +1,23 @@
 import React from "react";
-import { Folder, MoreVertical, Trash2, Edit2 } from "lucide-react";
+import { Folder, MoreVertical, Trash2, Edit2, Share2, RotateCcw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-export default function FolderCard({ folder, onOpen, onRename, onTrash }) {
+export default function FolderCard({
+  folder,
+  onOpen,
+  onRename,
+  onTrash,
+  onShare,
+  isTrashView = false,
+  onRestore,
+  onDeletePermanent,
+}) {
   return (
     <div
       onClick={() => onOpen(folder)}
@@ -30,25 +40,54 @@ export default function FolderCard({ folder, onOpen, onRename, onTrash }) {
               <MoreVertical className="size-3.5" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-36">
-            <DropdownMenuItem
-              onClick={() => onRename(folder)}
-              className="text-xs gap-2 cursor-pointer"
-            >
-              <Edit2 className="size-3" />
-              <span>Rename</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onTrash(folder._id)}
-              className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
-            >
-              <Trash2 className="size-3" />
-              <span>Move to Trash</span>
-            </DropdownMenuItem>
+          <DropdownMenuContent align="end" className="w-40">
+            {isTrashView ? (
+              <>
+                <DropdownMenuItem
+                  onClick={() => onRestore && onRestore(folder._id)}
+                  className="text-xs gap-2 cursor-pointer"
+                >
+                  <RotateCcw className="size-3" />
+                  <span>Restore</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => onDeletePermanent && onDeletePermanent(folder._id)}
+                  className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
+                >
+                  <Trash2 className="size-3" />
+                  <span>Delete permanently</span>
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <>
+                <DropdownMenuItem
+                  onClick={() => onShare && onShare(folder)}
+                  className="text-xs gap-2 cursor-pointer"
+                >
+                  <Share2 className="size-3" />
+                  <span>Share</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onRename(folder)}
+                  className="text-xs gap-2 cursor-pointer"
+                >
+                  <Edit2 className="size-3" />
+                  <span>Rename</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => onTrash(folder._id)}
+                  className="text-xs gap-2 text-destructive focus:text-destructive cursor-pointer"
+                >
+                  <Trash2 className="size-3" />
+                  <span>Move to Trash</span>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </div>
   );
 }
-
