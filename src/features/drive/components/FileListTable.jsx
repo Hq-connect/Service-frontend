@@ -1,5 +1,5 @@
 import React from "react";
-import { Star, Download, Eye, Trash2, Edit2, MoreVertical, Folder, Share2, RotateCcw } from "lucide-react";
+import { Star, Download, Eye, Trash2, Edit2, MoreVertical, Folder, Share2, RotateCcw, Lock, Globe } from "lucide-react";
 import { getFileIcon, formatBytes, formatShortDate } from "../utils/fileIcons";
 import {
   DropdownMenu,
@@ -16,12 +16,14 @@ export default function FileListTable({
   onRenameFolder,
   onTrashFolder,
   onShareFolder,
+  onToggleFolderVisibility,
   onPreviewFile,
   onDownloadFile,
   onToggleStarFile,
   onRenameFile,
   onTrashFile,
   onShareFile,
+  onToggleFileVisibility,
   isTrashView = false,
   onRestoreFolder,
   onDeletePermanentFolder,
@@ -52,9 +54,22 @@ export default function FileListTable({
                   <div className="p-1.5 rounded-md bg-primary/10 text-primary shrink-0">
                     <Folder className="size-3.5 fill-primary/20" />
                   </div>
-                  <span className="font-semibold text-foreground truncate max-w-[200px] sm:max-w-xs">
-                    {folder.name}
-                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-semibold text-foreground truncate max-w-[170px] sm:max-w-xs">
+                      {folder.name}
+                    </span>
+                    {!isTrashView && (
+                      folder.isPublic ? (
+                        <span title="Public to workspace">
+                          <Globe className="size-3 text-blue-500 shrink-0" />
+                        </span>
+                      ) : (
+                        <span title="Private">
+                          <Lock className="size-3 text-muted-foreground/60 shrink-0" />
+                        </span>
+                      )
+                    )}
+                  </div>
                 </td>
                 <td className="py-2.5 px-4 text-muted-foreground font-mono">—</td>
                 <td className="py-2.5 px-4 text-muted-foreground font-mono">
@@ -96,6 +111,13 @@ export default function FileListTable({
                             <span>Share</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem
+                            onClick={() => onToggleFolderVisibility && onToggleFolderVisibility(folder._id, !folder.isPublic)}
+                            className="text-xs gap-2 cursor-pointer"
+                          >
+                            {folder.isPublic ? <Lock className="size-3" /> : <Globe className="size-3" />}
+                            <span>{folder.isPublic ? "Make Private" : "Make Public"}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => onRenameFolder(folder)}
                             className="text-xs gap-2 cursor-pointer"
                           >
@@ -132,9 +154,22 @@ export default function FileListTable({
                       <div className={`p-1.5 rounded-md ${bg} ${color} shrink-0`}>
                         <Icon className="size-3.5" />
                       </div>
-                      <span className="font-medium text-foreground truncate max-w-[200px] sm:max-w-xs">
-                        {file.name}
-                      </span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-medium text-foreground truncate max-w-[170px] sm:max-w-xs">
+                          {file.name}
+                        </span>
+                        {!isTrashView && (
+                          file.isPublic ? (
+                            <span title="Public to workspace">
+                              <Globe className="size-3 text-blue-500 shrink-0" />
+                            </span>
+                          ) : (
+                            <span title="Private">
+                              <Lock className="size-3 text-muted-foreground/60 shrink-0" />
+                            </span>
+                          )
+                        )}
+                      </div>
                     </div>
 
                     {!isTrashView && (
@@ -207,6 +242,13 @@ export default function FileListTable({
                             >
                               <Share2 className="size-3" />
                               <span>Share</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onToggleFileVisibility && onToggleFileVisibility(file._id, !file.isPublic)}
+                              className="text-xs gap-2 cursor-pointer"
+                            >
+                              {file.isPublic ? <Lock className="size-3" /> : <Globe className="size-3" />}
+                              <span>{file.isPublic ? "Make Private" : "Make Public"}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => onPreviewFile(file)}

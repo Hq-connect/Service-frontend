@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { UploadCloud, File, CheckCircle2, AlertCircle } from "lucide-react";
+import { UploadCloud, File, CheckCircle2, AlertCircle, Lock, Globe } from "lucide-react";
 
 function formatBytes(bytes) {
   if (!bytes) return "0 B";
@@ -25,6 +25,7 @@ export default function UploadModal({
   uploadProgress,
 }) {
   const [selectedFile, setSelectedFile] = useState(null);
+  const [isPublic, setIsPublic] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -44,14 +45,16 @@ export default function UploadModal({
 
   const handleStartUpload = () => {
     if (!selectedFile) return;
-    onUploadFile(selectedFile, () => {
+    onUploadFile(selectedFile, isPublic, () => {
       setSelectedFile(null);
+      setIsPublic(false);
     });
   };
 
   const handleClose = () => {
     if (!isUploading) {
       setSelectedFile(null);
+      setIsPublic(false);
       onClose();
     }
   };
@@ -122,6 +125,34 @@ export default function UploadModal({
                     <span>{uploadProgress}%</span>
                   </div>
                   <Progress value={uploadProgress} className="h-1.5" />
+                </div>
+              )}
+
+              {/* Visibility Selector */}
+              {!isUploading && (
+                <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-muted/20">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isPublic ? (
+                      <Globe className="size-4 text-blue-500 shrink-0" />
+                    ) : (
+                      <Lock className="size-4 text-primary shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground">
+                        {isPublic ? "Public to Workspace" : "Private (Default)"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {isPublic ? "Visible to anyone in this company" : "Visible only to you"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsPublic(!isPublic)}
+                    className="text-xs text-primary hover:underline font-medium cursor-pointer shrink-0 ml-2"
+                  >
+                    {isPublic ? "Make Private" : "Make Public"}
+                  </button>
                 </div>
               )}
 

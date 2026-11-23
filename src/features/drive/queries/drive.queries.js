@@ -41,14 +41,39 @@ export function useCreateFolder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ name, parentFolderId }) =>
-      driveService.createFolder({ name, parentFolderId }),
+    mutationFn: ({ name, parentFolderId, isPublic }) =>
+      driveService.createFolder({ name, parentFolderId, isPublic }),
     onSuccess: (newFolder) => {
       queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.all });
       toast.success(`Folder "${newFolder.name}" created`);
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || "Failed to create folder");
+    },
+  });
+}
+
+/**
+ * Update folder visibility mutation
+ */
+export function useUpdateFolderVisibility() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ folderId, isPublic }) =>
+      driveService.updateFolderVisibility(folderId, isPublic),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.all });
+      toast.success(
+        updated?.isPublic
+          ? "Folder is now public to workspace"
+          : "Folder is now private"
+      );
+    },
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.message || "Failed to update folder visibility"
+      );
     },
   });
 }
@@ -132,12 +157,13 @@ export function useUploadFile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ file, folderId, onProgress }) => {
+    mutationFn: async ({ file, folderId, isPublic = false, onProgress }) => {
       // 1. Request presigned upload URL from backend
       const uploadSession = await driveService.requestUploadUrl({
         name: file.name,
         folderId: folderId || null,
         mimeType: file.type || "application/octet-stream",
+        isPublic,
       });
 
       // 2. Upload binary bytes directly to Cloudflare R2
@@ -200,6 +226,31 @@ export function useToggleStarFile() {
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || "Failed to update star");
+    },
+  });
+}
+
+/**
+ * Update file visibility mutation
+ */
+export function useUpdateFileVisibility() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ fileId, isPublic }) =>
+      driveService.updateFileVisibility(fileId, isPublic),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: DRIVE_KEYS.all });
+      toast.success(
+        updated?.isPublic
+          ? "File is now public to workspace"
+          : "File is now private"
+      );
+    },
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.message || "Failed to update file visibility"
+      );
     },
   });
 }

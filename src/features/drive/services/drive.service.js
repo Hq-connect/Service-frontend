@@ -32,8 +32,13 @@ const driveService = {
   /**
    * Folder operations
    */
-  async createFolder({ name, parentFolderId = null }) {
-    const response = await api.post("/drive/folders", { name, parentFolderId });
+  async createFolder({ name, parentFolderId = null, isPublic = false }) {
+    const response = await api.post("/drive/folders", { name, parentFolderId, isPublic });
+    return response.data?.data?.folder;
+  },
+
+  async updateFolderVisibility(folderId, isPublic) {
+    const response = await api.patch(`/drive/folders/${folderId}/visibility`, { isPublic });
     return response.data?.data?.folder;
   },
 
@@ -72,11 +77,12 @@ const driveService = {
   /**
    * Direct-to-R2 Upload Flow
    */
-  async requestUploadUrl({ name, folderId = null, mimeType }) {
+  async requestUploadUrl({ name, folderId = null, mimeType, isPublic = false }) {
     const response = await api.post("/drive/uploads", {
       name,
       folderId: folderId || null,
       mimeType,
+      isPublic,
     });
     return response.data?.data; // { uploadUrl, fileId, versionId, objectKey }
   },
@@ -118,6 +124,11 @@ const driveService = {
 
   async moveFile(fileId, targetFolderId = null) {
     const response = await api.patch(`/drive/${fileId}/move`, { targetFolderId });
+    return response.data?.data?.file;
+  },
+
+  async updateFileVisibility(fileId, isPublic) {
+    const response = await api.patch(`/drive/${fileId}/visibility`, { isPublic });
     return response.data?.data?.file;
   },
 

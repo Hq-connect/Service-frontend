@@ -1,5 +1,5 @@
 import React from "react";
-import { Star, MoreVertical, Download, Eye, Trash2, Edit2, Share2, RotateCcw } from "lucide-react";
+import { Star, MoreVertical, Download, Eye, Trash2, Edit2, Share2, RotateCcw, Lock, Globe } from "lucide-react";
 import { getFileIcon, formatBytes, formatShortDate } from "../utils/fileIcons";
 import {
   DropdownMenu,
@@ -17,6 +17,7 @@ export default function FileCard({
   onRename,
   onTrash,
   onShare,
+  onToggleVisibility,
   isTrashView = false,
   onRestore,
   onDeletePermanent,
@@ -30,8 +31,21 @@ export default function FileCard({
     >
       {/* Top Row: Icon, Star, Menu */}
       <div className="flex items-center justify-between">
-        <div className={`p-2.5 rounded-lg ${bg} ${color}`}>
-          <Icon className="size-5" />
+        <div className="flex items-center gap-1.5">
+          <div className={`p-2.5 rounded-lg ${bg} ${color}`}>
+            <Icon className="size-5" />
+          </div>
+          {!isTrashView && (
+            file.isPublic ? (
+              <span title="Public to workspace" className="p-1 rounded bg-muted/50">
+                <Globe className="size-3 text-blue-500" />
+              </span>
+            ) : (
+              <span title="Private" className="p-1 rounded bg-muted/50">
+                <Lock className="size-3 text-muted-foreground/60" />
+              </span>
+            )
+          )}
         </div>
 
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -96,6 +110,13 @@ export default function FileCard({
                   >
                     <Share2 className="size-3" />
                     <span>Share</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onToggleVisibility && onToggleVisibility(file._id, !file.isPublic)}
+                    className="text-xs gap-2 cursor-pointer"
+                  >
+                    {file.isPublic ? <Lock className="size-3" /> : <Globe className="size-3" />}
+                    <span>{file.isPublic ? "Make Private" : "Make Public"}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => onPreview(file)}

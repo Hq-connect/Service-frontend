@@ -15,6 +15,8 @@ import {
   useRestoreFile,
   useDeleteFilePermanent,
   useEmptyTrash,
+  useUpdateFolderVisibility,
+  useUpdateFileVisibility,
 } from "../queries/drive.queries";
 import driveService from "../services/drive.service";
 import DriveHeader from "../components/DriveHeader";
@@ -84,6 +86,8 @@ export default function FilesPage() {
   const restoreFileMutation = useRestoreFile();
   const deleteFilePermanentMutation = useDeleteFilePermanent();
   const emptyTrashMutation = useEmptyTrash();
+  const updateFolderVisibilityMutation = useUpdateFolderVisibility();
+  const updateFileVisibilityMutation = useUpdateFileVisibility();
 
   // Navigation Handlers
   const handleOpenFolder = (folder) => {
@@ -107,12 +111,13 @@ export default function FilesPage() {
   };
 
   // Upload Handler
-  const handleUploadFile = (file, onSuccess) => {
+  const handleUploadFile = (file, isPublic, onSuccess) => {
     setUploadProgress(0);
     uploadFileMutation.mutate(
       {
         file,
         folderId: currentFolderId,
+        isPublic,
         onProgress: (percent) => setUploadProgress(percent),
       },
       {
@@ -252,6 +257,9 @@ export default function FilesPage() {
                       onRename={(f) => setRenameTarget({ type: "folder", item: f })}
                       onTrash={(id) => trashFolderMutation.mutate(id)}
                       onShare={(f) => setShareTarget({ type: "folder", item: f })}
+                      onToggleVisibility={(id, isPub) =>
+                        updateFolderVisibilityMutation.mutate({ folderId: id, isPublic: isPub })
+                      }
                       isTrashView={isTrashView}
                       onRestore={(id) => restoreFolderMutation.mutate(id)}
                       onDeletePermanent={(id) => {
@@ -281,6 +289,9 @@ export default function FilesPage() {
                       onRename={(f) => setRenameTarget({ type: "file", item: f })}
                       onTrash={(id) => trashFileMutation.mutate(id)}
                       onShare={(f) => setShareTarget({ type: "file", item: f })}
+                      onToggleVisibility={(id, isPub) =>
+                        updateFileVisibilityMutation.mutate({ fileId: id, isPublic: isPub })
+                      }
                       isTrashView={isTrashView}
                       onRestore={(id) => restoreFileMutation.mutate(id)}
                       onDeletePermanent={(id) => {
@@ -303,12 +314,18 @@ export default function FilesPage() {
             onRenameFolder={(f) => setRenameTarget({ type: "folder", item: f })}
             onTrashFolder={(id) => trashFolderMutation.mutate(id)}
             onShareFolder={(f) => setShareTarget({ type: "folder", item: f })}
+            onToggleFolderVisibility={(id, isPub) =>
+              updateFolderVisibilityMutation.mutate({ folderId: id, isPublic: isPub })
+            }
             onPreviewFile={setPreviewFile}
             onDownloadFile={handleDownloadFile}
             onToggleStarFile={(id) => toggleStarMutation.mutate(id)}
             onRenameFile={(f) => setRenameTarget({ type: "file", item: f })}
             onTrashFile={(id) => trashFileMutation.mutate(id)}
             onShareFile={(f) => setShareTarget({ type: "file", item: f })}
+            onToggleFileVisibility={(id, isPub) =>
+              updateFileVisibilityMutation.mutate({ fileId: id, isPublic: isPub })
+            }
             isTrashView={isTrashView}
             onRestoreFolder={(id) => restoreFolderMutation.mutate(id)}
             onDeletePermanentFolder={(id) => {
@@ -330,9 +347,9 @@ export default function FilesPage() {
       <CreateFolderModal
         isOpen={isCreateFolderOpen}
         onClose={() => { setIsCreateFolderOpen(false); setCreateFolderError(""); }}
-        onCreateFolder={(name) =>
+        onCreateFolder={(name, isPublic) =>
           createFolderMutation.mutate(
-            { name, parentFolderId: currentFolderId },
+            { name, parentFolderId: currentFolderId, isPublic },
             {
               onSuccess: () => { setIsCreateFolderOpen(false); setCreateFolderError(""); },
               onError: (error) => {

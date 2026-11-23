@@ -23,6 +23,7 @@ import {
   Globe,
   Folder,
   File,
+  Lock,
 } from "lucide-react";
 import { useUsers } from "@/global/hooks/useUsers";
 import {
@@ -35,6 +36,8 @@ import {
   useGrantUserAccess,
   useCreateShareLink,
   useRevokeShare,
+  useUpdateFolderVisibility,
+  useUpdateFileVisibility,
 } from "../queries/drive.queries";
 import { toast } from "sonner";
 
@@ -55,6 +58,11 @@ export default function ShareModal({
   const [selectedRole, setSelectedRole] = useState("Viewer"); // Default role to invite
   const [copiedLink, setCopiedLink] = useState(false);
   const [linkRole, setLinkRole] = useState("Viewer");
+  const [isItemPublic, setIsItemPublic] = useState(!!targetItem?.isPublic);
+
+  React.useEffect(() => {
+    setIsItemPublic(!!targetItem?.isPublic);
+  }, [targetItem?.isPublic]);
 
   // React Queries
   const { data: shares = [], isLoading: isLoadingShares } = useShares(targetId);
@@ -70,6 +78,17 @@ export default function ShareModal({
   const grantAccessMutation = useGrantUserAccess();
   const createLinkMutation = useCreateShareLink();
   const revokeShareMutation = useRevokeShare();
+  const updateFolderVisibilityMutation = useUpdateFolderVisibility();
+  const updateFileVisibilityMutation = useUpdateFileVisibility();
+
+  const handleToggleVisibility = (makePublic) => {
+    setIsItemPublic(makePublic);
+    if (targetType === "folder") {
+      updateFolderVisibilityMutation.mutate({ folderId: targetId, isPublic: makePublic });
+    } else {
+      updateFileVisibilityMutation.mutate({ fileId: targetId, isPublic: makePublic });
+    }
+  };
 
   // Find user-based shares
   const userShares = shares.filter((s) => s.subjectUserId);
@@ -370,63 +389,89 @@ export default function ShareModal({
             </div>
           </div>
 
-          {/* Section 3: General Access / Link Sharing */}
-          <div className="p-3.5 rounded-xl border border-border bg-muted/30 space-y-2.5">
+          {/* Section 3: Workspace Visibility & Access */}
+          <div className="p-3.5 rounded-xl border border-border bg-muted/30 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-md bg-primary/10 text-primary">
-                  <Globe className="size-4" />
+                  {isItemPublic ? <Globe className="size-4 text-blue-500" /> : <Lock className="size-4 text-primary" />}
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-foreground">
-                    General Link Access
+                    Workspace Visibility
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {isItemPublic
+                      ? "Anyone in this company/workspace can find and view this"
+                      : "Only you and invited teammates can access"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Visibility Selector */}
+              <select
+                value={isItemPublic ? "public" : "private"}
+                onChange={(e) => handleToggleVisibility(e.target.value === "public")}
+                disabled={updateFolderVisibilityMutation.isPending || updateFileVisibilityMutation.isPending}
+                className="h-7 text-[11px] px-2 rounded-md border border-input bg-card text-foreground focus:outline-none cursor-pointer"
+              >
+                <option value="private">Private (Restricted)</option>
+                <option value="public">Public to Workspace</option>
+              </select>
+            </div>
+
+            <div className="border-t border-border/50 pt-2.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-foreground">
+                    Shareable Link
                   </p>
                   <p className="text-[11px] text-muted-foreground">
                     Anyone with the share link can access
                   </p>
                 </div>
+
+                {/* Link Role Selector */}
+                <select
+                  value={linkRole}
+                  onChange={(e) => setLinkRole(e.target.value)}
+                  className="h-7 text-[11px] px-2 rounded-md border border-input bg-card text-foreground focus:outline-none cursor-pointer"
+                >
+                  <option value="Viewer">Viewer</option>
+                  <option value="Editor">Editor</option>
+                </select>
               </div>
 
-              {/* Link Role Selector */}
-              <select
-                value={linkRole}
-                onChange={(e) => setLinkRole(e.target.value)}
-                className="h-7 text-[11px] px-2 rounded-md border border-input bg-card text-foreground focus:outline-none cursor-pointer"
-              >
-                <option value="Viewer">Viewer</option>
-                <option value="Editor">Editor</option>
-              </select>
-            </div>
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  {linkShares.length > 0
+                    ? `${linkShares.length} active share link(s)`
+                    : "No link created yet"}
+                </span>
 
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-muted-foreground font-mono">
-                {linkShares.length > 0
-                  ? `${linkShares.length} active share link(s)`
-                  : "No link created yet"}
-              </span>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleCopyLink}
-                disabled={createLinkMutation.isPending}
-                className="h-7 text-xs gap-1.5 font-medium cursor-pointer"
-              >
-                {copiedLink ? (
-                  <>
-                    <Check className="size-3 text-green-500" />
-                    <span className="text-green-600 dark:text-green-400 font-semibold">
-                      Copied!
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Link2 className="size-3" />
-                    <span>Copy Link</span>
-                  </>
-                )}
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyLink}
+                  disabled={createLinkMutation.isPending}
+                  className="h-7 text-xs gap-1.5 font-medium cursor-pointer"
+                >
+                  {copiedLink ? (
+                    <>
+                      <Check className="size-3 text-green-500" />
+                      <span className="text-green-600 dark:text-green-400 font-semibold">
+                        Copied!
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="size-3" />
+                      <span>Copy Link</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

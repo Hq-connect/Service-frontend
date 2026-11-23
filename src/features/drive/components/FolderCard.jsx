@@ -1,5 +1,5 @@
 import React from "react";
-import { Folder, MoreVertical, Trash2, Edit2, Share2, RotateCcw } from "lucide-react";
+import { Folder, MoreVertical, Trash2, Edit2, Share2, RotateCcw, Lock, Globe } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,6 +14,7 @@ export default function FolderCard({
   onRename,
   onTrash,
   onShare,
+  onToggleVisibility,
   isTrashView = false,
   onRestore,
   onDeletePermanent,
@@ -27,9 +28,22 @@ export default function FolderCard({
         <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 group-hover:scale-105 transition-transform">
           <Folder className="size-4 fill-primary/20" />
         </div>
-        <span className="text-xs font-semibold text-foreground truncate max-w-[140px] sm:max-w-[170px]">
-          {folder.name}
-        </span>
+        <div className="min-w-0 flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-[150px]">
+            {folder.name}
+          </span>
+          {!isTrashView && (
+            folder.isPublic ? (
+              <span title="Public to workspace">
+                <Globe className="size-3 text-blue-500 shrink-0" />
+              </span>
+            ) : (
+              <span title="Private">
+                <Lock className="size-3 text-muted-foreground/60 shrink-0" />
+              </span>
+            )
+          )}
+        </div>
       </div>
 
       {/* Quick Action Dropdown */}
@@ -67,6 +81,13 @@ export default function FolderCard({
                 >
                   <Share2 className="size-3" />
                   <span>Share</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onToggleVisibility && onToggleVisibility(folder._id, !folder.isPublic)}
+                  className="text-xs gap-2 cursor-pointer"
+                >
+                  {folder.isPublic ? <Lock className="size-3" /> : <Globe className="size-3" />}
+                  <span>{folder.isPublic ? "Make Private" : "Make Public"}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => onRename(folder)}
