@@ -1,7 +1,7 @@
 import { 
   Home, CheckSquare, FileText, Folder, Video, Sparkles, MessageSquare, Phone,
   LayoutGrid, Inbox, UserCheck, ClipboardList, CheckCircle, Archive,
-  Clock, FileSignature, Users, Layers, Share2, UploadCloud, Trash,
+  Clock, FileSignature, Users, Layers, Share2, Trash,
   Calendar, PlayCircle, RefreshCw, Cpu, AlignLeft, BookOpen, MessageCircle, Hash, BellOff,
   Repeat
 } from "lucide-react";
@@ -55,10 +55,9 @@ export const SECONDARY_NAV_DATA = {
   "/files": {
     title: "Files",
     items: [
-      { label: "All Files", icon: Folder },
-      { label: "Recent uploads", icon: UploadCloud },
-      { label: "Shared", icon: Share2 },
-      { label: "Trash", icon: Trash }
+      { label: "All Files", icon: Folder, path: "/files" },
+      { label: "Starred", icon: Share2, path: "/files?isStarred=true" },
+      { label: "Trash", icon: Trash, path: "/files?status=trashed" }
     ]
   },
   "/meets": {
